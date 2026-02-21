@@ -10,7 +10,7 @@ const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
   { href: "/players", label: "Players", roles: ["admin", "staff"] },
   { href: "/wellness", label: "Wellness" },
   { href: "/rpe", label: "RPE" },
-  { href: "/users", label: "Users", roles: ["admin"] },
+  { href: "/admin/users", label: "Users", roles: ["admin"] },
 ];
 
 interface SidebarProps {
