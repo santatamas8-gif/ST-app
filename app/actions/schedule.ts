@@ -8,7 +8,7 @@ import type { ScheduleActivityType } from "@/lib/types";
 export async function getScheduleForMonth(
   from: string,
   to: string
-): Promise<{ data: { date: string; activity_type: string }[]; error?: string }> {
+): Promise<{ data: { id: string; date: string; activity_type: string; sort_order?: number }[]; error?: string }> {
   const user = await getAppUser();
   if (!user) return { data: [], error: "Not authenticated" };
 
