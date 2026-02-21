@@ -96,6 +96,24 @@ export function ScheduleCalendar({ canEdit }: { canEdit: boolean }) {
 
   const grid = useMemo(() => buildCalendarGrid(year, month), [year, month]);
 
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const nextSessionDate = useMemo(() => {
+    const dates = [...itemsByDate.keys()].filter((d) => d >= todayISO).sort();
+    return dates[0] ?? null;
+  }, [itemsByDate, todayISO]);
+
+  const nextSessionSummary = useMemo(() => {
+    if (!nextSessionDate) return null;
+    const items = itemsByDate.get(nextSessionDate) ?? [];
+    const labels = items
+      .map((i) => ACTIVITY_LABELS[i.activity_type as ScheduleActivityType] ?? i.activity_type)
+      .join(", ");
+    const d = new Date(nextSessionDate);
+    const formatted = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+    return nextSessionDate === todayISO ? `Today – ${labels}` : `${formatted} – ${labels}`;
+  }, [nextSessionDate, itemsByDate]);
+
   const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
 
   function handlePrevMonth() {
@@ -134,11 +152,20 @@ export function ScheduleCalendar({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-6">
+      {!canEdit && (
+        <div className="rounded-xl border border-zinc-800 px-4 py-3" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
+          <p className="text-sm font-medium text-zinc-400">Next session</p>
+          <p className="mt-1 text-base font-semibold text-white">
+            {nextSessionSummary ?? "No upcoming sessions"}
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white hover:bg-zinc-700"
+          className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700"
         >
           ← Prev
         </button>
@@ -146,18 +173,18 @@ export function ScheduleCalendar({ canEdit }: { canEdit: boolean }) {
         <button
           type="button"
           onClick={handleNextMonth}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white hover:bg-zinc-700"
+          className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700"
         >
           Next →
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/50">
+      <div className="overflow-x-auto rounded-xl border border-zinc-800" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-zinc-700">
               {WEEKDAYS.map((d) => (
-                <th key={d} className="p-2 text-center font-medium text-zinc-400">
+                <th key={d} className="px-2 py-3 text-center font-medium text-zinc-400">
                   {d}
                 </th>
               ))}
@@ -169,30 +196,38 @@ export function ScheduleCalendar({ canEdit }: { canEdit: boolean }) {
                 {row.map((date, ci) => {
                   const items = date ? itemsByDate.get(date) ?? [] : [];
                   const isSelected = date === selectedDate;
+                  const isToday = date === todayISO;
+                  const isNextSession = date === nextSessionDate && date !== todayISO;
+                  const dayClass = isSelected
+                    ? "bg-emerald-600/30 ring-2 ring-emerald-500"
+                    : isToday
+                      ? "bg-amber-500/15 ring-2 ring-amber-400"
+                      : isNextSession
+                        ? "bg-emerald-500/15 ring-2 ring-emerald-400"
+                        : "hover:bg-zinc-800";
                   return (
                     <td
                       key={ci}
-                      className="border-b border-zinc-800 p-1"
+                      className="border-b border-zinc-800 p-2"
                     >
                       {date ? (
                         <button
                           type="button"
                           onClick={() => setSelectedDate(date)}
-                          className={`flex h-14 w-full flex-col items-center justify-center rounded-lg text-center transition ${
-                            isSelected
-                              ? "bg-emerald-600/30 ring-2 ring-emerald-500"
-                              : "hover:bg-zinc-800"
-                          }`}
+                          className={`flex h-16 w-full flex-col items-center justify-center rounded-lg text-center transition ${dayClass}`}
                         >
-                          <span className="text-zinc-300">{date.slice(8)}</span>
+                          <span className={`text-sm font-medium ${isToday ? "text-amber-300" : "text-zinc-300"}`}>
+                            {date.slice(8)}
+                            {isToday && <span className="ml-1 text-xs text-amber-400">Today</span>}
+                          </span>
                           {items.length > 0 && (
-                            <span className="mt-0.5 text-xs text-emerald-400">
+                            <span className="mt-1 text-xs text-emerald-400">
                               {items.length} item{items.length !== 1 ? "s" : ""}
                             </span>
                           )}
                         </button>
                       ) : (
-                        <div className="h-14" />
+                        <div className="h-16" />
                       )}
                     </td>
                   );
@@ -206,11 +241,11 @@ export function ScheduleCalendar({ canEdit }: { canEdit: boolean }) {
       {loading && <p className="text-sm text-zinc-500">Loading…</p>}
 
       {selectedDate && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <h2 className="mb-3 font-semibold text-white">
+        <div className="rounded-xl border border-zinc-800 p-5" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
+          <h2 className="mb-4 text-lg font-semibold text-white">
             Program for {selectedDate}
           </h2>
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {selectedItems.map((item) => (
               <li
                 key={item.id}
