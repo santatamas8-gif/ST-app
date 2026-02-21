@@ -6,6 +6,7 @@ import type { UserRole } from "@/lib/types";
 
 const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/schedule", label: "Schedule" },
   { href: "/players", label: "Players", roles: ["admin", "staff"] },
   { href: "/wellness", label: "Wellness" },
   { href: "/rpe", label: "RPE" },

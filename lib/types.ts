@@ -67,3 +67,20 @@ export interface AvailabilityRow {
   status: AvailabilityStatus;
   created_at?: string;
 }
+
+export type ScheduleActivityType =
+  | "breakfast"
+  | "lunch"
+  | "dinner"
+  | "training"
+  | "gym"
+  | "recovery"
+  | "pre_activation";
+
+export interface ScheduleRow {
+  id: string;
+  date: string;
+  activity_type: ScheduleActivityType;
+  sort_order?: number;
+  created_at?: string;
+}
