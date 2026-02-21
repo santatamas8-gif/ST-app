@@ -101,11 +101,11 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  type Chart7Point = { date: string; load: number; wellness: number | null };
+  type Chart7Point = { date: string; load: number; wellness: number | null; sleepHours: number | null };
   const role = data.role ?? "player";
   const metrics = data.metrics ?? {};
   const chart7: Chart7Point[] = (Array.isArray(data.chart7) ? data.chart7 : []) as Chart7Point[];
-  const chart28 = data.chart28 ?? [];
+  const chart28 = (Array.isArray(data.chart28) ? data.chart28 : []) as Chart7Point[];
   const isPlayer = role === "player";
   const todayScheduleItem = data.todayScheduleItem ?? null;
 
