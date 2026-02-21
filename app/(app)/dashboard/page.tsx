@@ -13,7 +13,7 @@ type AttentionPlayer = { user_id: string; email: string; reason?: string; wellne
 type DashboardData = {
   role?: string;
   metrics: any;
-  chart7: { date: string; load: number }[];
+  chart7: { date: string; load: number; wellness: number | null }[];
   chart28: any[];
   attentionToday?: {
     missingWellness: AttentionPlayer[];
