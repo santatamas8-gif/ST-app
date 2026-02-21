@@ -46,7 +46,7 @@ export default async function WellnessPage() {
             Wellness
           </h1>
           <p className="mt-1 text-zinc-400">
-            Submit once per day. Sleep, fatigue, soreness, stress, mood (1–10).
+            Submit once per day. Fekvés/kelés, alvás minőség, fatigue, soreness, stress, mood (1–10).
           </p>
         </div>
 
@@ -61,7 +61,10 @@ export default async function WellnessPage() {
                 <thead>
                   <tr className="border-b border-zinc-700 text-zinc-400">
                     <th className="pb-2 pr-4 font-medium">Date</th>
-                    <th className="pb-2 pr-4 font-medium">Sleep</th>
+                    <th className="pb-2 pr-4 font-medium">Fekvés</th>
+                    <th className="pb-2 pr-4 font-medium">Kelés</th>
+                    <th className="pb-2 pr-4 font-medium">Alvás (óra)</th>
+                    <th className="pb-2 pr-4 font-medium">Alvás minőség</th>
                     <th className="pb-2 pr-4 font-medium">Fatigue</th>
                     <th className="pb-2 pr-4 font-medium">Soreness</th>
                     <th className="pb-2 pr-4 font-medium">Stress</th>
@@ -72,6 +75,9 @@ export default async function WellnessPage() {
                   {list.map((r) => (
                     <tr key={r.id} className="border-b border-zinc-800">
                       <td className="py-3 pr-4">{r.date}</td>
+                      <td className="py-3 pr-4">{r.bed_time ?? "—"}</td>
+                      <td className="py-3 pr-4">{r.wake_time ?? "—"}</td>
+                      <td className="py-3 pr-4">{r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}</td>
                       <td className="py-3 pr-4">{r.sleep_quality ?? "—"}</td>
                       <td className="py-3 pr-4">{r.fatigue ?? "—"}</td>
                       <td className="py-3 pr-4">{r.soreness ?? "—"}</td>
@@ -95,7 +101,7 @@ export default async function WellnessPage() {
           Wellness
         </h1>
         <p className="mt-1 text-zinc-400">
-          Összesítés: a játékosok napi wellness adatai (Sleep, Fatigue, Soreness, Stress, Mood 1–10).
+          Összesítés: minden mező, amit a játékosok kitöltenek (fekvés, kelés, alvás óra, alvás minőség, fatigue, soreness, stress, mood). Ugyanez látható mobil appban is.
         </p>
       </div>
 
@@ -109,7 +115,10 @@ export default async function WellnessPage() {
                 <tr className="border-b border-zinc-700 text-zinc-400">
                   <th className="pb-2 pr-4 font-medium">Játékos</th>
                   <th className="pb-2 pr-4 font-medium">Dátum</th>
-                  <th className="pb-2 pr-4 font-medium">Sleep</th>
+                  <th className="pb-2 pr-4 font-medium">Fekvés</th>
+                  <th className="pb-2 pr-4 font-medium">Kelés</th>
+                  <th className="pb-2 pr-4 font-medium">Alvás (óra)</th>
+                  <th className="pb-2 pr-4 font-medium">Alvás minőség</th>
                   <th className="pb-2 pr-4 font-medium">Fatigue</th>
                   <th className="pb-2 pr-4 font-medium">Soreness</th>
                   <th className="pb-2 pr-4 font-medium">Stress</th>
@@ -121,6 +130,9 @@ export default async function WellnessPage() {
                   <tr key={r.id} className="border-b border-zinc-800">
                     <td className="py-3 pr-4">{emailByUserId[r.user_id] ?? r.user_id}</td>
                     <td className="py-3 pr-4">{r.date}</td>
+                    <td className="py-3 pr-4">{r.bed_time ?? "—"}</td>
+                    <td className="py-3 pr-4">{r.wake_time ?? "—"}</td>
+                    <td className="py-3 pr-4">{r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}</td>
                     <td className="py-3 pr-4">{r.sleep_quality ?? "—"}</td>
                     <td className="py-3 pr-4">{r.fatigue ?? "—"}</td>
                     <td className="py-3 pr-4">{r.soreness ?? "—"}</td>

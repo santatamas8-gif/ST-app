@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "ST App",
+    "slug": "st-app-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "st-app",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "android": {
+      "package": "com.stapp.mobile"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "6745e541-70cc-47e7-a626-c8ca077bcb01"
+      }
+    }
+  }
+}

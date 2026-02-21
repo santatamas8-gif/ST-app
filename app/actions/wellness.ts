@@ -38,11 +38,13 @@ export async function submitWellness(form: WellnessFormInput) {
 }
 
 export async function submitDailyWellness(data: {
-  sleep: number;
+  sleep_quality: number;
   fatigue: number;
   soreness: number;
   stress: number;
   mood: number;
+  bed_time?: string;
+  wake_time?: string;
 }) {
   const supabase = await createClient();
   const {
@@ -63,13 +65,18 @@ export async function submitDailyWellness(data: {
     return { error: "You have already submitted for today." };
   }
 
+  const sleepDuration =
+    data.bed_time && data.wake_time
+      ? sleepDurationHours(data.bed_time, data.wake_time)
+      : null;
+
   const { error } = await supabase.from("wellness").insert({
     user_id: user.id,
     date: today,
-    bed_time: null,
-    wake_time: null,
-    sleep_duration: null,
-    sleep_quality: data.sleep,
+    bed_time: data.bed_time ?? null,
+    wake_time: data.wake_time ?? null,
+    sleep_duration: sleepDuration,
+    sleep_quality: data.sleep_quality,
     soreness: data.soreness,
     fatigue: data.fatigue,
     stress: data.stress,
