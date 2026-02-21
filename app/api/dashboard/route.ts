@@ -16,8 +16,11 @@ export async function GET() {
       monotony: data.metrics.monotonyValue,
       strain: data.metrics.strainValue,
       redFlags: data.metrics.redFlags ?? [],
+      todayWellnessCount: data.metrics.todayWellnessCount,
+      todaySessionsCount: data.metrics.todaySessionsCount,
     };
     return NextResponse.json({
+      role: user.role,
       metrics,
       chart7: data.chart7,
       chart28: data.chart28,

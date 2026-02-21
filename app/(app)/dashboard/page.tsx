@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/Card";
 import { MetricCard } from "@/components/MetricCard";
@@ -9,6 +10,7 @@ import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { TrendCharts } from "@/components/TrendCharts";
 
 type DashboardData = {
+  role?: string;
   metrics: any;
   chart7: any[];
   chart28: any[];
@@ -82,21 +84,63 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  // same UI as before (minimal mapping safety)
+  const role = data.role ?? "player";
   const metrics = data.metrics ?? {};
   const chart7 = data.chart7 ?? [];
   const chart28 = data.chart28 ?? [];
+  const isPlayer = role === "player";
 
   const readiness = metrics.readiness;
   const readinessVariant =
     readiness != null ? (readiness >= 70 ? "success" : readiness < 50 ? "danger" : "default") : "default";
 
+  if (!isPlayer) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+        <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+        <p className="text-zinc-400">Összesítés: ma kitöltött wellness és edzés bejegyzések.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <MetricCard title="Ma wellness (db)" value={metrics.todayWellnessCount ?? 0} />
+          <MetricCard title="Ma edzés/RPE (db)" value={metrics.todaySessionsCount ?? 0} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/wellness"
+            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
+          >
+            <div className="font-semibold text-white">Wellness összesítés</div>
+            <div className="mt-1 text-sm text-zinc-400">Játékosok napi wellness adatai</div>
+          </Link>
+          <Link
+            href="/rpe"
+            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
+          >
+            <div className="font-semibold text-white">RPE / edzés összesítés</div>
+            <div className="mt-1 text-sm text-zinc-400">Játékosok edzés és RPE bejegyzései</div>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+      {metrics.todayWellness == null && (
+        <Card>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-zinc-300">Ma még nincs wellness bejegyzés.</p>
+            <Link
+              href="/wellness"
+              className="inline-flex shrink-0 rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white transition hover:bg-emerald-500"
+            >
+              Kitöltöm a Wellness űrlapot
+            </Link>
+          </div>
+        </Card>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
-       <MetricCard title="Avg sleep (7d)" value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"} />
-...
+        <MetricCard title="Avg sleep (7d)" value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"} />
         <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />
         <MetricCard title="Monotony" value={metrics.monotony ?? "—"} />
         <MetricCard title="Strain" value={metrics.strain ?? "—"} />
@@ -106,7 +150,7 @@ export default function DashboardPage() {
 
       <Card>
         <div className="p-6">
-          <div className="text-white font-semibold mb-4">Trends</div>
+          <div className="mb-4 font-semibold text-white">Trends</div>
           <TrendCharts chart7={chart7} chart28={chart28} />
         </div>
       </Card>

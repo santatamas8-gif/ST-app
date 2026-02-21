@@ -91,7 +91,7 @@ export default async function RpePage() {
           RPE
         </h1>
         <p className="mt-1 text-zinc-400">
-          Összesítés: a játékosok edzés/RPE bejegyzései (duration, RPE, load).
+          Összesítés: minden, amit a játékosok rögzítenek (dátum, időtartam, RPE, load).
         </p>
       </div>
 

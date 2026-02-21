@@ -30,6 +30,10 @@ export interface DashboardMetrics {
   readiness: number | null;
   redFlags: { type: string; label: string; value?: string | number }[];
   todayFatigue: number | null;
+  /** Staff: hány játékos töltötte ki a mai wellness-t */
+  todayWellnessCount?: number;
+  /** Staff: hány edzés/rpe bejegyzés van ma */
+  todaySessionsCount?: number;
 }
 
 export interface ChartPoint {
@@ -158,6 +162,11 @@ export async function getDashboardData(
     fatigue: todayFatigue,
   });
 
+  const todaySessionsCount =
+    user.role === "player"
+      ? undefined
+      : sessionRows.filter((s) => s.date === today).length;
+
   const chart7 = buildChartData(
     wellnessRows.filter((r) => r.date >= from7 && r.date <= to7),
     sessionRows.filter((s) => s.date >= from7 && s.date <= to7),
@@ -182,6 +191,8 @@ export async function getDashboardData(
       readiness,
       redFlags,
       todayFatigue,
+      todayWellnessCount: user.role === "player" ? undefined : todayWellness.length,
+      todaySessionsCount,
     },
     chart7,
     chart28,

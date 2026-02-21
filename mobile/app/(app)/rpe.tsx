@@ -89,7 +89,7 @@ export default function RpeScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Játékosok RPE / edzés bejegyzései</Text>
         <Text style={styles.subtitle}>
-          Összesítés: duration (perc), RPE, load.
+          Összesítés: minden, amit a játékosok rögzítenek (dátum, perc, RPE, load).
         </Text>
         {sessionsLoading ? (
           <ActivityIndicator style={{ marginVertical: 24 }} />
