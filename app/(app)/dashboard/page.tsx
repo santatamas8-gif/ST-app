@@ -101,9 +101,10 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  type Chart7Point = { date: string; load: number; wellness: number | null };
   const role = data.role ?? "player";
   const metrics = data.metrics ?? {};
-  const chart7 = data.chart7 ?? [];
+  const chart7: Chart7Point[] = (Array.isArray(data.chart7) ? data.chart7 : []) as Chart7Point[];
   const chart28 = data.chart28 ?? [];
   const isPlayer = role === "player";
   const todayScheduleItem = data.todayScheduleItem ?? null;
@@ -130,7 +131,7 @@ export default function DashboardPage() {
   // Player dashboard: Today's status + metrics + trends
   const todayISO = new Date().toISOString().slice(0, 10);
   const wellnessSubmitted = metrics.todayWellness != null;
-  const rpeSubmitted = chart7.some((p: { date: string; load?: number }) => p.date === todayISO && (p.load ?? 0) > 0);
+  const rpeSubmitted = chart7.some((p) => p.date === todayISO && (p.load ?? 0) > 0);
   const allDone = wellnessSubmitted && rpeSubmitted;
   const scheduleLabel = todayScheduleItem
     ? todayScheduleItem.activity_type.charAt(0).toUpperCase() + todayScheduleItem.activity_type.slice(1).replace(/_/g, " ")
