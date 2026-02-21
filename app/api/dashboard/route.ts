@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
+import { getStaffAttentionToday } from "@/lib/staffAttention";
 
 export async function GET() {
   const user = await getAppUser();
@@ -19,11 +20,14 @@ export async function GET() {
       todayWellnessCount: data.metrics.todayWellnessCount,
       todaySessionsCount: data.metrics.todaySessionsCount,
     };
+    const isStaff = user.role === "admin" || user.role === "staff";
+    const attentionToday = isStaff ? await getStaffAttentionToday() : null;
     return NextResponse.json({
       role: user.role,
       metrics,
       chart7: data.chart7,
       chart28: data.chart28,
+      attentionToday,
     });
   } catch (e) {
     console.error("Dashboard API error:", e);

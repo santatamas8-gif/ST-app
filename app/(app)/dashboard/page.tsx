@@ -9,11 +9,16 @@ import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { TrendCharts } from "@/components/TrendCharts";
 
+type AttentionPlayer = { user_id: string; email: string; reason?: string };
 type DashboardData = {
   role?: string;
   metrics: any;
   chart7: any[];
   chart28: any[];
+  attentionToday?: {
+    missingWellness: AttentionPlayer[];
+    atRisk: AttentionPlayer[];
+  } | null;
 };
 
 export default function DashboardPage() {
@@ -95,10 +100,50 @@ export default function DashboardPage() {
     readiness != null ? (readiness >= 70 ? "success" : readiness < 50 ? "danger" : "default") : "default";
 
   if (!isPlayer) {
+    const attention = data.attentionToday ?? null;
     return (
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
         <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
         <p className="text-zinc-400">Summary: today&apos;s wellness and session entries.</p>
+
+        {attention && (attention.missingWellness.length > 0 || attention.atRisk.length > 0) && (
+          <Card title="Attention today">
+            {attention.missingWellness.length > 0 && (
+              <div className="mb-4">
+                <p className="mb-2 text-sm font-medium text-amber-400">
+                  Missing wellness ({attention.missingWellness.length})
+                </p>
+                <ul className="list-inside list-disc text-sm text-zinc-300">
+                  {attention.missingWellness.map((p) => (
+                    <li key={p.user_id}>
+                      <Link href={`/players/${p.user_id}`} className="text-emerald-400 hover:underline">
+                        {p.email}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {attention.atRisk.length > 0 && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-amber-400">
+                  At risk today ({attention.atRisk.length})
+                </p>
+                <ul className="list-inside list-disc text-sm text-zinc-300">
+                  {attention.atRisk.map((p) => (
+                    <li key={p.user_id}>
+                      <Link href={`/players/${p.user_id}`} className="text-emerald-400 hover:underline">
+                        {p.email}
+                      </Link>
+                      {p.reason && <span className="text-zinc-500"> — {p.reason}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Card>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <MetricCard title="Today wellness (count)" value={metrics.todayWellnessCount ?? 0} />
           <MetricCard title="Today sessions/RPE (count)" value={metrics.todaySessionsCount ?? 0} />

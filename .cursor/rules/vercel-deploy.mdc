@@ -32,6 +32,24 @@ A webes felületet **mindig** úgy csináljuk, hogy **laptopon és telefonon is 
 
 ---
 
+## 3. Commit + push: mindig másolható blokk
+
+Ha változtatás után commit/push-t javaslunk (Vercel frissül, vagy csak mentés GitHubra), **mindig** írjunk egy **teljes, másolható parancsblokkot** a projekt gyökerébe, amit a felhasználó csak bemásolhat a terminálba.
+
+- **Formátum:** `cd c:\Users\berde\st-app` (projekt gyökér), majd `git add .`, opcionálisan `git status`, `git commit -m "Rövid leírás"`, `git push`.
+- **Példa** amit a válaszban meg kell adni:
+```
+cd c:\Users\berde\st-app
+git add .
+git status
+git commit -m "Rövid leírás a változásról"
+git push
+```
+- A commit message legyen konkrét (pl. "Wellness: bed/wake time, sleep quality" vagy "Full English UI"), ne csak "Frissítések".
+
+---
+
 ## Emlékeztető
 
 - Webes feature/fix után: **push** (Vercel frissül) + **reszponzív** (laptop + telefon mindkettő rendben).
+- Pushnál: **mindig** másolható terminálblokk a projekt gyökeréből.

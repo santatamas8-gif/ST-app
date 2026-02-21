@@ -57,3 +57,13 @@ export interface SessionFormInput {
   duration: number;
   rpe: number;
 }
+
+export type AvailabilityStatus = "available" | "injured" | "unavailable";
+
+export interface AvailabilityRow {
+  id: string;
+  user_id: string;
+  date: string;
+  status: AvailabilityStatus;
+  created_at?: string;
+}

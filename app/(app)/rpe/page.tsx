@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
@@ -113,7 +114,11 @@ export default async function RpePage() {
               <tbody className="text-zinc-300">
                 {list.map((r) => (
                   <tr key={r.id} className="border-b border-zinc-800">
-                    <td className="py-3 pr-4">{emailByUserId[r.user_id] ?? r.user_id}</td>
+                    <td className="py-3 pr-4">
+                      <Link href={`/players/${r.user_id}`} className="text-emerald-400 hover:underline">
+                        {emailByUserId[r.user_id] ?? r.user_id}
+                      </Link>
+                    </td>
                     <td className="py-3 pr-4">{r.date}</td>
                     <td className="py-3 pr-4">{r.duration}</td>
                     <td className="py-3 pr-4">{r.rpe ?? "—"}</td>
