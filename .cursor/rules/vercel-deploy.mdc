@@ -1,0 +1,37 @@
+---
+description: Vercel frissítés + laptop és telefon (reszponzív) – mindkettőre figyeljünk
+alwaysApply: true
+---
+
+# Web app: Vercel + laptop és telefon
+
+Mindig **két dolgra** figyeljünk a webes változtatásoknál.
+
+---
+
+## 1. Vercel frissítése
+
+Ha a **web** appon (Next.js: `app/`, `components/`, `lib/`, stb.) változtatunk, a élő oldal (Vercel) csak akkor frissül, ha a kód felkerül a GitHubra.
+
+- **Teendő:** `git add .` → `git commit -m "…"` → `git push`
+- A Vercel a **master** branchre van kötve; a push után indul az új deploy.
+- Ha nem látszik a változás: kemény frissítés (Ctrl+F5) vagy Vercel → Deployments → Redeploy.
+- A **mobile/** mappa ki van zárva a Vercel buildből; a mobil app külön (Expo/EAS) deployolódik.
+
+---
+
+## 2. Laptop és telefon is (reszponzív)
+
+A webes felületet **mindig** úgy csináljuk, hogy **laptopon és telefonon is jól nézzen ki és használható legyen**.
+
+- **Layout:** Kis képernyőn (mobil) ne folyjon egybe a tartalom; legyen olvasható, gombok/űrlapok ne legyenek túl szűken vagy egymásra csúszva.
+- **Sidebar / navigáció:** Mobilon kompakt (pl. felső sáv vagy összecsukható menü), hogy a fő tartalom teljes szélességben jelenjen meg.
+- **Táblázatok:** Használjunk `overflow-x-auto` (vízszintes görgetés kis képernyőn), vagy mobilon kártyás/lista nézet.
+- **Űrlapok, gombok:** Legyenek megfelelő méretűek (touch-friendly) és ne törjenek el kis viewporton.
+- **Ellenőrzés:** Új vagy nagyobb UI változtatásnál említsük: nézze meg telefonon is (vagy böngésző dev tools responsive módjában).
+
+---
+
+## Emlékeztető
+
+- Webes feature/fix után: **push** (Vercel frissül) + **reszponzív** (laptop + telefon mindkettő rendben).
