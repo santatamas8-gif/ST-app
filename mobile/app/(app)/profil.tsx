@@ -14,9 +14,9 @@ export default function ProfilScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.email}>{user?.email ?? "—"}</Text>
-      <Text style={styles.role}>Szerepkör: {user?.role ?? "—"}</Text>
+      <Text style={styles.role}>Role: {user?.role ?? "—"}</Text>
       <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-        <Text style={styles.buttonText}>Kijelentkezés</Text>
+        <Text style={styles.buttonText}>Sign out</Text>
       </TouchableOpacity>
     </View>
   );

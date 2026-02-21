@@ -19,7 +19,7 @@ export function AddPlayerForm() {
       setMessage({ type: "error", text: result.error });
       return;
     }
-    setMessage({ type: "success", text: "Játékos létrehozva. Be tud lépni az email és jelszó megadásával." });
+    setMessage({ type: "success", text: "Player created. They can sign in with the email and password." });
     setEmail("");
     setPassword("");
   }
@@ -28,7 +28,7 @@ export function AddPlayerForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="new-player-email" className="block text-sm font-medium text-zinc-300">
-          Email (pl. jatekos@klub.hu)
+          Email
         </label>
         <input
           id="new-player-email"
@@ -43,7 +43,7 @@ export function AddPlayerForm() {
       </div>
       <div>
         <label htmlFor="new-player-password" className="block text-sm font-medium text-zinc-300">
-          Jelszó (min. 6 karakter)
+          Password (min. 6 characters)
         </label>
         <input
           id="new-player-password"
@@ -73,7 +73,7 @@ export function AddPlayerForm() {
         disabled={loading}
         className="rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
       >
-        {loading ? "Létrehozás…" : "Játékos hozzáadása"}
+        {loading ? "Creating…" : "Add player"}
       </button>
     </form>
   );

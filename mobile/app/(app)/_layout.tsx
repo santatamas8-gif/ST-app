@@ -19,10 +19,10 @@ export default function AppLayout() {
 
   return (
     <Tabs screenOptions={{ headerShown: true }}>
-      <Tabs.Screen name="index" options={{ title: "Kezdőlap", tabBarLabel: "Kezdőlap" }} />
+      <Tabs.Screen name="index" options={{ title: "Home", tabBarLabel: "Home" }} />
       <Tabs.Screen name="wellness" options={{ title: "Wellness", tabBarLabel: "Wellness" }} />
       <Tabs.Screen name="rpe" options={{ title: "RPE", tabBarLabel: "RPE" }} />
-      <Tabs.Screen name="profil" options={{ title: "Profil", tabBarLabel: "Profil" }} />
+      <Tabs.Screen name="profil" options={{ title: "Profile", tabBarLabel: "Profile" }} />
     </Tabs>
   );
 }

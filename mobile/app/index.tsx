@@ -9,7 +9,7 @@ export default function Index() {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 12 }}>Betöltés...</Text>
+        <Text style={{ marginTop: 12 }}>Loading...</Text>
       </View>
     );
   }

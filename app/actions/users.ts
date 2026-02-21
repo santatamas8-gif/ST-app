@@ -17,14 +17,14 @@ export async function createPlayer(data: { email: string; password: string }) {
   const { email, password } = data;
 
   const trimmedEmail = email.trim().toLowerCase();
-  if (!trimmedEmail) return { error: "Email megadása kötelező." };
-  if (!isValidEmail(trimmedEmail)) return { error: "Érvényes email címet adj meg." };
-  if (!password) return { error: "Jelszó megadása kötelező." };
-  if (!isValidPassword(password)) return { error: "A jelszó legalább 6 karakter legyen." };
+  if (!trimmedEmail) return { error: "Email is required." };
+  if (!isValidEmail(trimmedEmail)) return { error: "Enter a valid email address." };
+  if (!password) return { error: "Password is required." };
+  if (!isValidPassword(password)) return { error: "Password must be at least 6 characters." };
 
   const appUser = await getAppUser();
   if (!appUser || appUser.role !== "admin") {
-    return { error: "Csak admin adhat hozzá játékost." };
+    return { error: "Only admin can add players." };
   }
 
   try {
@@ -38,11 +38,11 @@ export async function createPlayer(data: { email: string; password: string }) {
 
     if (authError) {
       if (authError.message.includes("already been registered"))
-        return { error: "Ez az email már használatban van." };
+        return { error: "This email is already in use." };
       return { error: authError.message };
     }
 
-    if (!authData.user?.id) return { error: "Nem sikerült létrehozni a usert." };
+    if (!authData.user?.id) return { error: "Failed to create user." };
 
     const supabase = await createClient();
     const { error: profileError } = await supabase.from("profiles").upsert(
@@ -55,12 +55,12 @@ export async function createPlayer(data: { email: string; password: string }) {
     );
 
     if (profileError) {
-      return { error: "Profil mentése sikertelen: " + profileError.message };
+      return { error: "Failed to save profile: " + profileError.message };
     }
 
     revalidatePath("/users");
     return { success: true };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Ismeretlen hiba." };
+    return { error: e instanceof Error ? e.message : "Unknown error." };
   }
 }

@@ -46,7 +46,7 @@ export default async function WellnessPage() {
             Wellness
           </h1>
           <p className="mt-1 text-zinc-400">
-            Submit once per day. Fekvés/kelés, alvás minőség, fatigue, soreness, stress, mood (1–10).
+            Submit once per day. Bed/wake time, sleep quality, fatigue, soreness, stress, mood (1–10).
           </p>
         </div>
 
@@ -61,10 +61,10 @@ export default async function WellnessPage() {
                 <thead>
                   <tr className="border-b border-zinc-700 text-zinc-400">
                     <th className="pb-2 pr-4 font-medium">Date</th>
-                    <th className="pb-2 pr-4 font-medium">Fekvés</th>
-                    <th className="pb-2 pr-4 font-medium">Kelés</th>
-                    <th className="pb-2 pr-4 font-medium">Alvás (óra)</th>
-                    <th className="pb-2 pr-4 font-medium">Alvás minőség</th>
+                    <th className="pb-2 pr-4 font-medium">Bed time</th>
+                    <th className="pb-2 pr-4 font-medium">Wake time</th>
+                    <th className="pb-2 pr-4 font-medium">Sleep (h)</th>
+                    <th className="pb-2 pr-4 font-medium">Sleep quality</th>
                     <th className="pb-2 pr-4 font-medium">Fatigue</th>
                     <th className="pb-2 pr-4 font-medium">Soreness</th>
                     <th className="pb-2 pr-4 font-medium">Stress</th>
@@ -101,24 +101,24 @@ export default async function WellnessPage() {
           Wellness
         </h1>
         <p className="mt-1 text-zinc-400">
-          Összesítés: minden mező, amit a játékosok kitöltenek (fekvés, kelés, alvás óra, alvás minőség, fatigue, soreness, stress, mood). Ugyanez látható mobil appban is.
+          Summary: all fields players submit (bed/wake time, sleep h, sleep quality, fatigue, soreness, stress, mood). Same on mobile app.
         </p>
       </div>
 
-      <Card title="Játékosok wellness bejegyzései">
+      <Card title="Players wellness entries">
         {list.length === 0 ? (
-          <p className="text-zinc-400">Még nincs kitöltött wellness bejegyzés.</p>
+          <p className="text-zinc-400">No wellness entries yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-700 text-zinc-400">
-                  <th className="pb-2 pr-4 font-medium">Játékos</th>
-                  <th className="pb-2 pr-4 font-medium">Dátum</th>
-                  <th className="pb-2 pr-4 font-medium">Fekvés</th>
-                  <th className="pb-2 pr-4 font-medium">Kelés</th>
-                  <th className="pb-2 pr-4 font-medium">Alvás (óra)</th>
-                  <th className="pb-2 pr-4 font-medium">Alvás minőség</th>
+                  <th className="pb-2 pr-4 font-medium">Player</th>
+                  <th className="pb-2 pr-4 font-medium">Date</th>
+                  <th className="pb-2 pr-4 font-medium">Bed time</th>
+                  <th className="pb-2 pr-4 font-medium">Wake time</th>
+                  <th className="pb-2 pr-4 font-medium">Sleep (h)</th>
+                  <th className="pb-2 pr-4 font-medium">Sleep quality</th>
                   <th className="pb-2 pr-4 font-medium">Fatigue</th>
                   <th className="pb-2 pr-4 font-medium">Soreness</th>
                   <th className="pb-2 pr-4 font-medium">Stress</th>

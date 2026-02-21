@@ -90,7 +90,7 @@ export default function WellnessScreen() {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Betöltés...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -98,25 +98,25 @@ export default function WellnessScreen() {
   if (!isPlayer) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Játékosok wellness bejegyzései</Text>
+        <Text style={styles.sectionTitle}>Players wellness entries</Text>
         <Text style={styles.subtitle}>
-          Összesítés: minden mező, amit a játékosok kitöltenek (fekvés, kelés, alvás, minőség, fatigue, soreness, stress, mood).
+          Summary: all fields players submit (bed/wake time, sleep, quality, fatigue, soreness, stress, mood).
         </Text>
         {entriesLoading ? (
           <ActivityIndicator style={{ marginVertical: 24 }} />
         ) : error ? (
           <Text style={styles.error}>{error}</Text>
         ) : entries.length === 0 ? (
-          <Text style={styles.empty}>Még nincs kitöltött wellness bejegyzés.</Text>
+          <Text style={styles.empty}>No wellness entries yet.</Text>
         ) : (
           <View style={styles.table}>
             <View style={styles.tableRowHeader}>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colEmail]} numberOfLines={1}>Játékos</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colDate]}>Dátum</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colTime]}>Fekvés</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colTime]}>Kelés</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Óra</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Minőség</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colEmail]} numberOfLines={1}>Player</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colDate]}>Date</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colTime]}>Bed time</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colTime]}>Wake time</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Sleep h</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Quality</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Fatigue</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Soreness</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Stress</Text>
@@ -146,9 +146,9 @@ export default function WellnessScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Napi wellness</Text>
+      <Text style={styles.sectionTitle}>Daily wellness</Text>
       <View style={styles.form}>
-        <Text style={styles.sliderLabel}>Mikor feküdt le</Text>
+        <Text style={styles.sliderLabel}>Bed time</Text>
         <TextInput
           style={styles.timeInput}
           value={bedTime}
@@ -156,7 +156,7 @@ export default function WellnessScreen() {
           placeholder="HH:mm"
           placeholderTextColor="#999"
         />
-        <Text style={styles.sliderLabel}>Mikor kelt fel</Text>
+        <Text style={styles.sliderLabel}>Wake time</Text>
         <TextInput
           style={styles.timeInput}
           value={wakeTime}
@@ -165,13 +165,13 @@ export default function WellnessScreen() {
           placeholderTextColor="#999"
         />
         {sleepHours !== null && (
-          <Text style={styles.sleepHours}>Alvás: {sleepHours.toFixed(1)} óra</Text>
+          <Text style={styles.sleepHours}>Sleep: {sleepHours.toFixed(1)} h</Text>
         )}
-        <SliderRow label="Alvás minőség (1–10)" value={sleepQuality} onChange={setSleepQuality} />
-        <SliderRow label="Fáradtság" value={fatigue} onChange={setFatigue} />
-        <SliderRow label="Fájdalom" value={soreness} onChange={setSoreness} />
-        <SliderRow label="Stressz" value={stress} onChange={setStress} />
-        <SliderRow label="Hangulat" value={mood} onChange={setMood} />
+        <SliderRow label="Sleep quality (1–10)" value={sleepQuality} onChange={setSleepQuality} />
+        <SliderRow label="Fatigue" value={fatigue} onChange={setFatigue} />
+        <SliderRow label="Soreness" value={soreness} onChange={setSoreness} />
+        <SliderRow label="Stress" value={stress} onChange={setStress} />
+        <SliderRow label="Mood" value={mood} onChange={setMood} />
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TouchableOpacity
@@ -182,24 +182,24 @@ export default function WellnessScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Küldés</Text>
+          <Text style={styles.buttonText}>Submit</Text>
         )}
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Korábbi bejegyzések</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Recent entries</Text>
       {entriesLoading ? (
         <ActivityIndicator style={{ marginVertical: 16 }} />
       ) : (
         <View style={styles.list}>
           {entries.length === 0 ? (
-            <Text style={styles.empty}>Még nincs bejegyzés.</Text>
+            <Text style={styles.empty}>No entries yet.</Text>
           ) : (
             entries.map((e) => (
               <View key={e.id} style={styles.row}>
                 <Text style={styles.date}>{e.date}</Text>
                 <Text style={styles.values}>
                   {e.bed_time ?? "—"} → {e.wake_time ?? "—"}
-                  {e.sleep_duration != null ? ` (${e.sleep_duration}h)` : ""} · minőség {e.sleep_quality ?? "—"} · fáradtság {e.fatigue ?? "—"} · hangulat {e.mood ?? "—"}
+                  {e.sleep_duration != null ? ` (${e.sleep_duration}h)` : ""} · quality {e.sleep_quality ?? "—"} · fatigue {e.fatigue ?? "—"} · mood {e.mood ?? "—"}
                 </Text>
               </View>
             ))

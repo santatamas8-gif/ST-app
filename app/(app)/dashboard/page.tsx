@@ -98,25 +98,25 @@ export default function DashboardPage() {
     return (
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
         <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-        <p className="text-zinc-400">Összesítés: ma kitöltött wellness és edzés bejegyzések.</p>
+        <p className="text-zinc-400">Summary: today&apos;s wellness and session entries.</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <MetricCard title="Ma wellness (db)" value={metrics.todayWellnessCount ?? 0} />
-          <MetricCard title="Ma edzés/RPE (db)" value={metrics.todaySessionsCount ?? 0} />
+          <MetricCard title="Today wellness (count)" value={metrics.todayWellnessCount ?? 0} />
+          <MetricCard title="Today sessions/RPE (count)" value={metrics.todaySessionsCount ?? 0} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href="/wellness"
             className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
           >
-            <div className="font-semibold text-white">Wellness összesítés</div>
-            <div className="mt-1 text-sm text-zinc-400">Játékosok napi wellness adatai</div>
+            <div className="font-semibold text-white">Wellness summary</div>
+            <div className="mt-1 text-sm text-zinc-400">Players&apos; daily wellness data</div>
           </Link>
           <Link
             href="/rpe"
             className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
           >
-            <div className="font-semibold text-white">RPE / edzés összesítés</div>
-            <div className="mt-1 text-sm text-zinc-400">Játékosok edzés és RPE bejegyzései</div>
+            <div className="font-semibold text-white">RPE / sessions summary</div>
+            <div className="mt-1 text-sm text-zinc-400">Players&apos; training and RPE entries</div>
           </Link>
         </div>
       </div>
@@ -128,12 +128,12 @@ export default function DashboardPage() {
       {metrics.todayWellness == null && (
         <Card>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-zinc-300">Ma még nincs wellness bejegyzés.</p>
+            <p className="text-zinc-300">No wellness entry for today yet.</p>
             <Link
               href="/wellness"
               className="inline-flex shrink-0 rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white transition hover:bg-emerald-500"
             >
-              Kitöltöm a Wellness űrlapot
+              Fill wellness form
             </Link>
           </div>
         </Card>

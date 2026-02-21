@@ -35,7 +35,7 @@ export async function signIn(
   });
   if (error) return { error: error.message };
   const authUser = authData.user;
-  if (!authUser) return { error: "Bejelentkezés sikertelen." };
+  if (!authUser) return { error: "Sign-in failed." };
 
   let role: AppUser["role"] = "player";
   try {

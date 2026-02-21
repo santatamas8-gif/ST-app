@@ -28,9 +28,9 @@ export default function LoginScreen() {
   async function handleSubmit() {
     setError("");
     if (!email.trim() || !password) {
-      const msg = "Email és jelszó kötelező.";
+      const msg = "Email and password are required.";
       setError(msg);
-      Alert.alert("Hiba", msg);
+      Alert.alert("Error", msg);
       return;
     }
     setLoading(true);
@@ -45,7 +45,7 @@ export default function LoginScreen() {
       ]);
       if (result.error) {
         setError(result.error);
-        Alert.alert("Bejelentkezési hiba", result.error);
+        Alert.alert("Sign-in error", result.error);
         return;
       }
       setError("");
@@ -53,12 +53,12 @@ export default function LoginScreen() {
     } catch (e) {
       const msg =
         e instanceof Error && e.message === "TIMEOUT"
-          ? "A szerver nem válaszol (15 mp). Ellenőrizd: 1) Telefon és laptop ugyanazon a Wi-Fi-n van? 2) Van internet a telefonon?"
+          ? "Server not responding (15s). Check: 1) Phone and laptop on same Wi‑Fi? 2) Internet on phone?"
           : e instanceof Error
             ? e.message
-            : "Hiba történt. Próbáld újra.";
+            : "Something went wrong. Try again.";
       setError(msg);
-      Alert.alert("Hiba", msg);
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.form}>
-        <Text style={styles.title}>Bejelentkezés</Text>
+        <Text style={styles.title}>Sign in</Text>
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -83,7 +83,7 @@ export default function LoginScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Jelszó"
+          placeholder="Password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -99,7 +99,7 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Bejelentkezés</Text>
+            <Text style={styles.buttonText}>Sign in</Text>
           )}
         </TouchableOpacity>
       </View>

@@ -91,20 +91,20 @@ export default async function RpePage() {
           RPE
         </h1>
         <p className="mt-1 text-zinc-400">
-          Összesítés: minden, amit a játékosok rögzítenek (dátum, időtartam, RPE, load).
+          Summary: everything players log (date, duration, RPE, load).
         </p>
       </div>
 
-      <Card title="Játékosok RPE / edzés bejegyzései">
+      <Card title="Players RPE / session entries">
         {list.length === 0 ? (
-          <p className="text-zinc-400">Még nincs rögzített edzés.</p>
+          <p className="text-zinc-400">No sessions logged yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-700 text-zinc-400">
-                  <th className="pb-2 pr-4 font-medium">Játékos</th>
-                  <th className="pb-2 pr-4 font-medium">Dátum</th>
+                  <th className="pb-2 pr-4 font-medium">Player</th>
+                  <th className="pb-2 pr-4 font-medium">Date</th>
                   <th className="pb-2 pr-4 font-medium">Duration (min)</th>
                   <th className="pb-2 pr-4 font-medium">RPE</th>
                   <th className="pb-2 font-medium">Load</th>

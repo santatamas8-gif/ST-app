@@ -59,7 +59,7 @@ export default function RpeScreen() {
     const dur = parseInt(duration, 10);
     const r = parseInt(rpe, 10);
     if (!date || isNaN(dur) || dur < 1 || isNaN(r) || r < 1 || r > 10) {
-      setError("Dátum, időtartam (perc) és RPE (1–10) kötelező.");
+      setError("Date, duration (min) and RPE (1–10) are required.");
       return;
     }
     setLoading(true);
@@ -79,7 +79,7 @@ export default function RpeScreen() {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Betöltés...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -87,21 +87,21 @@ export default function RpeScreen() {
   if (!isPlayer) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Játékosok RPE / edzés bejegyzései</Text>
+        <Text style={styles.sectionTitle}>Players RPE / session entries</Text>
         <Text style={styles.subtitle}>
-          Összesítés: minden, amit a játékosok rögzítenek (dátum, perc, RPE, load).
+          Summary: everything players log (date, min, RPE, load).
         </Text>
         {sessionsLoading ? (
           <ActivityIndicator style={{ marginVertical: 24 }} />
         ) : error ? (
           <Text style={styles.error}>{error}</Text>
         ) : sessions.length === 0 ? (
-          <Text style={styles.empty}>Még nincs rögzített edzés.</Text>
+          <Text style={styles.empty}>No sessions logged yet.</Text>
         ) : (
           <View style={styles.table}>
             <View style={styles.tableRowHeader}>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colEmail]} numberOfLines={1}>Játékos</Text>
-              <Text style={[styles.tableCell, styles.tableHeader, styles.colDate]}>Dátum</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colEmail]} numberOfLines={1}>Player</Text>
+              <Text style={[styles.tableCell, styles.tableHeader, styles.colDate]}>Date</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Perc</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>RPE</Text>
               <Text style={[styles.tableCell, styles.tableHeader, styles.colNum]}>Load</Text>
@@ -123,16 +123,16 @@ export default function RpeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Edzés rögzítése</Text>
+      <Text style={styles.sectionTitle}>Log session</Text>
       <View style={styles.form}>
-        <Text style={styles.label}>Dátum</Text>
+        <Text style={styles.label}>Date</Text>
         <TextInput
           style={styles.input}
           value={date}
           onChangeText={setDate}
-          placeholder="ÉÉÉÉ-HH-NN"
+          placeholder="YYYY-MM-DD"
         />
-        <Text style={styles.label}>Időtartam (perc)</Text>
+        <Text style={styles.label}>Duration (min)</Text>
         <TextInput
           style={styles.input}
           value={duration}
@@ -158,17 +158,17 @@ export default function RpeScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Küldés</Text>
+          <Text style={styles.buttonText}>Submit</Text>
         )}
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Korábbi edzések</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Recent sessions</Text>
       {sessionsLoading ? (
         <ActivityIndicator style={{ marginVertical: 16 }} />
       ) : (
         <View style={styles.list}>
           {sessions.length === 0 ? (
-            <Text style={styles.empty}>Még nincs bejegyzés.</Text>
+            <Text style={styles.empty}>No entries yet.</Text>
           ) : (
             sessions.map((s) => (
               <View key={s.id} style={styles.row}>

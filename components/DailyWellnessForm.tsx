@@ -65,7 +65,7 @@ export function DailyWellnessForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
-            Mikor feküdt le
+            Bed time
           </label>
           <input
             id="bed_time"
@@ -77,7 +77,7 @@ export function DailyWellnessForm() {
         </div>
         <div>
           <label htmlFor="wake_time" className="block text-sm font-medium text-zinc-300">
-            Mikor kelt fel
+            Wake time
           </label>
           <input
             id="wake_time"
@@ -89,12 +89,12 @@ export function DailyWellnessForm() {
         </div>
         {sleepDuration !== null && (
           <p className="text-sm text-zinc-400">
-            Alvás: <span className="font-medium text-white">{sleepDuration.toFixed(1)} óra</span>
+            Sleep: <span className="font-medium text-white">{sleepDuration.toFixed(1)} h</span>
           </p>
         )}
         <div>
           <label htmlFor="sleep_quality" className="block text-sm font-medium text-zinc-300">
-            Alvás minőség (1–10)
+            Sleep quality (1–10)
           </label>
           <input
             id="sleep_quality"

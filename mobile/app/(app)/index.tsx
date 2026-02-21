@@ -30,7 +30,7 @@ export default function DashboardScreen() {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" />
-        <Text style={styles.hint}>Betöltés…</Text>
+        <Text style={styles.hint}>Loading…</Text>
       </View>
     );
   }
@@ -39,37 +39,37 @@ export default function DashboardScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.welcome}>Dashboard</Text>
-        <Text style={styles.hint}>Összesítés: ma kitöltött wellness és edzés bejegyzések.</Text>
+        <Text style={styles.hint}>Summary: today's wellness and session entries.</Text>
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{todayWellnessCount}</Text>
-            <Text style={styles.statLabel}>Ma wellness (db)</Text>
+            <Text style={styles.statLabel}>Today wellness (count)</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{todaySessionsCount}</Text>
-            <Text style={styles.statLabel}>Ma edzés/RPE (db)</Text>
+            <Text style={styles.statLabel}>Today sessions/RPE (count)</Text>
           </View>
         </View>
-        <Text style={styles.linkHint}>Használd a Wellness és RPE tabokat az összesítések megtekintéséhez.</Text>
+        <Text style={styles.linkHint}>Use the Wellness and RPE tabs to view summaries.</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.welcome}>Üdv, {user.email ?? "játékos"}!</Text>
+      <Text style={styles.welcome}>Hi, {user.email ?? "player"}!</Text>
       {!hasTodayWellness && (
         <View style={styles.ctaBox}>
-          <Text style={styles.ctaText}>Ma még nincs wellness bejegyzés.</Text>
+          <Text style={styles.ctaText}>No wellness entry for today yet.</Text>
           <TouchableOpacity
             style={styles.ctaButton}
             onPress={() => router.push("/(app)/wellness")}
           >
-            <Text style={styles.ctaButtonText}>Kitöltöm a Wellness űrlapot</Text>
+            <Text style={styles.ctaButtonText}>Fill wellness form</Text>
           </TouchableOpacity>
         </View>
       )}
-      <Text style={styles.hint}>Használd az alul lévő tabokat a Wellness és RPE oldalakhoz.</Text>
+      <Text style={styles.hint}>Use the tabs below for Wellness and RPE.</Text>
     </View>
   );
 }

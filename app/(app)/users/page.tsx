@@ -20,9 +20,9 @@ export default async function UsersPage() {
         </p>
       </div>
 
-      <Card title="Játékos hozzáadása">
+      <Card title="Add player">
         <p className="mb-4 text-sm text-zinc-400">
-          Add meg az email címet és egy ideiglenes jelszót. A játékos ezzel tud bejelentkezni (pl. telefonról).
+          Enter email and a temporary password. The player can sign in with these (e.g. from the mobile app).
         </p>
         <AddPlayerForm />
       </Card>
