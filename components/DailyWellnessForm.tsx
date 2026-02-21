@@ -1,17 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo } from "react";
 import { submitDailyWellness } from "@/app/actions/wellness";
 import { sleepDurationHours } from "@/utils/sleep";
+import { ScaleInput } from "@/components/ScaleInput";
+
+const SCALE_HELPER = "1 = very bad, 10 = excellent";
 
 const FIELDS = [
-  { key: "fatigue", label: "Fatigue (1–10)" },
-  { key: "soreness", label: "Soreness (1–10)" },
-  { key: "stress", label: "Stress (1–10)" },
-  { key: "mood", label: "Mood (1–10)" },
+  { key: "fatigue", label: "Fatigue (1–10)", inverted: true },
+  { key: "soreness", label: "Soreness (1–10)", inverted: true },
+  { key: "stress", label: "Stress (1–10)", inverted: true },
+  { key: "mood", label: "Mood (1–10)", inverted: false },
 ] as const;
 
-export function DailyWellnessForm() {
+interface DailyWellnessFormProps {
+  hasSubmittedToday?: boolean;
+}
+
+export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFormProps) {
   const [bedTime, setBedTime] = useState("");
   const [wakeTime, setWakeTime] = useState("");
   const [sleepQuality, setSleepQuality] = useState(5);
@@ -20,8 +28,8 @@ export function DailyWellnessForm() {
   const [stress, setStress] = useState(5);
   const [mood, setMood] = useState(5);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const sleepDuration = useMemo(() => {
     if (!bedTime || !wakeTime) return null;
@@ -36,9 +44,22 @@ export function DailyWellnessForm() {
     mood: setMood,
   };
 
+  const allScalesValid =
+    sleepQuality >= 1 &&
+    sleepQuality <= 10 &&
+    values.fatigue >= 1 &&
+    values.fatigue <= 10 &&
+    values.soreness >= 1 &&
+    values.soreness <= 10 &&
+    values.stress >= 1 &&
+    values.stress <= 10 &&
+    values.mood >= 1 &&
+    values.mood <= 10;
+  const canSubmit = allScalesValid && !loading && !hasSubmittedToday;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
+    setSubmitError(null);
     setIsSuccess(false);
     setLoading(true);
     const result = await submitDailyWellness({
@@ -52,17 +73,64 @@ export function DailyWellnessForm() {
     });
     setLoading(false);
     if (result.error) {
-      setMessage(result.error);
+      setSubmitError(result.error);
       return;
     }
     setIsSuccess(true);
-    setMessage("Daily wellness saved.");
+  }
+
+  if (hasSubmittedToday) {
+    return (
+      <div
+        className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-5"
+        style={{ borderRadius: 12 }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl text-emerald-400">✔</span>
+          <div>
+            <p className="font-semibold text-emerald-400">Already submitted today</p>
+            <p className="mt-0.5 text-sm text-zinc-400">You can submit again tomorrow.</p>
+          </div>
+        </div>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-block rounded-lg bg-zinc-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-600"
+        >
+          Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
+  if (isSuccess) {
+    return (
+      <div
+        className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-6"
+        style={{ borderRadius: 12 }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl text-emerald-400">✔</span>
+          <p className="text-lg font-semibold text-emerald-400">Wellness submitted</p>
+        </div>
+        <p className="mt-2 text-sm text-zinc-400">Thanks! Your daily check-in is saved.</p>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+        >
+          Back to dashboard
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg">
-      <h2 className="mb-4 text-lg font-semibold text-white">Daily wellness</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div
+      className="rounded-xl border border-zinc-800 p-5 shadow-lg"
+      style={{ backgroundColor: "#11161c", borderRadius: 12 }}
+    >
+      <h2 className="mb-1 text-lg font-semibold text-white">Daily wellness</h2>
+      <p className="mb-4 text-sm text-zinc-400">{SCALE_HELPER}</p>
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
             Bed time
@@ -93,52 +161,37 @@ export function DailyWellnessForm() {
           </p>
         )}
         <div>
-          <label htmlFor="sleep_quality" className="block text-sm font-medium text-zinc-300">
-            Sleep quality (1–10)
-          </label>
-          <input
+          <ScaleInput
             id="sleep_quality"
-            type="number"
+            label="Sleep quality (1–10)"
+            value={sleepQuality}
+            onChange={setSleepQuality}
             min={1}
             max={10}
-            value={sleepQuality}
-            onChange={(e) => setSleepQuality(Number(e.target.value))}
-            required
-            className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white"
           />
         </div>
-        {FIELDS.map(({ key, label }) => (
+        {FIELDS.map(({ key, label, inverted }) => (
           <div key={key}>
-            <label htmlFor={key} className="block text-sm font-medium text-zinc-300">
-              {label}
-            </label>
-            <input
+            <ScaleInput
               id={key}
-              type="number"
+              label={label}
+              value={values[key]}
+              onChange={setters[key]}
               min={1}
               max={10}
-              value={values[key]}
-              onChange={(e) => setters[key](Number(e.target.value))}
-              required
-              className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white"
+              inverted={inverted}
             />
           </div>
         ))}
-        {message && (
-          <p
-            className={
-              isSuccess
-                ? "text-sm text-emerald-400"
-                : "text-sm text-red-400"
-            }
-          >
-            {message}
-          </p>
+        {submitError && (
+          <div className="rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2 text-sm text-red-400">
+            {submitError}
+          </div>
         )}
         <button
           type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white disabled:opacity-50"
+          disabled={!canSubmit}
+          className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Saving…" : "Submit"}
         </button>

@@ -48,23 +48,37 @@ export default async function WellnessPage() {
   }
 
   if (isPlayer) {
+    const today = new Date().toISOString().slice(0, 10);
+    const hasSubmittedToday = list.some((r) => r.date === today);
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Wellness
-          </h1>
-          <p className="mt-1 text-zinc-400">
-            Submit once per day. Bed/wake time, sleep quality, fatigue, soreness, stress, mood (1–10).
-          </p>
-        </div>
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+        <div className="mx-auto max-w-2xl space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              Wellness
+            </h1>
+            <p className="mt-1 text-zinc-400">
+              Submit once per day. Bed/wake time, sleep quality, fatigue, soreness, stress, mood (1–10).
+            </p>
+          </div>
 
-        <DailyWellnessForm />
+          {hasSubmittedToday && (
+            <div
+              className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 px-4 py-3"
+              style={{ borderRadius: 12 }}
+            >
+              <p className="flex items-center gap-2 font-medium text-emerald-400">
+                <span>✔</span> You&apos;ve already submitted today
+              </p>
+            </div>
+          )}
 
-        <Card title="Recent entries">
-          {list.length === 0 ? (
-            <p className="text-zinc-400">No wellness entries yet.</p>
-          ) : (
+          <DailyWellnessForm hasSubmittedToday={hasSubmittedToday} />
+
+          <Card title="Recent entries">
+            {list.length === 0 ? (
+              <p className="text-zinc-400">No wellness entries yet.</p>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -98,7 +112,8 @@ export default async function WellnessPage() {
               </table>
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
