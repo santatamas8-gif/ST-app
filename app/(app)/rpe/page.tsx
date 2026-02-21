@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { RpeForm } from "@/components/RpeForm";
 import type { SessionRow } from "@/lib/types";
+import { StaffLoadView } from "./components/StaffLoadView";
 
 export default async function RpePage() {
   const user = await getAppUser();
@@ -86,50 +86,6 @@ export default async function RpePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          RPE
-        </h1>
-        <p className="mt-1 text-zinc-400">
-          Summary: everything players log (date, duration, RPE, load).
-        </p>
-      </div>
-
-      <Card title="Players RPE / session entries">
-        {list.length === 0 ? (
-          <p className="text-zinc-400">No sessions logged yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-700 text-zinc-400">
-                  <th className="pb-2 pr-4 font-medium">Player</th>
-                  <th className="pb-2 pr-4 font-medium">Date</th>
-                  <th className="pb-2 pr-4 font-medium">Duration (min)</th>
-                  <th className="pb-2 pr-4 font-medium">RPE</th>
-                  <th className="pb-2 font-medium">Load</th>
-                </tr>
-              </thead>
-              <tbody className="text-zinc-300">
-                {list.map((r) => (
-                  <tr key={r.id} className="border-b border-zinc-800">
-                    <td className="py-3 pr-4">
-                      <Link href={`/players/${r.user_id}`} className="text-emerald-400 hover:underline">
-                        {emailByUserId[r.user_id] ?? r.user_id}
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4">{r.date}</td>
-                    <td className="py-3 pr-4">{r.duration}</td>
-                    <td className="py-3 pr-4">{r.rpe ?? "—"}</td>
-                    <td className="py-3">{r.load ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </div>
+    <StaffLoadView list={list} emailByUserId={emailByUserId} />
   );
 }
