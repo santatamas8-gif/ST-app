@@ -8,8 +8,9 @@ import { Card } from "@/components/Card";
 import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { TrendCharts } from "@/components/TrendCharts";
+import { StaffDashboard } from "@/components/StaffDashboard";
 
-type AttentionPlayer = { user_id: string; email: string; reason?: string };
+type AttentionPlayer = { user_id: string; email: string; reason?: string; wellness?: number | null; fatigue?: number | null; load?: number };
 type DashboardData = {
   role?: string;
   metrics: any;
@@ -100,71 +101,17 @@ export default function DashboardPage() {
     readiness != null ? (readiness >= 70 ? "success" : readiness < 50 ? "danger" : "default") : "default";
 
   if (!isPlayer) {
-    const attention = data.attentionToday ?? null;
     return (
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-        <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
-        <p className="text-zinc-400">Summary: today&apos;s wellness and session entries.</p>
-
-        {attention && (attention.missingWellness.length > 0 || attention.atRisk.length > 0) && (
-          <Card title="Attention today">
-            {attention.missingWellness.length > 0 && (
-              <div className="mb-4">
-                <p className="mb-2 text-sm font-medium text-amber-400">
-                  Missing wellness ({attention.missingWellness.length})
-                </p>
-                <ul className="list-inside list-disc text-sm text-zinc-300">
-                  {attention.missingWellness.map((p) => (
-                    <li key={p.user_id}>
-                      <Link href={`/players/${p.user_id}`} className="text-emerald-400 hover:underline">
-                        {p.email}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {attention.atRisk.length > 0 && (
-              <div>
-                <p className="mb-2 text-sm font-medium text-amber-400">
-                  At risk today ({attention.atRisk.length})
-                </p>
-                <ul className="list-inside list-disc text-sm text-zinc-300">
-                  {attention.atRisk.map((p) => (
-                    <li key={p.user_id}>
-                      <Link href={`/players/${p.user_id}`} className="text-emerald-400 hover:underline">
-                        {p.email}
-                      </Link>
-                      {p.reason && <span className="text-zinc-500"> — {p.reason}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Card>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <MetricCard title="Today wellness (count)" value={metrics.todayWellnessCount ?? 0} />
-          <MetricCard title="Today sessions/RPE (count)" value={metrics.todaySessionsCount ?? 0} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/wellness"
-            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
-          >
-            <div className="font-semibold text-white">Wellness summary</div>
-            <div className="mt-1 text-sm text-zinc-400">Players&apos; daily wellness data</div>
-          </Link>
-          <Link
-            href="/rpe"
-            className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition hover:border-emerald-600/50 hover:bg-zinc-800/50"
-          >
-            <div className="font-semibold text-white">RPE / sessions summary</div>
-            <div className="mt-1 text-sm text-zinc-400">Players&apos; training and RPE entries</div>
-          </Link>
-        </div>
-      </div>
+      <StaffDashboard
+        metrics={{
+          todayWellnessCount: metrics.todayWellnessCount,
+          totalPlayers: metrics.totalPlayers,
+          todayWellness: metrics.todayWellness,
+          totalTeamLoadToday: metrics.totalTeamLoadToday,
+        }}
+        attentionToday={data.attentionToday ?? null}
+        chart7={chart7}
+      />
     );
   }
 

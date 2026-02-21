@@ -34,6 +34,10 @@ export interface DashboardMetrics {
   todayWellnessCount?: number;
   /** Staff: hány edzés/rpe bejegyzés van ma */
   todaySessionsCount?: number;
+  /** Staff: total players (role=player) */
+  totalPlayers?: number;
+  /** Staff: sum of today's load */
+  totalTeamLoadToday?: number;
 }
 
 export interface ChartPoint {
@@ -167,6 +171,19 @@ export async function getDashboardData(
       ? undefined
       : sessionRows.filter((s) => s.date === today).length;
 
+  let totalPlayers: number | undefined;
+  let totalTeamLoadToday: number | undefined;
+  if (user.role !== "player") {
+    totalTeamLoadToday = sessionRows
+      .filter((s) => s.date === today)
+      .reduce((sum, s) => sum + (s.load ?? 0), 0);
+    const { count } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "player");
+    totalPlayers = count ?? 0;
+  }
+
   const chart7 = buildChartData(
     wellnessRows.filter((r) => r.date >= from7 && r.date <= to7),
     sessionRows.filter((s) => s.date >= from7 && s.date <= to7),
@@ -193,6 +210,8 @@ export async function getDashboardData(
       todayFatigue,
       todayWellnessCount: user.role === "player" ? undefined : todayWellness.length,
       todaySessionsCount,
+      totalPlayers,
+      totalTeamLoadToday,
     },
     chart7,
     chart28,

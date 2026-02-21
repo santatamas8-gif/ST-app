@@ -19,6 +19,8 @@ export async function GET() {
       redFlags: data.metrics.redFlags ?? [],
       todayWellnessCount: data.metrics.todayWellnessCount,
       todaySessionsCount: data.metrics.todaySessionsCount,
+      totalPlayers: data.metrics.totalPlayers,
+      totalTeamLoadToday: data.metrics.totalTeamLoadToday,
     };
     const isStaff = user.role === "admin" || user.role === "staff";
     const attentionToday = isStaff ? await getStaffAttentionToday() : null;

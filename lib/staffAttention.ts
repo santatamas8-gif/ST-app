@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { WellnessRow } from "@/lib/types";
 import { readinessScore } from "@/utils/readiness";
+import { averageWellness } from "@/utils/wellness";
 
 const READINESS_AT_RISK_BELOW = 50;
 const FATIGUE_AT_RISK_ABOVE = 7;
@@ -11,9 +12,16 @@ export interface AttentionPlayer {
   email: string;
 }
 
+export interface AtRiskPlayer extends AttentionPlayer {
+  reason?: string;
+  wellness?: number | null;
+  fatigue?: number | null;
+  load?: number;
+}
+
 export interface StaffAttentionToday {
   missingWellness: AttentionPlayer[];
-  atRisk: (AttentionPlayer & { reason?: string })[];
+  atRisk: AtRiskPlayer[];
 }
 
 export async function getStaffAttentionToday(): Promise<StaffAttentionToday | null> {
@@ -27,12 +35,20 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
 
   if (!players?.length) return { missingWellness: [], atRisk: [] };
 
-  const { data: todayWellness } = await supabase
-    .from("wellness")
-    .select("*")
-    .eq("date", today);
+  const [wellnessRes, sessionsRes] = await Promise.all([
+    supabase.from("wellness").select("*").eq("date", today),
+    supabase.from("sessions").select("user_id, load").eq("date", today),
+  ]);
 
-  const wellnessRows = (todayWellness ?? []) as WellnessRow[];
+  const wellnessRows = (wellnessRes.data ?? []) as WellnessRow[];
+  const todaySessions = sessionsRes.data ?? [];
+  const loadByUser = new Map<string, number>();
+  for (const s of todaySessions) {
+    const uid = (s as { user_id: string; load?: number }).user_id;
+    const load = (s as { user_id: string; load?: number }).load ?? 0;
+    loadByUser.set(uid, (loadByUser.get(uid) ?? 0) + load);
+  }
+
   const submittedIds = new Set(wellnessRows.map((r) => r.user_id));
   const emailById = new Map(players.map((p) => [p.id, p.email ?? "—"]));
 
@@ -40,7 +56,7 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
     .filter((p) => !submittedIds.has(p.id))
     .map((p) => ({ user_id: p.id, email: p.email ?? "—" }));
 
-  const atRisk: (AttentionPlayer & { reason?: string })[] = [];
+  const atRisk: AtRiskPlayer[] = [];
   for (const row of wellnessRows) {
     const readiness = readinessScore({
       sleepQuality: row.sleep_quality ?? null,
@@ -50,6 +66,7 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
       mood: row.mood ?? null,
       sleepHours: row.sleep_duration ?? null,
     });
+    const wellnessScore = averageWellness([row]);
     const reasons: string[] = [];
     if (readiness != null && readiness < READINESS_AT_RISK_BELOW)
       reasons.push(`readiness ${readiness}`);
@@ -62,6 +79,9 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
         user_id: row.user_id,
         email: emailById.get(row.user_id) ?? "—",
         reason: reasons.join(", "),
+        wellness: wellnessScore,
+        fatigue: row.fatigue ?? null,
+        load: loadByUser.get(row.user_id) ?? 0,
       });
     }
   }
