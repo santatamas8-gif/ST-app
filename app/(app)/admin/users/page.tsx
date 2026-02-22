@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAppUser } from "@/lib/auth";
+import { runQuery } from "@/lib/supabase/safeQuery";
 import { AdminUsersView } from "./AdminUsersView";
 
 export type ProfileRow = {
@@ -23,18 +24,13 @@ function supabaseHostFromUrl(url: string | undefined): string {
 export default async function AdminUsersPage() {
   const user = await getAppUser();
   const supabase = await createClient();
-  const { data: profiles, error } = await supabase
-    .from("profiles")
-    .select("id, email, role, created_at, full_name")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("[AdminUsersPage] profiles query error", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-    });
-  }
+  const { data: profiles, error: queryError } = await runQuery("admin-users-profiles", () =>
+    supabase
+      .from("profiles")
+      .select("id, email, role, created_at, full_name")
+      .order("created_at", { ascending: false })
+      .then((r) => ({ data: r.data ?? [], error: r.error }))
+  );
 
   const list: ProfileRow[] = (profiles ?? []).map((p) => ({
     id: p.id,
@@ -44,10 +40,7 @@ export default async function AdminUsersPage() {
     full_name: p.full_name ?? null,
   }));
 
-  const loadError =
-    error === null || error === undefined
-      ? null
-      : { code: error.code ?? "unknown", message: error.message ?? "Unknown error" };
+  const loadError = queryError;
 
   const envCheck =
     user?.role === "admin"

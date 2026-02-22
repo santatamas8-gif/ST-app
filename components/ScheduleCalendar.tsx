@@ -79,6 +79,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addingType, setAddingType] = useState<ScheduleActivityType | null>(null);
   const [addStart, setAddStart] = useState("");
@@ -92,8 +93,14 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
 
   useEffect(() => {
     setLoading(true);
-    getScheduleForMonth(from, to).then(({ data }) => {
-      setScheduleItems(data);
+    setLoadError(null);
+    getScheduleForMonth(from, to).then(({ data, error }) => {
+      if (error) {
+        setLoadError(error);
+        setScheduleItems([]);
+      } else {
+        setScheduleItems(data ?? []);
+      }
       setLoading(false);
     });
   }, [from, to]);
@@ -307,6 +314,12 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         </table>
       </div>
 
+      {loadError && (
+        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-4 mb-4" style={{ borderRadius: 12 }}>
+          <p className="text-sm font-medium text-red-400">Something went wrong</p>
+          <p className="mt-1 text-sm text-zinc-400">{loadError}</p>
+        </div>
+      )}
       {loading && <p className="text-sm text-zinc-500">Loading…</p>}
 
       {selectedDate && (

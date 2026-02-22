@@ -8,6 +8,6 @@ export default async function AdminLayout({
 }) {
   const user = await getAppUser();
   if (!user) redirect("/login");
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!isAdmin(user.role)) redirect("/forbidden");
   return <>{children}</>;
 }

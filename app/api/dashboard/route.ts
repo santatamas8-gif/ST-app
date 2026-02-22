@@ -92,10 +92,12 @@ export async function GET() {
       todayScheduleItems,
       playersWithStatus,
     });
-  } catch (e) {
-    console.error("Dashboard API error:", e);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    const code = e instanceof Error ? (e as { code?: string }).code ?? "DASHBOARD_ERROR" : "DASHBOARD_ERROR";
+    console.error("[dashboard-api]", { area: "dashboard", code, message, details: String(e) });
     return NextResponse.json(
-      { error: "Failed to load dashboard" },
+      { errorCode: "DASHBOARD_ERROR", error: "Failed to load dashboard" },
       { status: 500 }
     );
   }

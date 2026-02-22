@@ -1,5 +1,6 @@
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { runQuery } from "@/lib/supabase/safeQuery";
 import { Card } from "@/components/Card";
 import { DailyWellnessForm } from "@/components/DailyWellnessForm";
 import type { WellnessRow } from "@/lib/types";
@@ -22,8 +23,25 @@ export default async function WellnessPage() {
     query = query.eq("user_id", user.id);
   }
 
-  const { data: rows } = await query;
+  const { data: rows, error: loadError } = await runQuery("wellness-list", () =>
+    query.then((r) => ({ data: r.data ?? [], error: r.error }))
+  );
   const list = (rows ?? []) as WellnessRow[];
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-2xl font-bold tracking-tight text-white">Wellness</h1>
+          <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-4" style={{ borderRadius: 12 }}>
+            <p className="font-medium text-red-400">Something went wrong</p>
+            <p className="mt-1 text-sm text-zinc-400">Code: {loadError.code}</p>
+            <p className="mt-1 text-sm text-zinc-400">{loadError.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   let emailByUserId: Record<string, string> = {};
   let totalPlayers: number | null = null;

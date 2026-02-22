@@ -62,12 +62,17 @@ export default function DashboardPage() {
 
         // 2) load dashboard data from API route (server fetch)
         const res = await fetch("/api/dashboard", { cache: "no-store" });
-        if (!res.ok) throw new Error(`Dashboard API error: ${res.status}`);
-        const json = (await res.json()) as DashboardData;
-
+        const json = (await res.json()) as DashboardData & { errorCode?: string; error?: string };
+        if (!res.ok) {
+          const msg = json?.error ?? `Dashboard API error: ${res.status}`;
+          const code = json?.errorCode ?? "DASHBOARD_ERROR";
+          setErr(`${code}: ${msg}`);
+          return;
+        }
         setData(json);
-      } catch (e: any) {
-        setErr(e?.message ?? "Unknown error");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        setErr(msg);
       } finally {
         setLoading(false);
       }
