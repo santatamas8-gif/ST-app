@@ -32,9 +32,18 @@ async function getProfileForAuth(userId: string): Promise<{ role: UserRole; is_a
     .select("role, is_active")
     .eq("id", userId)
     .single();
-  if (error || !data) return null;
-  const isActive = data.is_active === undefined ? true : !!data.is_active;
-  return { role: data.role as UserRole, is_active: isActive };
+  if (!error && data) {
+    const isActive = data.is_active === undefined ? true : !!data.is_active;
+    return { role: data.role as UserRole, is_active: isActive };
+  }
+  // Fallback when is_active column is missing (e.g. migration not run): read role only
+  const { data: roleData } = await supabase
+    .from(ROLES_TABLE)
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (roleData?.role) return { role: roleData.role as UserRole, is_active: true };
+  return null;
 }
 
 export async function getAppUser() {
@@ -42,15 +51,21 @@ export async function getAppUser() {
   if (!user) return null;
   let profile = await getProfileForAuth(user.id);
   if (profile === null) {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from(ROLES_TABLE)
-      .upsert(
-        { id: user.id, role: "player", email: user.email ?? "" },
-        { onConflict: "id" }
-      );
-    if (!error) profile = { role: "player", is_active: true };
-    if (profile === null) profile = { role: "player", is_active: true };
+    // Do not overwrite existing profile: read role first (e.g. admin may exist but is_active select failed)
+    const existingRole = await getUserRole(user.id);
+    if (existingRole !== null) {
+      profile = { role: existingRole, is_active: true };
+    } else {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from(ROLES_TABLE)
+        .upsert(
+          { id: user.id, role: "player", email: user.email ?? "" },
+          { onConflict: "id" }
+        );
+      if (!error) profile = { role: "player", is_active: true };
+      if (profile === null) profile = { role: "player", is_active: true };
+    }
   }
   if (!profile.is_active) return null;
   return {
