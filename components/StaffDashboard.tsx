@@ -54,6 +54,7 @@ type StaffDashboardProps = {
   chart7: { date: string; load: number; wellness: number | null }[];
   playersWithStatus?: PlayerWithStatus[];
   isAdmin?: boolean;
+  todayScheduleItems?: { id: string; activity_type: string; sort_order: number; start_time: string | null; end_time: string | null }[];
 };
 
 function formatShortDate(dateStr: string) {
@@ -73,6 +74,7 @@ export function StaffDashboard({
   chart7,
   playersWithStatus = [],
   isAdmin = false,
+  todayScheduleItems = [],
 }: StaffDashboardProps) {
   const router = useRouter();
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -193,6 +195,64 @@ export function StaffDashboard({
             Elite football – today&apos;s overview
           </p>
         </div>
+
+        {/* Today's Schedule – horizontal timeline strip */}
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
+          <div
+            className="overflow-hidden rounded-xl border border-zinc-800"
+            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          >
+            {todayScheduleItems.length === 0 ? (
+              <p className="px-5 py-6 text-zinc-400">No schedule items today.</p>
+            ) : (
+              <div className="overflow-x-auto p-4">
+                <div className="flex gap-3" style={{ minWidth: "min-content" }}>
+                  {todayScheduleItems.map((item) => {
+                    const SCHEDULE_LABELS: Record<string, string> = {
+                      breakfast: "Breakfast",
+                      lunch: "Lunch",
+                      dinner: "Dinner",
+                      training: "Training",
+                      gym: "Gym",
+                      recovery: "Recovery",
+                      pre_activation: "Pre-activation",
+                    };
+                    const SCHEDULE_PILL: Record<string, string> = {
+                      breakfast: "bg-amber-500/40",
+                      lunch: "bg-amber-500/40",
+                      dinner: "bg-amber-500/40",
+                      training: "bg-blue-500/40",
+                      gym: "bg-purple-500/40",
+                      recovery: "bg-emerald-500/40",
+                      pre_activation: "bg-orange-500/40",
+                    };
+                    const label = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
+                    const pill = SCHEDULE_PILL[item.activity_type] ?? "bg-zinc-500/40";
+                    const timeStr =
+                      item.start_time != null
+                        ? item.end_time != null
+                          ? `${item.start_time}–${item.end_time}`
+                          : item.start_time
+                        : "—";
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/80"
+                      >
+                        <div className={`w-1 shrink-0 ${pill}`} aria-hidden />
+                        <div className="min-w-0 flex-1 px-3 py-2">
+                          <p className="truncate font-medium text-white text-sm">{label}</p>
+                          <p className="text-xs text-zinc-400">{timeStr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* PLAYERS – ID cards */}
         {playersWithStatus.length > 0 && (

@@ -18,6 +18,14 @@ type PlayerWithStatus = {
   avatar_url?: string | null;
 };
 
+type ScheduleItemToday = {
+  id: string;
+  activity_type: string;
+  sort_order: number;
+  start_time: string | null;
+  end_time: string | null;
+};
+
 type DashboardData = {
   role?: string;
   metrics: any;
@@ -28,6 +36,7 @@ type DashboardData = {
     atRisk: AttentionPlayer[];
   } | null;
   todayScheduleItem?: { activity_type: string } | null;
+  todayScheduleItems?: ScheduleItemToday[];
   playersWithStatus?: PlayerWithStatus[];
 };
 
@@ -135,6 +144,7 @@ export default function DashboardPage() {
         chart7={chart7}
         playersWithStatus={data.playersWithStatus ?? []}
         isAdmin={role === "admin"}
+        todayScheduleItems={data.todayScheduleItems ?? []}
       />
     );
   }
@@ -150,10 +160,70 @@ export default function DashboardPage() {
 
   const CARD_BG = "#11161c";
   const CARD_RADIUS = "12px";
+  const todayScheduleItems = data.todayScheduleItems ?? [];
+
+  const SCHEDULE_ACTIVITY_LABELS: Record<string, string> = {
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    dinner: "Dinner",
+    training: "Training",
+    gym: "Gym",
+    recovery: "Recovery",
+    pre_activation: "Pre-activation",
+  };
+  const SCHEDULE_PILL_COLORS: Record<string, string> = {
+    breakfast: "bg-amber-500/40",
+    lunch: "bg-amber-500/40",
+    dinner: "bg-amber-500/40",
+    training: "bg-blue-500/40",
+    gym: "bg-purple-500/40",
+    recovery: "bg-emerald-500/40",
+    pre_activation: "bg-orange-500/40",
+  };
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
       <div className="mx-auto max-w-6xl space-y-8">
+        {/* Today's Schedule – horizontal timeline strip */}
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
+          <div
+            className="overflow-hidden rounded-xl border border-zinc-800"
+            style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+          >
+            {todayScheduleItems.length === 0 ? (
+              <p className="px-5 py-6 text-zinc-400">No schedule items today.</p>
+            ) : (
+              <div className="overflow-x-auto p-4">
+                <div className="flex gap-3" style={{ minWidth: "min-content" }}>
+                  {todayScheduleItems.map((item) => {
+                    const label = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
+                    const pill = SCHEDULE_PILL_COLORS[item.activity_type] ?? "bg-zinc-500/40";
+                    const timeStr =
+                      item.start_time != null
+                        ? item.end_time != null
+                          ? `${item.start_time}–${item.end_time}`
+                          : item.start_time
+                      : "—";
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/80"
+                      >
+                        <div className={`w-1 shrink-0 ${pill}`} aria-hidden />
+                        <div className="min-w-0 flex-1 px-3 py-2">
+                          <p className="truncate font-medium text-white text-sm">{label}</p>
+                          <p className="text-xs text-zinc-400">{timeStr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Today's status */}
         <section>
           <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s status</h2>

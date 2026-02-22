@@ -23,7 +23,10 @@ export default async function SchedulePage() {
               : " View the program for each day."}
           </p>
         </div>
-        <ScheduleCalendar canEdit={user.role === "admin" || user.role === "staff"} />
+        <ScheduleCalendar
+          canEdit={user.role === "admin" || user.role === "staff"}
+          isAdmin={user.role === "admin"}
+        />
       </div>
     </div>
   );

@@ -56,19 +56,31 @@ export async function GET() {
       }));
     }
 
-    let todayScheduleItem: { activity_type: string } | null = null;
-    if (user.role === "player") {
-      const today = new Date().toISOString().slice(0, 10);
-      const supabase = await createClient();
-      const { data: scheduleRow } = await supabase
-        .from("schedule")
-        .select("activity_type")
-        .eq("date", today)
-        .order("sort_order", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (scheduleRow) todayScheduleItem = { activity_type: scheduleRow.activity_type };
-    }
+    const today = new Date().toISOString().slice(0, 10);
+    const supabaseForSchedule = await createClient();
+    const { data: todayRows } = await supabaseForSchedule
+      .from("schedule")
+      .select("id, activity_type, sort_order, start_time, end_time")
+      .eq("date", today)
+      .order("sort_order", { ascending: true });
+
+    const raw = (todayRows ?? []).map((r) => ({
+      id: r.id,
+      activity_type: r.activity_type as string,
+      sort_order: r.sort_order ?? 0,
+      start_time: r.start_time != null ? String(r.start_time).slice(0, 5) : null,
+      end_time: r.end_time != null ? String(r.end_time).slice(0, 5) : null,
+    }));
+    const todayScheduleItems = [...raw].sort((a, b) => {
+      const aStart = a.start_time ?? "zzz";
+      const bStart = b.start_time ?? "zzz";
+      return aStart.localeCompare(bStart) || a.sort_order - b.sort_order;
+    });
+
+    const todayScheduleItem =
+      todayScheduleItems.length > 0
+        ? { activity_type: todayScheduleItems[0].activity_type }
+        : null;
 
     return NextResponse.json({
       role: user.role,
@@ -77,6 +89,7 @@ export async function GET() {
       chart28: data.chart28,
       attentionToday,
       todayScheduleItem,
+      todayScheduleItems,
       playersWithStatus,
     });
   } catch (e) {
