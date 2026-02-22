@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import type { ProfileRow } from "./page";
-import { createUser, updateUserRole } from "@/app/actions/admin-users";
+import { createUser, updateUserRole, deactivateUser, reactivateUser, deleteUserPermanently } from "@/app/actions/admin-users";
 import type { UserRole } from "@/lib/types";
 
 const BG_PAGE = "#0b0f14";
@@ -22,6 +22,21 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [successResult, setSuccessResult] = useState<{ email: string; role: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<ProfileRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+        setActionsOpenId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const filtered = useMemo(() => {
     let rows = list;
@@ -63,6 +78,28 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
     const result = await updateUserRole(userId, newRole);
     if (result.success) setEditingId(null);
     return result;
+  }
+
+  async function handleDeactivate(user: ProfileRow) {
+    setDeactivateTarget(null);
+    setActionsOpenId(null);
+    const result = await deactivateUser(user.id);
+    if (result.error) return result;
+    return result;
+  }
+
+  async function handleDeletePermanently(user: ProfileRow) {
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+    setActionsOpenId(null);
+    const result = await deleteUserPermanently(user.id);
+    if (result.error) return result;
+    return result;
+  }
+
+  async function handleReactivate(userId: string) {
+    setActionsOpenId(null);
+    await reactivateUser(userId);
   }
 
   return (
@@ -165,6 +202,7 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                     <th className="px-4 py-3 font-medium">Full name</th>
                     <th className="px-4 py-3 font-medium">Email</th>
                     <th className="px-4 py-3 font-medium">Role</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Created at</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
                   </tr>
@@ -176,6 +214,13 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                       <td className="px-4 py-3">{u.email}</td>
                       <td className="px-4 py-3 capitalize">{u.role}</td>
                       <td className="px-4 py-3">
+                        {u.is_active === false ? (
+                          <span className="rounded bg-zinc-600/50 px-2 py-0.5 text-xs font-medium text-zinc-400">Inactive</span>
+                        ) : (
+                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">Active</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         {u.created_at
                           ? new Date(u.created_at).toLocaleString(undefined, {
                               dateStyle: "short",
@@ -184,21 +229,60 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        {editingId === u.id ? (
-                          <RoleEditRow
-                            currentRole={u.role as UserRole}
-                            onSave={(newRole) => handleRoleChange(u.id, newRole)}
-                            onCancel={() => setEditingId(null)}
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(u.id)}
-                            className="text-emerald-400 hover:underline"
-                          >
-                            Edit role
-                          </button>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {editingId === u.id ? (
+                            <RoleEditRow
+                              currentRole={u.role as UserRole}
+                              onSave={(newRole) => handleRoleChange(u.id, newRole)}
+                              onCancel={() => setEditingId(null)}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(u.id)}
+                              className="text-emerald-400 hover:underline"
+                            >
+                              Edit role
+                            </button>
+                          )}
+                          <div className="relative" ref={actionsRef}>
+                            <button
+                              type="button"
+                              onClick={() => setActionsOpenId(actionsOpenId === u.id ? null : u.id)}
+                              className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                            >
+                              Actions ▼
+                            </button>
+                            {actionsOpenId === u.id && (
+                              <div className="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-lg">
+                                {u.is_active === false ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReactivate(u.id)}
+                                    className="block w-full px-3 py-2 text-left text-sm text-emerald-400 hover:bg-zinc-800"
+                                  >
+                                    Reactivate
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setDeactivateTarget(u); setActionsOpenId(null); }}
+                                    className="block w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                                  >
+                                    Deactivate
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => { setDeleteTarget(u); setActionsOpenId(null); }}
+                                  className="block w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-800"
+                                >
+                                  Delete permanently
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -213,6 +297,24 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
         <CreateUserModal
           onClose={() => setCreateOpen(false)}
           onSubmit={handleCreate}
+        />
+      )}
+
+      {deactivateTarget && (
+        <DeactivateModal
+          user={deactivateTarget}
+          onClose={() => setDeactivateTarget(null)}
+          onConfirm={() => handleDeactivate(deactivateTarget)}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          user={deleteTarget}
+          confirmText={deleteConfirmText}
+          onConfirmTextChange={setDeleteConfirmText}
+          onClose={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+          onConfirm={() => handleDeletePermanently(deleteTarget)}
         />
       )}
     </div>
@@ -421,6 +523,150 @@ function CreateUserModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function DeactivateModal({
+  user,
+  onClose,
+  onConfirm,
+}: {
+  user: ProfileRow;
+  onClose: () => void;
+  onConfirm: () => Promise<{ error?: string }>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConfirm() {
+    setError(null);
+    setLoading(true);
+    const result = await onConfirm();
+    setLoading(false);
+    if (result?.error) setError(result.error);
+    else onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-md rounded-xl p-6 shadow-xl"
+        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-bold text-white">Deactivate user</h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          User: <span className="font-medium text-white">{user.email}</span>
+        </p>
+        <p className="mt-2 text-sm text-zinc-400">
+          They will not be able to log in. You can reactivate later by updating their profile.
+        </p>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        <div className="mt-6 flex gap-2">
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+          >
+            {loading ? "Deactivating…" : "Deactivate"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-600"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmModal({
+  user,
+  confirmText,
+  onConfirmTextChange,
+  onClose,
+  onConfirm,
+}: {
+  user: ProfileRow;
+  confirmText: string;
+  onConfirmTextChange: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => Promise<{ error?: string }>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canDelete = confirmText === "DELETE";
+
+  async function handleConfirm() {
+    if (!canDelete) return;
+    setError(null);
+    setLoading(true);
+    const result = await onConfirm();
+    setLoading(false);
+    if (result?.error) setError(result.error);
+    else onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-md rounded-xl p-6 shadow-xl"
+        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-bold text-red-400">Delete permanently</h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          User: <span className="font-medium text-white">{user.email}</span>
+        </p>
+        <p className="mt-2 text-sm text-amber-400">
+          This will permanently remove the user and their data. They will not be able to log in.
+        </p>
+        <p className="mt-2 text-sm text-zinc-500">
+          Type <strong className="text-white">DELETE</strong> to confirm.
+        </p>
+        <input
+          type="text"
+          value={confirmText}
+          onChange={(e) => onConfirmTextChange(e.target.value)}
+          placeholder="DELETE"
+          className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+        />
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        <div className="mt-6 flex gap-2">
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!canDelete || loading}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Deleting…" : "Delete permanently"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-600"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

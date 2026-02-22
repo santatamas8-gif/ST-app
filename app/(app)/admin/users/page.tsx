@@ -7,13 +7,14 @@ export type ProfileRow = {
   role: string;
   created_at: string | null;
   full_name?: string | null;
+  is_active?: boolean;
 };
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
   const { data: profiles, error } = await supabase
     .from("profiles")
-    .select("id, email, role, created_at, full_name")
+    .select("id, email, role, created_at, full_name, is_active")
     .order("created_at", { ascending: false });
 
   const list: ProfileRow[] = (profiles ?? []).map((p) => ({
@@ -22,6 +23,7 @@ export default async function AdminUsersPage() {
     role: p.role ?? "player",
     created_at: p.created_at ?? null,
     full_name: p.full_name ?? null,
+    is_active: p.is_active ?? true,
   }));
 
   return (

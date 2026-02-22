@@ -7,9 +7,12 @@ Admin-only page at **/admin/users** to create staff and player accounts and edit
 1. **Migration 004** – Add `full_name` (and `created_at` if missing) to `profiles`:
    - Run `supabase/migrations/004_profiles_full_name.sql` in Supabase SQL Editor.
 
-2. **Service role key** – In `.env.local`:
+2. **Migration 005** – Add `is_active` for soft delete (deactivate):
+   - Run `supabase/migrations/005_profiles_is_active.sql` in Supabase SQL Editor.
+
+3. **Service role key** – In `.env.local`:
    - `SUPABASE_SERVICE_ROLE_KEY` (from Supabase → Project Settings → API → service_role secret).  
-   Required for creating auth users from the app.
+   Required for creating auth users and for permanent user deletion.
 
 ## Profiles table (reference)
 
@@ -84,7 +87,23 @@ If you already ran `add-admin-staff-policies.sql`, you only need migration 004 t
 4. **Search and filter**
    - Use search by name/email and “All roles” / Admin / Staff / Player filter; list sorts newest first.
 
+5. **Deactivate (soft delete)**
+   - As admin → **Users** → find a non-admin user → **Actions** → **Deactivate**.
+   - Confirm in modal → **Deactivate**. User status becomes “Inactive”.
+   - Log in as that user: they should be blocked (same as not logged in). They no longer appear as “Active” in the list.
+
+6. **Reactivate**
+   - As admin → **Users** → find an inactive user → **Actions** → **Reactivate**.
+   - User status becomes “Active” again and can log in.
+
+7. **Delete permanently (hard delete)**
+   - Create a test player (e.g. `delete-test@test.com`).
+   - As admin → **Users** → find that user → **Actions** → **Delete permanently**.
+   - In the modal, type **DELETE** and confirm. User is removed from auth and profiles.
+   - **Verify:** They cannot log in. They no longer appear in the Users list.
+
 ## Security
 
-- User creation uses **server-side only** `SUPABASE_SERVICE_ROLE_KEY` (via `createAdminClient()` in server actions). Never expose the service role key to the client.
+- User creation and permanent deletion use **server-side only** `SUPABASE_SERVICE_ROLE_KEY` (via `createAdminClient()` in server actions). Never expose the service role key to the client.
 - Passwords are set by admin and sent only to Supabase Auth; they are not stored in the database in plain text.
+- Deactivate/reactivate and delete-permanently actions verify the current user is admin before performing any change.

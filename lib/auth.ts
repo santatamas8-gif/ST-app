@@ -24,11 +24,24 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
   return data.role as UserRole;
 }
 
+/** Returns { role, is_active }. is_active defaults to true if column missing. */
+async function getProfileForAuth(userId: string): Promise<{ role: UserRole; is_active: boolean } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from(ROLES_TABLE)
+    .select("role, is_active")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return null;
+  const isActive = data.is_active === undefined ? true : !!data.is_active;
+  return { role: data.role as UserRole, is_active: isActive };
+}
+
 export async function getAppUser() {
   const user = await getAuthUser();
   if (!user) return null;
-  let role = await getUserRole(user.id);
-  if (role === null) {
+  let profile = await getProfileForAuth(user.id);
+  if (profile === null) {
     const supabase = await createClient();
     const { error } = await supabase
       .from(ROLES_TABLE)
@@ -36,13 +49,14 @@ export async function getAppUser() {
         { id: user.id, role: "player", email: user.email ?? "" },
         { onConflict: "id" }
       );
-    if (!error) role = "player";
-    if (role === null) role = "player";
+    if (!error) profile = { role: "player", is_active: true };
+    if (profile === null) profile = { role: "player", is_active: true };
   }
+  if (!profile.is_active) return null;
   return {
     id: user.id,
     email: user.email ?? "",
-    role,
+    role: profile.role,
   };
 }
 
