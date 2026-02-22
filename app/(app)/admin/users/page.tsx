@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAppUser } from "@/lib/auth";
 import { AdminUsersView } from "./AdminUsersView";
 
 export type ProfileRow = {
@@ -7,15 +8,33 @@ export type ProfileRow = {
   role: string;
   created_at: string | null;
   full_name?: string | null;
-  is_active?: boolean;
 };
 
+function supabaseHostFromUrl(url: string | undefined): string {
+  if (!url || typeof url !== "string") return "(not set)";
+  try {
+    const u = new URL(url);
+    return u.hostname;
+  } catch {
+    return "(invalid URL)";
+  }
+}
+
 export default async function AdminUsersPage() {
+  const user = await getAppUser();
   const supabase = await createClient();
   const { data: profiles, error } = await supabase
     .from("profiles")
-    .select("id, email, role, created_at, full_name, is_active")
+    .select("id, email, role, created_at, full_name")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[AdminUsersPage] profiles query error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
+  }
 
   const list: ProfileRow[] = (profiles ?? []).map((p) => ({
     id: p.id,
@@ -23,13 +42,29 @@ export default async function AdminUsersPage() {
     role: p.role ?? "player",
     created_at: p.created_at ?? null,
     full_name: p.full_name ?? null,
-    is_active: p.is_active ?? true,
   }));
+
+  const loadError =
+    error === null || error === undefined
+      ? null
+      : { code: error.code ?? "unknown", message: error.message ?? "Unknown error" };
+
+  const envCheck =
+    user?.role === "admin"
+      ? {
+          supabaseHost: supabaseHostFromUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
+          buildEnv: process.env.NODE_ENV ?? "unknown",
+          currentUserId: user?.id ?? null,
+          currentUserRole: user?.role ?? null,
+        }
+      : null;
 
   return (
     <AdminUsersView
       list={list}
-      loadError={error?.message ?? null}
+      loadError={loadError}
+      currentUserId={user?.id ?? null}
+      envCheck={envCheck}
     />
   );
 }

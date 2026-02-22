@@ -24,54 +24,25 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
   return data.role as UserRole;
 }
 
-/** Returns { role, is_active }. is_active defaults to true if column missing. */
-async function getProfileForAuth(userId: string): Promise<{ role: UserRole; is_active: boolean } | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from(ROLES_TABLE)
-    .select("role, is_active")
-    .eq("id", userId)
-    .single();
-  if (!error && data) {
-    const isActive = data.is_active === undefined ? true : !!data.is_active;
-    return { role: data.role as UserRole, is_active: isActive };
-  }
-  // Fallback when is_active column is missing (e.g. migration not run): read role only
-  const { data: roleData } = await supabase
-    .from(ROLES_TABLE)
-    .select("role")
-    .eq("id", userId)
-    .single();
-  if (roleData?.role) return { role: roleData.role as UserRole, is_active: true };
-  return null;
-}
-
 export async function getAppUser() {
   const user = await getAuthUser();
   if (!user) return null;
-  let profile = await getProfileForAuth(user.id);
-  if (profile === null) {
-    // Do not overwrite existing profile: read role first (e.g. admin may exist but is_active select failed)
-    const existingRole = await getUserRole(user.id);
-    if (existingRole !== null) {
-      profile = { role: existingRole, is_active: true };
-    } else {
-      const supabase = await createClient();
-      const { error } = await supabase
-        .from(ROLES_TABLE)
-        .upsert(
-          { id: user.id, role: "player", email: user.email ?? "" },
-          { onConflict: "id" }
-        );
-      if (!error) profile = { role: "player", is_active: true };
-      if (profile === null) profile = { role: "player", is_active: true };
-    }
+  let role = await getUserRole(user.id);
+  if (role === null) {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from(ROLES_TABLE)
+      .upsert(
+        { id: user.id, role: "player", email: user.email ?? "" },
+        { onConflict: "id" }
+      );
+    if (!error) role = "player";
+    if (role === null) role = "player";
   }
-  if (!profile.is_active) return null;
   return {
     id: user.id,
     email: user.email ?? "",
-    role: profile.role,
+    role,
   };
 }
 

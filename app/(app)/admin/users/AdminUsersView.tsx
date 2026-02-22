@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ProfileRow } from "./page";
-import { createUser, updateUserRole, deactivateUser, reactivateUser, deleteUserPermanently } from "@/app/actions/admin-users";
+import { createUser, updateUserRole } from "@/app/actions/admin-users";
 import type { UserRole } from "@/lib/types";
 
 const BG_PAGE = "#0b0f14";
@@ -13,30 +14,25 @@ type RoleFilter = "all" | "admin" | "staff" | "player";
 
 interface AdminUsersViewProps {
   list: ProfileRow[];
-  loadError: string | null;
+  loadError: { code: string; message: string } | null;
+  currentUserId?: string | null;
+  envCheck?: {
+    supabaseHost: string;
+    buildEnv: string;
+    currentUserId: string | null;
+    currentUserRole: string | null;
+  } | null;
 }
 
-export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
+export function AdminUsersView({ list, loadError, currentUserId = null, envCheck = null }: AdminUsersViewProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [successResult, setSuccessResult] = useState<{ email: string; role: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
-  const [deactivateTarget, setDeactivateTarget] = useState<ProfileRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const actionsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
-        setActionsOpenId(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const filtered = useMemo(() => {
     let rows = list;
@@ -80,26 +76,20 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
     return result;
   }
 
-  async function handleDeactivate(user: ProfileRow) {
-    setDeactivateTarget(null);
-    setActionsOpenId(null);
-    const result = await deactivateUser(user.id);
-    if (result.error) return result;
-    return result;
-  }
-
-  async function handleDeletePermanently(user: ProfileRow) {
+  async function handleDelete(userId: string) {
+    const res = await fetch("/api/admin/delete-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: (data.error as string) || "Delete failed." };
+    }
     setDeleteTarget(null);
     setDeleteConfirmText("");
-    setActionsOpenId(null);
-    const result = await deleteUserPermanently(user.id);
-    if (result.error) return result;
-    return result;
-  }
-
-  async function handleReactivate(userId: string) {
-    setActionsOpenId(null);
-    await reactivateUser(userId);
+    router.refresh();
+    return {};
   }
 
   return (
@@ -122,9 +112,36 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
             className="rounded-xl border border-red-900/50 bg-red-950/20 p-4"
             style={{ borderRadius: CARD_RADIUS }}
           >
-            <p className="text-red-400">{loadError}</p>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="font-medium text-red-400">Profiles query failed</p>
+            <p className="mt-1 text-sm text-zinc-300">
+              <span className="text-zinc-500">code:</span> {loadError.code}
+            </p>
+            <p className="mt-1 text-sm text-zinc-300">
+              <span className="text-zinc-500">message:</span> {loadError.message}
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
               Ensure the profiles table has id, email, role, created_at, full_name and RLS allows admin read.
+            </p>
+          </div>
+        )}
+
+        {envCheck && (
+          <div
+            className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-4 font-mono text-sm"
+            style={{ borderRadius: CARD_RADIUS }}
+          >
+            <p className="mb-2 font-semibold text-zinc-300">Environment check (admin only)</p>
+            <p className="text-zinc-400">
+              <span className="text-zinc-500">Supabase host:</span> {envCheck.supabaseHost}
+            </p>
+            <p className="mt-1 text-zinc-400">
+              <span className="text-zinc-500">Build env:</span> {envCheck.buildEnv}
+            </p>
+            <p className="mt-1 text-zinc-400">
+              <span className="text-zinc-500">Current user id:</span> {envCheck.currentUserId ?? "(none)"}
+            </p>
+            <p className="mt-1 text-zinc-400">
+              <span className="text-zinc-500">Detected role:</span> {envCheck.currentUserRole ?? "(none)"}
             </p>
           </div>
         )}
@@ -202,7 +219,6 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                     <th className="px-4 py-3 font-medium">Full name</th>
                     <th className="px-4 py-3 font-medium">Email</th>
                     <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Created at</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
                   </tr>
@@ -213,13 +229,6 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                       <td className="px-4 py-3">{u.full_name || "—"}</td>
                       <td className="px-4 py-3">{u.email}</td>
                       <td className="px-4 py-3 capitalize">{u.role}</td>
-                      <td className="px-4 py-3">
-                        {u.is_active === false ? (
-                          <span className="rounded bg-zinc-600/50 px-2 py-0.5 text-xs font-medium text-zinc-400">Inactive</span>
-                        ) : (
-                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">Active</span>
-                        )}
-                      </td>
                       <td className="px-4 py-3">
                         {u.created_at
                           ? new Date(u.created_at).toLocaleString(undefined, {
@@ -245,43 +254,15 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
                               Edit role
                             </button>
                           )}
-                          <div className="relative" ref={actionsRef}>
-                            <button
-                              type="button"
-                              onClick={() => setActionsOpenId(actionsOpenId === u.id ? null : u.id)}
-                              className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
-                            >
-                              Actions ▼
-                            </button>
-                            {actionsOpenId === u.id && (
-                              <div className="absolute right-0 top-full z-20 mt-1 min-w-[180px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-lg">
-                                {u.is_active === false ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleReactivate(u.id)}
-                                    className="block w-full px-3 py-2 text-left text-sm text-emerald-400 hover:bg-zinc-800"
-                                  >
-                                    Reactivate
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => { setDeactivateTarget(u); setActionsOpenId(null); }}
-                                    className="block w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
-                                  >
-                                    Deactivate
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => { setDeleteTarget(u); setActionsOpenId(null); }}
-                                  className="block w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-800"
-                                >
-                                  Delete permanently
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(u)}
+                            disabled={currentUserId === u.id}
+                            className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs text-red-400 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            title={currentUserId === u.id ? "You cannot delete your own account" : "Delete user"}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -300,21 +281,13 @@ export function AdminUsersView({ list, loadError }: AdminUsersViewProps) {
         />
       )}
 
-      {deactivateTarget && (
-        <DeactivateModal
-          user={deactivateTarget}
-          onClose={() => setDeactivateTarget(null)}
-          onConfirm={() => handleDeactivate(deactivateTarget)}
-        />
-      )}
-
       {deleteTarget && (
         <DeleteConfirmModal
           user={deleteTarget}
           confirmText={deleteConfirmText}
           onConfirmTextChange={setDeleteConfirmText}
           onClose={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
-          onConfirm={() => handleDeletePermanently(deleteTarget)}
+          onConfirm={() => handleDelete(deleteTarget.id)}
         />
       )}
     </div>
@@ -528,70 +501,6 @@ function CreateUserModal({
   );
 }
 
-function DeactivateModal({
-  user,
-  onClose,
-  onConfirm,
-}: {
-  user: ProfileRow;
-  onClose: () => void;
-  onConfirm: () => Promise<{ error?: string }>;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleConfirm() {
-    setError(null);
-    setLoading(true);
-    const result = await onConfirm();
-    setLoading(false);
-    if (result?.error) setError(result.error);
-    else onClose();
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full max-w-md rounded-xl p-6 shadow-xl"
-        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-bold text-white">Deactivate user</h2>
-        <p className="mt-2 text-sm text-zinc-400">
-          User: <span className="font-medium text-white">{user.email}</span>
-        </p>
-        <p className="mt-2 text-sm text-zinc-400">
-          They will not be able to log in. You can reactivate later by updating their profile.
-        </p>
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={loading}
-            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
-          >
-            {loading ? "Deactivating…" : "Deactivate"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-600"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DeleteConfirmModal({
   user,
   confirmText,
@@ -616,7 +525,6 @@ function DeleteConfirmModal({
     const result = await onConfirm();
     setLoading(false);
     if (result?.error) setError(result.error);
-    else onClose();
   }
 
   return (
@@ -632,7 +540,7 @@ function DeleteConfirmModal({
         style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-red-400">Delete permanently</h2>
+        <h2 className="text-lg font-bold text-red-400">Delete user</h2>
         <p className="mt-2 text-sm text-zinc-400">
           User: <span className="font-medium text-white">{user.email}</span>
         </p>
@@ -657,7 +565,7 @@ function DeleteConfirmModal({
             disabled={!canDelete || loading}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Deleting…" : "Delete permanently"}
+            {loading ? "Deleting…" : "Delete"}
           </button>
           <button
             type="button"
