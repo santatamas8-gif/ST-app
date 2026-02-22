@@ -10,6 +10,14 @@ import { TrendCharts } from "@/components/TrendCharts";
 import { StaffDashboard } from "@/components/StaffDashboard";
 
 type AttentionPlayer = { user_id: string; email: string; reason?: string; wellness?: number | null; fatigue?: number | null; load?: number };
+type PlayerWithStatus = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  status: string;
+  avatar_url?: string | null;
+};
+
 type DashboardData = {
   role?: string;
   metrics: any;
@@ -20,6 +28,7 @@ type DashboardData = {
     atRisk: AttentionPlayer[];
   } | null;
   todayScheduleItem?: { activity_type: string } | null;
+  playersWithStatus?: PlayerWithStatus[];
 };
 
 export default function DashboardPage() {
@@ -124,6 +133,8 @@ export default function DashboardPage() {
         }}
         attentionToday={data.attentionToday ?? null}
         chart7={chart7}
+        playersWithStatus={data.playersWithStatus ?? []}
+        isAdmin={role === "admin"}
       />
     );
   }

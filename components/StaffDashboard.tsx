@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   LineChart,
@@ -30,6 +32,14 @@ type AtRiskPlayer = {
   load?: number;
 };
 
+type PlayerWithStatus = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  status: string;
+  avatar_url?: string | null;
+};
+
 type StaffDashboardProps = {
   metrics: {
     todayWellnessCount?: number;
@@ -42,6 +52,8 @@ type StaffDashboardProps = {
     atRisk: AtRiskPlayer[];
   } | null;
   chart7: { date: string; load: number; wellness: number | null }[];
+  playersWithStatus?: PlayerWithStatus[];
+  isAdmin?: boolean;
 };
 
 function formatShortDate(dateStr: string) {
@@ -49,11 +61,37 @@ function formatShortDate(dateStr: string) {
   return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
 }
 
+const STATUS_OPTIONS = [
+  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400" },
+  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400" },
+  { value: "unavailable", label: "Unavailable", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400" },
+] as const;
+
 export function StaffDashboard({
   metrics,
   attentionToday,
   chart7,
+  playersWithStatus = [],
+  isAdmin = false,
 }: StaffDashboardProps) {
+  const router = useRouter();
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+  const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
+  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [avatarOverrides, setAvatarOverrides] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpenId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const totalPlayers = metrics.totalPlayers ?? 0;
   const submitted = metrics.todayWellnessCount ?? 0;
   const avgWellness = metrics.todayWellness ?? null;
@@ -91,6 +129,56 @@ export function StaffDashboard({
     { name: "Missing", value: Math.max(0, totalPlayers - submitted), color: "#3f3f46" },
   ].filter((d) => d.value > 0);
 
+  async function setPlayerStatus(userId: string, status: string) {
+    setStatusError(null);
+    setSavingPlayerId(userId);
+    const res = await fetch("/api/admin/player-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, status }),
+    });
+    setSavingPlayerId(null);
+    if (res.ok) {
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      setStatusError((data.error as string) || "Failed to save status.");
+    }
+  }
+
+  function onStatusSelect(p: PlayerWithStatus, value: string) {
+    setDropdownOpenId(null);
+    setStatusOverrides((prev) => ({ ...prev, [p.id]: value }));
+    setPlayerStatus(p.id, value);
+  }
+
+  async function uploadAvatar(userId: string, file: File) {
+    const formData = new FormData();
+    formData.set("userId", userId);
+    formData.set("file", file);
+    const res = await fetch("/api/admin/upload-avatar", { method: "POST", body: formData });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.avatar_url) {
+      setAvatarOverrides((prev) => ({ ...prev, [userId]: data.avatar_url }));
+      router.refresh();
+    }
+  }
+
+  function getStatusStyle(status: string) {
+    const opt = STATUS_OPTIONS.find((o) => o.value === status) ?? STATUS_OPTIONS[0];
+    return { pillClass: opt.pillClass, badgeClass: opt.badgeClass, label: opt.label };
+  }
+
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
@@ -105,6 +193,109 @@ export function StaffDashboard({
             Elite football – today&apos;s overview
           </p>
         </div>
+
+        {/* PLAYERS – ID cards */}
+        {playersWithStatus.length > 0 && (
+          <div ref={statusDropdownRef}>
+            <h2 className="mb-4 text-lg font-semibold text-white">Players</h2>
+            {statusError && (
+              <p className="mb-2 text-sm text-red-400">{statusError}</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {playersWithStatus.map((p) => {
+                const effectiveStatus = statusOverrides[p.id] ?? p.status;
+                const { pillClass, badgeClass, label } = getStatusStyle(effectiveStatus);
+                const displayName = (p.full_name && p.full_name.trim()) || p.email;
+                const avatarUrl = avatarOverrides[p.id] ?? p.avatar_url ?? null;
+                const monogram = (displayName[0] ?? "?").toUpperCase();
+                const isSaving = savingPlayerId === p.id;
+                const isOpen = dropdownOpenId === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    className="flex overflow-hidden rounded-xl border border-zinc-800 shadow-lg"
+                    style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+                  >
+                    <div className={`w-1.5 shrink-0 ${pillClass}`} aria-hidden />
+                    <div className="flex min-w-0 flex-1 items-start gap-3 p-4">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-zinc-400">
+                            {monogram}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-white">{displayName}</p>
+                        <p className="mt-0.5 truncate text-xs text-zinc-400">{p.email}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeClass}`}>
+                            {label}
+                          </span>
+                          {isAdmin && (
+                            <div className="relative inline-block">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStatusError(null);
+                                  setDropdownOpenId(isOpen ? null : p.id);
+                                }}
+                                disabled={isSaving}
+                                className="rounded border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+                              >
+                                {isSaving ? "Saving…" : "Change status ▾"}
+                              </button>
+                              {isOpen && (
+                                <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-lg">
+                                  {STATUS_OPTIONS.map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      onClick={() => onStatusSelect(p, opt.value)}
+                                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                                    >
+                                      {opt.label}
+                                      {effectiveStatus === opt.value && (
+                                        <span className="text-emerald-400" aria-hidden>✓</span>
+                                      )}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {isAdmin && (
+                          <div className="mt-2">
+                            <label className="cursor-pointer text-xs text-zinc-400 hover:text-white">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png"
+                                className="sr-only"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) uploadAvatar(p.id, f);
+                                  e.target.value = "";
+                                }}
+                              />
+                              {avatarUrl ? "Change photo" : "Upload photo"}
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* SECTION 1 – TOP KPI ROW */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
