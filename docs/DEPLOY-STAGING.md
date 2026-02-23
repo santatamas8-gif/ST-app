@@ -39,8 +39,8 @@ A web appot Vercelre tesszük ki, hogy ne localhoston, hanem egy stabil linken l
 
 1. Menj a **https://vercel.com** oldalra, jelentkezz be (pl. GitHub fiókkal).
 2. Kattints **Add New…** → **Project**.
-3. **Import Git Repository:** válaszd ki a **st-app** (vagy a repo neved) repót. Ha nem látszik, kapcsold össze a GitHubot a Vercellel (Configure GitHub App).
-4. **Project Name:** maradhat `st-app` vagy adj neki egy nevet (pl. `st-app-staging`).
+3. **Import Git Repository:** válaszd ki a **st-ams** (vagy a repo neved) repót. Ha nem látszik, kapcsold össze a GitHubot a Vercellel (Configure GitHub App).
+4. **Project Name:** maradhat `st-ams` vagy adj neki egy nevet (pl. `st-ams-staging`).
 5. **Framework Preset:** Vercel automatikusan felismeri a Next.js-t, ne változtasd.
 6. **Root Directory:** hagyd üresen (ha a Next.js app a gyökérben van).
 7. **Build and Output Settings:** hagyd az alapértelmezettet (`npm run build`, `next build`).
@@ -65,7 +65,7 @@ A **Vercel project** beállításainál (import előtt vagy után) add hozzá a 
 ## 4. lépés: Deploy indítása
 
 1. Kattints a **Deploy** gombra.
-2. Várd meg a build végét (1–2 perc). Ha sikeres, kapsz egy URL-t, pl. `https://st-app-xxx.vercel.app`.
+2. Várd meg a build végét (1–2 perc). Ha sikeres, kapsz egy URL-t, pl. `https://st-ams-xxx.vercel.app`.
 3. Ha piros hiba van: nyisd meg a **Build Logs**-t, másold ki a hibaüzenetet és javítsuk.
 
 ---
@@ -76,16 +76,16 @@ A bejelentkezés csak akkor működik a Vercel URL-en, ha a Supabase tudja, hogy
 
 1. Supabase Dashboard → **Authentication** → **URL Configuration** (vagy **Settings** → **Auth**).
 2. **Redirect URLs** mezőhöz add hozzá (cseréld a saját Vercel domainre):
-   - `https://st-app-xxx.vercel.app/**`
-   - `https://st-app-xxx.vercel.app/auth/callback`
-3. **Site URL**-t állítsd át (opcionális, de ajánlott) staginghez: `https://st-app-xxx.vercel.app`.
+   - `https://st-ams-xxx.vercel.app/**`
+   - `https://st-ams-xxx.vercel.app/auth/callback`
+3. **Site URL**-t állítsd át (opcionális, de ajánlott) staginghez: `https://st-ams-xxx.vercel.app`.
 4. Mentsd a beállításokat.
 
 ---
 
 ## 6. lépés: Tesztelés stagingen
 
-1. Böngészőben nyisd meg a Vercel URL-t (pl. `https://st-app-xxx.vercel.app`).
+1. Böngészőben nyisd meg a Vercel URL-t (pl. `https://st-ams-xxx.vercel.app`).
 2. Át kell irányítania a login oldalra.
 3. Jelentkezz be a meglévő admin (vagy játékos) adataiddal.
 4. Ellenőrizd: Dashboard, Wellness, RPE, Users (adminként) – mind működik.

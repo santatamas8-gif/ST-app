@@ -1,4 +1,4 @@
-# ST App – Első indulás (lépésről lépésre)
+# ST AMS – Első indulás (lépésről lépésre)
 
 Ez az első appod, ezért mindent lépésről lépésre írok. Cél: a böngészőben megnyitod az appot, bejelentkezel, és működik a wellness űrlap.
 
@@ -19,7 +19,7 @@ Ez az első appod, ezért mindent lépésről lépésre írok. Cél: a böngész
 3. Jelentkezz be **GitHub**-bal (vagy email/jelszó).
 4. Kattints **New project**.
 5. Töltsd ki:
-   - **Name:** pl. `st-app`
+   - **Name:** pl. `st-ams`
    - **Database password:** találj ki egy erős jelszót, **írd le magadnak** (később kell).
    - **Region:** válassz egy közeli régiót (pl. Frankfurt).
 6. Kattints **Create new project**.
@@ -46,7 +46,7 @@ Az appnak tudnia kell, hogy a *te* Supabase projektedhez kapcsolódjon. Ehhez k�
 ## 3. lépés: A projekt mappádban lévő .env.local fájl megnyitása
 
 1. Nyisd meg a **Cursor**-t (vagy a kódszerkesztőt).
-2. A bal oldali fájl listában menj a **st-app** mappába (a projekt gyökere).
+2. A bal oldali fájl listában menj a **st-ams** mappába (a projekt gyökere).
 3. Kattints a **.env.local** fájlra.  
    (Ha nem látod: lehet, hogy rejtett fájl. A Cursor-ban általában megjelenik.)
 
@@ -79,7 +79,7 @@ Az appnak kell egy „táblázat” a felhasználóknak, egy a wellness adatokna
 1. A Supabase bal menüjében kattints **SQL Editor**.
 2. Kattints **New query** (új lekérdezés).
 3. Nyisd meg a **saját gépeden** a projektben a fájlt:  
-   **st-app** → **supabase** → **schema.sql**
+   **st-ams** → **supabase** → **schema.sql**
 4. Nyisd meg a **schema.sql** fájlt a Cursor-ban, nyomd meg **Ctrl+A** (mindent kijelöl), majd **Ctrl+C** (másolás).
 5. Válts vissza a **Supabase SQL Editor** ablakra, illeszd be a másolt szöveget (Ctrl+V).
 6. Kattints lent a **Run** (vagy F5) gombra.
@@ -134,7 +134,7 @@ ON CONFLICT (id) DO UPDATE SET role = 'admin', email = EXCLUDED.email;
 2. Írd be (Enter):
 
    ```
-   cd c:\Users\berde\st-app
+   cd c:\Users\berde\st-ams
    ```
 
 3. Utána:
