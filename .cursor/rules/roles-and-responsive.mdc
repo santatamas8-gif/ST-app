@@ -1,0 +1,35 @@
+---
+description: Admin / Staff / Player nézet + laptop és telefon – minden változtatásnál figyelni
+alwaysApply: true
+---
+
+# Szerepkörök és nézet (admin, staff, player + laptop, telefon)
+
+Minden változtatásnál **mindig** két dolgot vegyél figyelembe:
+
+---
+
+## 1. Admin / Staff / Player nézet
+
+A funkciók és UI **szerepkör szerint** különbözhetnek:
+
+- **Admin:** teljes jogosultság (pl. status változtatás, fotó upload/delete, users kezelés). Csak adminnak jelenjen meg / legyen engedélyezve az, ami admin-only.
+- **Staff:** olvasási jog + bizonyos műveletek (pl. dashboard, schedule, players megtekintés, de nem users). Ne jelenítsünk meg staffnak admin-only elemeket.
+- **Player:** saját adatok, wellness, RPE, saját profil. A player ne lásson staff/admin funkciókat (pl. más játékosok statusa, Change status gomb).
+
+Változtatáskor ellenőrizd: **ki látja / ki használhatja** az adott elemet (role check: `role === "admin"`, `isAdmin`, `isStaff`, stb.), és a **három nézet** (admin, staff, player) mindegyike konzisztens és biztonságos legyen.
+
+---
+
+## 2. Laptop és telefon (reszponzív)
+
+A felület **laptopon és telefonon is** jól nézzen ki és használható legyen:
+
+- **Layout:** Kis képernyőn ne törjön el, ne folyjon össze a tartalom; legyen olvasható.
+- **Navigáció / sidebar:** Mobilon kompakt vagy összecsukható, hogy a fő tartalom teljes szélességben jelenjen meg.
+- **Táblázatok / kártyák:** Kis képernyőn `overflow-x-auto` vagy kártyás/lista nézet; touch-friendly gombok.
+- **Új vagy nagyobb UI változtatásnál:** említsük, hogy érdemes **telefonon is** megnézni (vagy böngésző responsive módjában).
+
+---
+
+**Összefoglalva:** Minden változtatásnál gondoljunk a **három szerepkörre** (admin, staff, player) és a **két nézetre** (laptop, telefon).

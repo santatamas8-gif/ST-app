@@ -10,6 +10,7 @@ const SORENESS_AT_RISK_ABOVE = 7;
 export interface AttentionPlayer {
   user_id: string;
   email: string;
+  full_name?: string | null;
 }
 
 export interface AtRiskPlayer extends AttentionPlayer {
@@ -30,7 +31,7 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
 
   const { data: players } = await supabase
     .from("profiles")
-    .select("id, email")
+    .select("id, email, full_name")
     .eq("role", "player");
 
   if (!players?.length) return { missingWellness: [], atRisk: [] };
@@ -51,10 +52,11 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
 
   const submittedIds = new Set(wellnessRows.map((r) => r.user_id));
   const emailById = new Map(players.map((p) => [p.id, p.email ?? "—"]));
+  const fullNameById = new Map(players.map((p) => [p.id, p.full_name ?? null]));
 
   const missingWellness: AttentionPlayer[] = players
     .filter((p) => !submittedIds.has(p.id))
-    .map((p) => ({ user_id: p.id, email: p.email ?? "—" }));
+    .map((p) => ({ user_id: p.id, email: p.email ?? "—", full_name: p.full_name ?? null }));
 
   const atRisk: AtRiskPlayer[] = [];
   for (const row of wellnessRows) {
@@ -78,6 +80,7 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
       atRisk.push({
         user_id: row.user_id,
         email: emailById.get(row.user_id) ?? "—",
+        full_name: fullNameById.get(row.user_id) ?? null,
         reason: reasons.join(", "),
         wellness: wellnessScore,
         fatigue: row.fatigue ?? null,

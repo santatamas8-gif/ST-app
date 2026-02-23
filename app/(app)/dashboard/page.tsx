@@ -16,6 +16,7 @@ type PlayerWithStatus = {
   full_name: string | null;
   status: string;
   avatar_url?: string | null;
+  status_notes?: string | null;
 };
 
 type ScheduleItemToday = {
@@ -48,10 +49,27 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  const loadDashboard = async () => {
+    try {
+      const res = await fetch("/api/dashboard", { cache: "no-store" });
+      const json = (await res.json()) as DashboardData & { errorCode?: string; error?: string };
+      if (!res.ok) {
+        const msg = json?.error ?? `Dashboard API error: ${res.status}`;
+        const code = json?.errorCode ?? "DASHBOARD_ERROR";
+        setErr(`${code}: ${msg}`);
+        return;
+      }
+      setData(json);
+      setErr(null);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      setErr(msg);
+    }
+  };
+
   useEffect(() => {
     const run = async () => {
       try {
-        // 1) session check (CLIENT -> működik biztosan)
         const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
         if (sessionErr) throw sessionErr;
 
@@ -60,16 +78,7 @@ export default function DashboardPage() {
           return;
         }
 
-        // 2) load dashboard data from API route (server fetch)
-        const res = await fetch("/api/dashboard", { cache: "no-store" });
-        const json = (await res.json()) as DashboardData & { errorCode?: string; error?: string };
-        if (!res.ok) {
-          const msg = json?.error ?? `Dashboard API error: ${res.status}`;
-          const code = json?.errorCode ?? "DASHBOARD_ERROR";
-          setErr(`${code}: ${msg}`);
-          return;
-        }
-        setData(json);
+        await loadDashboard();
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Unknown error";
         setErr(msg);
@@ -150,6 +159,7 @@ export default function DashboardPage() {
         playersWithStatus={data.playersWithStatus ?? []}
         isAdmin={role === "admin"}
         todayScheduleItems={data.todayScheduleItems ?? []}
+        onRefreshData={loadDashboard}
       />
     );
   }

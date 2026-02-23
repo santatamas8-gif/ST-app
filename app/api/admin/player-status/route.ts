@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAppUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const ALLOWED_STATUSES = ["available", "limited", "unavailable"] as const;
+const ALLOWED_STATUSES = ["available", "limited", "unavailable", "injured", "rehab"] as const;
 
 export async function POST(request: Request) {
   const user = await getAppUser();
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { userId?: string; status?: string };
+  let body: { userId?: string; status?: string; notes?: string };
   try {
     body = await request.json();
   } catch {
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
 
   const userId = typeof body.userId === "string" ? body.userId.trim() : "";
   const status = typeof body.status === "string" ? body.status.trim().toLowerCase() : "";
+  const notes = typeof body.notes === "string" ? body.notes.trim() || null : null;
 
   if (!userId) {
     return NextResponse.json(
@@ -37,18 +38,28 @@ export async function POST(request: Request) {
   }
   if (!ALLOWED_STATUSES.includes(status as (typeof ALLOWED_STATUSES)[number])) {
     return NextResponse.json(
-      { error: "status must be one of: available, limited, unavailable." },
+      { error: "status must be one of: available, limited, unavailable, injured, rehab." },
       { status: 400 }
     );
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Server configuration error." },
+      { status: 500 }
+    );
+  }
+
+  const { error } = await admin
     .from("player_status")
     .upsert(
       {
         user_id: userId,
         status,
+        status_notes: notes,
         updated_at: new Date().toISOString(),
         updated_by: user.id,
       },

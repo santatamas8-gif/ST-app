@@ -26,7 +26,7 @@ export async function GET() {
     const isStaff = user.role === "admin" || user.role === "staff";
     const attentionToday = isStaff ? await getStaffAttentionToday() : null;
 
-    let playersWithStatus: { id: string; email: string; full_name: string | null; status: string; avatar_url: string | null }[] = [];
+    let playersWithStatus: { id: string; email: string; full_name: string | null; status: string; avatar_url: string | null; status_notes: string | null }[] = [];
     if (isStaff) {
       const supabase = await createClient();
       const { data: profiles } = await supabase
@@ -35,25 +35,32 @@ export async function GET() {
         .eq("role", "player")
         .order("full_name", { ascending: true });
       const playerIds = (profiles ?? []).map((p) => p.id);
-      let statusByUser = new Map<string, string>();
+      const statusMap = new Map<string, { status: string; status_notes: string | null }>();
       if (playerIds.length > 0) {
         const { data: statusRows, error: statusErr } = await supabase
           .from("player_status")
-          .select("user_id, status")
+          .select("user_id, status, status_notes")
           .in("user_id", playerIds);
         if (!statusErr && statusRows) {
-          statusByUser = new Map(
-            statusRows.map((r) => [r.user_id, r.status as string])
-          );
+          for (const r of statusRows) {
+            statusMap.set(r.user_id, {
+              status: r.status as string,
+              status_notes: r.status_notes ?? null,
+            });
+          }
         }
       }
-      playersWithStatus = (profiles ?? []).map((p) => ({
-        id: p.id,
-        email: p.email ?? "",
-        full_name: p.full_name ?? null,
-        status: statusByUser.get(p.id) ?? "available",
-        avatar_url: p.avatar_url ?? null,
-      }));
+      playersWithStatus = (profiles ?? []).map((p) => {
+        const row = statusMap.get(p.id);
+        return {
+          id: p.id,
+          email: p.email ?? "",
+          full_name: p.full_name ?? null,
+          status: row?.status ?? "available",
+          avatar_url: p.avatar_url ?? null,
+          status_notes: row?.status_notes ?? null,
+        };
+      });
     }
 
     const today = new Date().toISOString().slice(0, 10);
