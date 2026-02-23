@@ -56,7 +56,7 @@ export default function SignUpPage() {
               Create account
             </h1>
             <p className="mt-2 text-sm text-zinc-400">
-              ST App
+              ST AMS
             </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5">

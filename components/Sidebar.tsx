@@ -29,7 +29,7 @@ export function Sidebar({ role, userEmail }: SidebarProps) {
     <aside className="flex w-full flex-col border-b border-zinc-800 bg-zinc-900/80 md:h-full md:w-64 md:border-b-0 md:border-r">
       <div className="flex h-14 items-center justify-between border-b border-zinc-800 px-4 md:h-16 md:justify-start md:px-5">
         <Link href="/dashboard" className="text-lg font-bold text-white md:text-xl">
-          ST App
+          ST AMS
         </Link>
         <nav className="flex gap-1 md:hidden">
           {visibleItems.map((item) => {
