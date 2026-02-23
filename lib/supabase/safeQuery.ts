@@ -8,10 +8,10 @@ export type SafeError = { code: string; message: string };
 
 export async function runQuery<T>(
   area: string,
-  fn: () => Promise<{ data: T; error?: { code?: string; message?: string } | null }>
-): Promise<{ data: T | null; error: SafeError | null }> {
+  fn: () => PromiseLike<{ data: T; error?: { code?: string; message?: string } | null }>
+) {
   try {
-    const result = await fn();
+    const result = await Promise.resolve(fn());
     if (result.error) {
       const code = result.error.code ?? "unknown";
       const message = result.error.message ?? "Unknown error";

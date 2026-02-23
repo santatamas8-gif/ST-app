@@ -24,15 +24,17 @@ function supabaseHostFromUrl(url: string | undefined): string {
 export default async function AdminUsersPage() {
   const user = await getAppUser();
   const supabase = await createClient();
-  const { data: profiles, error: queryError } = await runQuery("admin-users-profiles", () =>
-    supabase
-      .from("profiles")
-      .select("id, email, role, created_at, full_name")
-      .order("created_at", { ascending: false })
-      .then((r) => ({ data: r.data ?? [], error: r.error }))
+  const { data: profiles, error: queryError } = await runQuery(
+    "admin-users-profiles",
+    async () => {
+      const r = await supabase
+        .from("profiles")
+        .select("id, email, role, created_at, full_name")
+        .order("created_at", { ascending: false });
+      return { data: (r.data ?? []) as ProfileRow[], error: r.error };
+    }
   );
-
-  const list: ProfileRow[] = (profiles ?? []).map((p) => ({
+  const list: ProfileRow[] = (profiles ?? []).map((p: ProfileRow) => ({
     id: p.id,
     email: p.email ?? "",
     role: p.role ?? "player",
