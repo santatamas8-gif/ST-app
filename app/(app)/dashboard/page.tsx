@@ -139,7 +139,6 @@ export default function DashboardPage() {
   const chart7: Chart7Point[] = (Array.isArray(data.chart7) ? data.chart7 : []) as Chart7Point[];
   const chart28 = (Array.isArray(data.chart28) ? data.chart28 : []) as Chart7Point[];
   const isPlayer = role === "player";
-  const todayScheduleItem = data.todayScheduleItem ?? null;
 
   const readiness = metrics.readiness;
   const readinessVariant =
@@ -169,9 +168,6 @@ export default function DashboardPage() {
   const wellnessSubmitted = metrics.todayWellness != null;
   const rpeSubmitted = chart7.some((p) => p.date === todayISO && (p.load ?? 0) > 0);
   const allDone = wellnessSubmitted && rpeSubmitted;
-  const scheduleLabel = todayScheduleItem
-    ? todayScheduleItem.activity_type.charAt(0).toUpperCase() + todayScheduleItem.activity_type.slice(1).replace(/_/g, " ")
-    : "No sessions today";
 
   const CARD_BG = "#11161c";
   const CARD_RADIUS = "12px";
@@ -196,9 +192,41 @@ export default function DashboardPage() {
     pre_activation: "bg-orange-500/40",
   };
 
+  const summaryLine = allDone
+    ? "You're all set for today."
+    : !wellnessSubmitted && !rpeSubmitted
+      ? "Complete your check-in: wellness and RPE."
+      : !wellnessSubmitted
+        ? "Fill in wellness to complete today."
+        : "Log your session (RPE) to complete today.";
+
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
       <div className="mx-auto max-w-6xl space-y-8">
+        <p className="text-zinc-400">{summaryLine}</p>
+
+        {!allDone && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <span className="text-sm font-medium text-amber-400">To do:</span>
+            {!wellnessSubmitted && (
+              <Link
+                href="/wellness"
+                className="rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-500/30"
+              >
+                Wellness
+              </Link>
+            )}
+            {!rpeSubmitted && (
+              <Link
+                href="/rpe"
+                className="rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-500/30"
+              >
+                RPE
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
           <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
@@ -239,13 +267,17 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Today's status */}
+        {/* Today's status – Wellness & RPE only */}
         <section>
           <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s status</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div
-              className="rounded-xl p-5"
-              style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+              className="rounded-xl border p-5"
+              style={{
+                backgroundColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                borderColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
+                borderRadius: CARD_RADIUS,
+              }}
             >
               <p className="text-sm font-medium text-zinc-400">Wellness</p>
               <p className="mt-2 text-xl font-bold text-white">
@@ -261,8 +293,12 @@ export default function DashboardPage() {
               )}
             </div>
             <div
-              className="rounded-xl p-5"
-              style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+              className="rounded-xl border p-5"
+              style={{
+                backgroundColor: rpeSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                borderColor: rpeSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
+                borderRadius: CARD_RADIUS,
+              }}
             >
               <p className="text-sm font-medium text-zinc-400">RPE</p>
               <p className="mt-2 text-xl font-bold text-white">
@@ -276,13 +312,6 @@ export default function DashboardPage() {
                   Log session
                 </Link>
               )}
-            </div>
-            <div
-              className="rounded-xl p-5"
-              style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
-            >
-              <p className="text-sm font-medium text-zinc-400">Next schedule item</p>
-              <p className="mt-2 text-xl font-bold text-white">{scheduleLabel}</p>
             </div>
           </div>
 
@@ -307,26 +336,38 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Metrics */}
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Metrics</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
-            <MetricCard title="Avg sleep (7d)" value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"} />
-            <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />
-            <MetricCard title="Monotony" value={metrics.monotony ?? "—"} />
-            <MetricCard title="Strain" value={metrics.strain ?? "—"} />
-          </div>
-        </section>
-
         <RedFlagsCard flags={metrics.redFlags ?? []} />
 
+        {/* Trends: 7-day Load then 28-day (one metric at a time) */}
         <section
           className="rounded-xl p-6"
           style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
         >
           <h2 className="mb-4 font-semibold text-white">Trends</h2>
           <TrendCharts chart7={chart7} chart28={chart28} />
+        </section>
+
+        {/* Metrics: primary first, then collapsible detailed */}
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-white">Metrics</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
+            <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />
+          </div>
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-400">
+              More metrics
+            </summary>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <MetricCard
+                title="Avg sleep (7d)"
+                value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"}
+                subtitle="hours per night"
+              />
+              <MetricCard title="Monotony" value={metrics.monotony ?? "—"} subtitle="load variation" />
+              <MetricCard title="Strain" value={metrics.strain ?? "—"} subtitle="weekly load stress" />
+            </div>
+          </details>
         </section>
       </div>
     </div>

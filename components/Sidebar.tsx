@@ -16,13 +16,31 @@ const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
 interface SidebarProps {
   role: UserRole;
   userEmail: string;
+  /** Player only: today's check-in status. Show dot when not done. */
+  todoToday?: { wellnessDone: boolean; rpeDone: boolean } | null;
 }
 
-export function Sidebar({ role, userEmail }: SidebarProps) {
+export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
   const pathname = usePathname();
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(role)
+  );
+
+  const needsTodo = (href: string) => {
+    if (!todoToday) return false;
+    if (href === "/wellness") return !todoToday.wellnessDone;
+    if (href === "/rpe") return !todoToday.rpeDone;
+    return false;
+  };
+
+  const linkContent = (item: (typeof navItems)[0]) => (
+    <>
+      {item.label}
+      {needsTodo(item.href) && (
+        <span className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400" title="To do today" aria-hidden />
+      )}
+    </>
   );
 
   return (
@@ -38,11 +56,11 @@ export function Sidebar({ role, userEmail }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition ${
+                className={`flex items-center rounded-lg px-2.5 py-2 text-xs font-medium transition ${
                   isActive ? "bg-emerald-600/20 text-emerald-400" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                 }`}
               >
-                {item.label}
+                {linkContent(item)}
               </Link>
             );
           })}
@@ -55,13 +73,13 @@ export function Sidebar({ role, userEmail }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+              className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 isActive
                   ? "bg-emerald-600/20 text-emerald-400"
                   : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
               }`}
             >
-              {item.label}
+              {linkContent(item)}
             </Link>
           );
         })}

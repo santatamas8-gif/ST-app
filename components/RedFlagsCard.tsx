@@ -18,11 +18,15 @@ export function RedFlagsCard({ flags }: RedFlagsCardProps) {
     );
   }
 
+  const maxShow = 3;
+  const showFlags = flags.slice(0, maxShow);
+  const restCount = flags.length - maxShow;
+
   return (
     <div className="rounded-xl border border-red-500/50 bg-red-500/5 p-4 shadow-lg">
       <p className="text-sm font-medium text-red-400">Red flags</p>
       <ul className="mt-2 space-y-1.5">
-        {flags.map((f, i) => (
+        {showFlags.map((f, i) => (
           <li
             key={`${f.type}-${i}`}
             className="flex items-center gap-2 text-sm text-red-300"
@@ -34,7 +38,11 @@ export function RedFlagsCard({ flags }: RedFlagsCardProps) {
             )}
           </li>
         ))}
+        {restCount > 0 && (
+          <li className="text-sm text-zinc-500">+{restCount} more</li>
+        )}
       </ul>
+      <p className="mt-2 text-xs text-zinc-500">Consider rest or talk to staff.</p>
     </div>
   );
 }
