@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow } from "@/utils/wellness";
+import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { BadgeScore } from "./BadgeScore";
 
 const BG_PAGE = "#0b0f14";
@@ -103,6 +104,26 @@ export function PlayerWellnessModal({
               <span className="text-zinc-500">Mood</span>
               <BadgeScore value={latest.mood} type="badLow" />
             </div>
+            {latest.body_parts && Object.keys(latest.body_parts).length > 0 && (
+              <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2">
+                <h4 className="text-xs font-medium text-zinc-500">Body map (soreness / pain 1–10)</h4>
+                <ul className="mt-1.5 space-y-1 text-sm text-zinc-300">
+                  {Object.entries(latest.body_parts).map(([partId, v]) => {
+                    const s = v.s ?? 0;
+                    const p = v.p ?? 0;
+                    const label = getBodyPartLabel(partId);
+                    const parts: string[] = [];
+                    if (s > 0) parts.push(`soreness ${s}`);
+                    if (p > 0) parts.push(`pain ${p}`);
+                    return (
+                      <li key={partId}>
+                        {label}: {parts.join(", ")}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

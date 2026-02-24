@@ -45,6 +45,7 @@ export async function submitDailyWellness(data: {
   mood: number;
   bed_time?: string;
   wake_time?: string;
+  body_parts?: Record<string, { s: number; p: number }>;
 }) {
   const supabase = await createClient();
   const {
@@ -70,6 +71,15 @@ export async function submitDailyWellness(data: {
       ? sleepDurationHours(data.bed_time, data.wake_time)
       : null;
 
+  const bodyPartsFiltered =
+    data.body_parts && Object.keys(data.body_parts).length > 0
+      ? Object.fromEntries(
+          Object.entries(data.body_parts).filter(
+            ([, v]) => (v.s ?? 0) > 0 || (v.p ?? 0) > 0
+          )
+        )
+      : null;
+
   const { error } = await supabase.from("wellness").insert({
     user_id: user.id,
     date: today,
@@ -82,6 +92,7 @@ export async function submitDailyWellness(data: {
     stress: data.stress,
     mood: data.mood,
     bodyweight: null,
+    body_parts: bodyPartsFiltered,
   });
 
   if (error) return { error: error.message };

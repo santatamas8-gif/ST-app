@@ -3,10 +3,35 @@
 import { useMemo, useState } from "react";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
+import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { KpiCard } from "./KpiCard";
 import { BadgeScore } from "./BadgeScore";
 import { RiskRowHighlight, RiskBadge } from "./RiskRowHighlight";
 import { PlayerWellnessModal } from "./PlayerWellnessModal";
+
+type BodyPartEntry = { label: string; value: number };
+
+function splitBodyParts(bodyParts: WellnessRow["body_parts"]): {
+  soreness: BodyPartEntry[];
+  pain: BodyPartEntry[];
+} {
+  const soreness: BodyPartEntry[] = [];
+  const pain: BodyPartEntry[] = [];
+  if (!bodyParts) return { soreness, pain };
+  Object.entries(bodyParts).forEach(([partId, v]) => {
+    const s = v.s ?? 0;
+    const p = v.p ?? 0;
+    const label = getBodyPartLabel(partId);
+    if (s > 0) soreness.push({ label, value: s });
+    if (p > 0) pain.push({ label, value: p });
+  });
+  return { soreness, pain };
+}
+
+/** Opacity 0.35 (value 1) → 1 (value 10) so higher values look stronger */
+function intensityOpacity(value: number): number {
+  return Math.min(1, Math.max(0, 0.35 + (value / 10) * 0.65));
+}
 
 const BG_PAGE = "#0b0f14";
 const BG_CARD = "#11161c";
@@ -242,6 +267,110 @@ export function StaffWellnessView({
             </div>
           )}
         </div>
+
+        {/* Body parts: only show if at least one player has any soreness or pain */}
+        {filteredAndSorted.length > 0 &&
+          filteredAndSorted.some((r) => {
+            const { soreness, pain } = splitBodyParts(r.body_parts);
+            return soreness.length > 0 || pain.length > 0;
+          }) && (
+          <div
+            className="rounded-xl border border-zinc-700 px-4 py-4 sm:px-5"
+            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          >
+            <h3 className="text-sm font-medium text-zinc-400">Body parts</h3>
+
+            {/* Section 1: Soreness – every player who has soreness */}
+            <div className="mt-4">
+              <span className="text-xs font-medium text-amber-400/90">Soreness</span>
+              <ul className="mt-2 space-y-3">
+                {filteredAndSorted
+                  .filter((r) => splitBodyParts(r.body_parts).soreness.length > 0)
+                  .map((r) => {
+                    const displayName = emailByUserId[r.user_id] ?? r.user_id;
+                    const { soreness } = splitBodyParts(r.body_parts);
+                    return (
+                      <li key={r.id} className="border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalUserId(r.user_id)}
+                          className="text-left font-medium text-emerald-400 hover:underline"
+                        >
+                          {displayName}
+                        </button>
+                        <div className="mt-1 flex flex-wrap gap-1.5 text-sm">
+                          {soreness.map(({ label, value }) => {
+                            const op = intensityOpacity(value);
+                            return (
+                              <span
+                                key={label}
+                                className="inline-flex items-center rounded-md border px-2 py-0.5"
+                                style={{
+                                  backgroundColor: `rgba(245, 158, 11, ${op * 0.5})`,
+                                  borderColor: `rgba(245, 158, 11, ${op * 0.8})`,
+                                  color: `rgba(253, 224, 71, ${0.5 + op * 0.5})`,
+                                }}
+                              >
+                                {label} <span className="ml-1 font-semibold">{value}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </li>
+                    );
+                  })}
+                {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).soreness.length === 0) && (
+                  <li className="text-sm text-zinc-500">—</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Section 2: Pain – every player who has pain */}
+            <div className="mt-4">
+              <span className="text-xs font-medium text-red-400/90">Pain</span>
+              <ul className="mt-2 space-y-3">
+                {filteredAndSorted
+                  .filter((r) => splitBodyParts(r.body_parts).pain.length > 0)
+                  .map((r) => {
+                    const displayName = emailByUserId[r.user_id] ?? r.user_id;
+                    const { pain } = splitBodyParts(r.body_parts);
+                    return (
+                      <li key={r.id} className="border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalUserId(r.user_id)}
+                          className="text-left font-medium text-emerald-400 hover:underline"
+                        >
+                          {displayName}
+                        </button>
+                        <div className="mt-1 flex flex-wrap gap-1.5 text-sm">
+                          {pain.map(({ label, value }) => {
+                            const op = intensityOpacity(value);
+                            return (
+                              <span
+                                key={label}
+                                className="inline-flex items-center rounded-md border px-2 py-0.5"
+                                style={{
+                                  backgroundColor: `rgba(239, 68, 68, ${op * 0.5})`,
+                                  borderColor: `rgba(239, 68, 68, ${op * 0.8})`,
+                                  color: `rgba(252, 165, 165, ${0.5 + op * 0.5})`,
+                                }}
+                              >
+                                {label} <span className="ml-1 font-semibold">{value}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </li>
+                    );
+                  })}
+                {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).pain.length === 0) && (
+                  <li className="text-sm text-zinc-500">—</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       {modalUserId && modalUser && (

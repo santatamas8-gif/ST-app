@@ -14,6 +14,9 @@ export interface DbUser {
   updated_at?: string;
 }
 
+/** Per-body-part: s = soreness 1-10, p = pain 1-10 */
+export type BodyPartsMap = Record<string, { s: number; p: number }>;
+
 export interface WellnessRow {
   id: string;
   user_id: string;
@@ -27,6 +30,7 @@ export interface WellnessRow {
   stress: number | null;
   mood: number | null;
   bodyweight: number | null;
+  body_parts: BodyPartsMap | null;
   created_at?: string;
 }
 

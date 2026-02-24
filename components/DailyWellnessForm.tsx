@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { submitDailyWellness } from "@/app/actions/wellness";
 import { sleepDurationHours } from "@/utils/sleep";
 import { ScaleInput } from "@/components/ScaleInput";
+import { BodyMap, type BodyPartsState } from "@/components/BodyMap";
 
 const SCALE_HELPER = "1 = very bad, 10 = excellent";
 
@@ -27,6 +28,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   const [soreness, setSoreness] = useState(5);
   const [stress, setStress] = useState(5);
   const [mood, setMood] = useState(5);
+  const [bodyParts, setBodyParts] = useState<BodyPartsState>({});
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -62,6 +64,15 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     setSubmitError(null);
     setIsSuccess(false);
     setLoading(true);
+    const bodyPartsForDb =
+      Object.keys(bodyParts).length > 0
+        ? Object.fromEntries(
+            Object.entries(bodyParts).map(([id, v]) => [
+              id,
+              { s: v.soreness || 0, p: v.pain || 0 },
+            ])
+          )
+        : undefined;
     const result = await submitDailyWellness({
       sleep_quality: sleepQuality,
       fatigue,
@@ -70,6 +81,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
       mood,
       bed_time: bedTime || undefined,
       wake_time: wakeTime || undefined,
+      body_parts: bodyPartsForDb,
     });
     setLoading(false);
     if (result.error) {
@@ -183,6 +195,15 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             />
           </div>
         ))}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300">
+            Body map – soreness & pain (optional)
+          </label>
+          <p className="mt-0.5 mb-2 text-xs text-zinc-500">
+            Tap body parts to add soreness or pain level (1–10). Switch view for front/back.
+          </p>
+          <BodyMap value={bodyParts} onChange={setBodyParts} />
+        </div>
         {submitError && (
           <div className="rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2 text-sm text-red-400">
             {submitError}
