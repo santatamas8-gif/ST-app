@@ -12,6 +12,7 @@ export type ScheduleItemRow = {
   sort_order?: number;
   start_time: string | null;
   end_time: string | null;
+  notes?: string | null;
 };
 
 export async function getScheduleForMonth(
@@ -24,7 +25,7 @@ export async function getScheduleForMonth(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schedule")
-    .select("id, date, activity_type, sort_order, start_time, end_time")
+    .select("id, date, activity_type, sort_order, start_time, end_time, notes")
     .gte("date", from)
     .lte("date", to)
     .order("date", { ascending: true })
@@ -58,11 +59,18 @@ function validateTimes(start: string | null, end: string | null): string | null 
   return null;
 }
 
+function truncateNotes(notes: string | null | undefined): string | null {
+  if (notes == null || typeof notes !== "string") return null;
+  const t = notes.trim();
+  return t === "" ? null : t.slice(0, 100);
+}
+
 export async function addScheduleItem(
   date: string,
   activity_type: ScheduleActivityType,
   startTime?: string | null,
-  endTime?: string | null
+  endTime?: string | null,
+  notes?: string | null
 ): Promise<{ error?: string }> {
   const user = await getAppUser();
   if (!user) return { error: "Not authenticated" };
@@ -85,13 +93,32 @@ export async function addScheduleItem(
     if (err) return { error: err };
   }
 
+  const notesVal = truncateNotes(notes);
+
   const { error } = await supabase.from("schedule").insert({
     date,
     activity_type,
     sort_order: nextOrder,
     ...(start != null && { start_time: start }),
     ...(end != null && { end_time: end }),
+    ...(notesVal != null && { notes: notesVal }),
   });
+
+  if (error) return { error: error.message };
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function updateScheduleItemNotes(id: string, notes: string | null): Promise<{ error?: string }> {
+  const user = await getAppUser();
+  if (!user) return { error: "Not authenticated" };
+  if (user.role !== "admin") return { error: "Only admin can edit notes." };
+
+  const notesVal = truncateNotes(notes);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("schedule").update({ notes: notesVal }).eq("id", id);
 
   if (error) return { error: error.message };
   revalidatePath("/schedule");

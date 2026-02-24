@@ -6,8 +6,10 @@ import {
   addScheduleItem,
   removeScheduleItem,
   updateScheduleItemTime,
+  updateScheduleItemNotes,
 } from "@/app/actions/schedule";
 import type { ScheduleActivityType } from "@/lib/types";
+import { ScheduleIcon } from "@/components/ScheduleIcon";
 
 const ACTIVITY_LABELS: Record<ScheduleActivityType, string> = {
   breakfast: "Breakfast",
@@ -17,6 +19,16 @@ const ACTIVITY_LABELS: Record<ScheduleActivityType, string> = {
   gym: "Gym",
   recovery: "Recovery",
   pre_activation: "Pre-activation",
+  video_analysis: "Video analysis",
+  meeting: "Meeting",
+  traveling: "Traveling",
+  physio: "Physio",
+  medical: "Medical",
+  media: "Media",
+  rest_off: "Rest/Off",
+  match: "Match",
+  team_building: "Team building",
+  individual: "Individual",
 };
 
 const ACTIVITY_TYPES: ScheduleActivityType[] = [
@@ -27,6 +39,16 @@ const ACTIVITY_TYPES: ScheduleActivityType[] = [
   "gym",
   "recovery",
   "pre_activation",
+  "video_analysis",
+  "meeting",
+  "traveling",
+  "physio",
+  "medical",
+  "media",
+  "rest_off",
+  "match",
+  "team_building",
+  "individual",
 ];
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -37,7 +59,13 @@ type ScheduleItem = {
   activity_type: string;
   start_time: string | null;
   end_time: string | null;
+  notes?: string | null;
 };
+
+function formatItemLabel(item: ScheduleItem): string {
+  const label = ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type;
+  return item.notes?.trim() ? `${label} (${item.notes.trim()})` : label;
+}
 
 function getMonthRange(year: number, month: number) {
   const from = new Date(year, month, 1);
@@ -87,6 +115,9 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [editingNotesValue, setEditingNotesValue] = useState("");
+  const [addNotes, setAddNotes] = useState("");
   const [timeSaveError, setTimeSaveError] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
@@ -127,9 +158,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   const nextSessionSummary = useMemo(() => {
     if (!nextSessionDate) return null;
     const items = itemsByDate.get(nextSessionDate) ?? [];
-    const labels = items
-      .map((i) => ACTIVITY_LABELS[i.activity_type as ScheduleActivityType] ?? i.activity_type)
-      .join(", ");
+    const labels = items.map((i) => formatItemLabel(i)).join(", ");
     const d = new Date(nextSessionDate);
     const formatted = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
     return nextSessionDate === todayISO ? `Today – ${labels}` : `${formatted} – ${labels}`;
@@ -151,7 +180,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     } else setMonth((m) => m + 1);
   }
 
-  async function handleAdd(activity_type: ScheduleActivityType, startTime?: string | null, endTime?: string | null) {
+  async function handleAdd(activity_type: ScheduleActivityType, startTime?: string | null, endTime?: string | null, notes?: string | null) {
     if (!selectedDate || !canEdit) return;
     setTimeSaveError(null);
     if (startTime != null || endTime != null) {
@@ -162,13 +191,23 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
       }
     }
     setAddLoading(true);
-    await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null);
+    await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null, notes ?? null);
     const { data } = await getScheduleForMonth(from, to);
-    setScheduleItems(data);
+    setScheduleItems(data ?? []);
     setAddLoading(false);
     setAddingType(null);
     setAddStart("");
     setAddEnd("");
+    setAddNotes("");
+  }
+
+  async function handleSaveNotes(id: string, notes: string) {
+    const val = notes.trim().slice(0, 100) || null;
+    await updateScheduleItemNotes(id, val);
+    const { data } = await getScheduleForMonth(from, to);
+    setScheduleItems(data ?? []);
+    setEditingNotesId(null);
+    setEditingNotesValue("");
   }
 
   async function handleSetTime(id: string, startTime: string | null, endTime: string | null) {
@@ -346,26 +385,30 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   key={item.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-zinc-200"
                 >
-                  <span>
-                    {ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type}
-                    {timeStr != null ? (
-                      <span className="ml-2 text-sm text-zinc-400">{timeStr}</span>
-                    ) : isAdmin && !isEditing ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingTimeId(item.id);
-                          setEditStart("");
-                          setEditEnd("");
-                        }}
-                        className="ml-2 text-xs text-amber-400 hover:text-amber-300"
-                      >
-                        Set time
-                      </button>
-                    ) : (
-                      <span className="ml-2 text-sm text-zinc-500">—</span>
-                    )}
-                  </span>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-medium text-white text-sm">
+                      {ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type}
+                      <ScheduleIcon type={item.activity_type} />
+                    </p>
+                    {item.notes?.trim() ? <p className="text-xs text-zinc-400">{item.notes.trim()}</p> : null}
+                    <p className="text-xs text-zinc-400">
+                      {timeStr != null ? timeStr : isAdmin && !isEditing ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTimeId(item.id);
+                            setEditStart("");
+                            setEditEnd("");
+                          }}
+                          className="text-amber-400 hover:text-amber-300"
+                        >
+                          Set time
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </p>
+                  </div>
                   {isEditing && isAdmin && (
                     <div className="flex flex-wrap items-center gap-2" lang="en-GB">
                       <input
@@ -402,14 +445,52 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       </button>
                     </div>
                   )}
-                  {canEdit && !isEditing && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(item.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      Remove
-                    </button>
+                  {isAdmin && editingNotesId === item.id ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="text"
+                        value={editingNotesValue}
+                        onChange={(e) => setEditingNotesValue(e.target.value)}
+                        placeholder="Notes (max 100)"
+                        maxLength={100}
+                        className="w-40 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveNotes(item.id, editingNotesValue)}
+                        className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingNotesId(null); setEditingNotesValue(""); }}
+                        className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {isAdmin && !isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => { setEditingNotesId(item.id); setEditingNotesValue(item.notes ?? ""); }}
+                          className="text-xs text-zinc-500 hover:text-zinc-400"
+                        >
+                          Notes
+                        </button>
+                      )}
+                      {canEdit && !isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(item.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </>
                   )}
                 </li>
               );
@@ -426,9 +507,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       type="button"
                       onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
                       disabled={addLoading}
-                      className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
                     >
                       {ACTIVITY_LABELS[type]}
+                      <ScheduleIcon type={type} className="shrink-0" />
                     </button>
                   ))}
                 </>
@@ -453,9 +535,17 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                     aria-label="End time (24h)"
                     title="24h format, e.g. 09:00 or 14:30"
                   />
+                  <input
+                    type="text"
+                    value={addNotes}
+                    onChange={(e) => setAddNotes(e.target.value)}
+                    placeholder="Notes (max 100)"
+                    maxLength={100}
+                    className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                  />
                   <button
                     type="button"
-                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null)}
+                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null)}
                     disabled={addLoading}
                     className="rounded bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
                   >
@@ -463,7 +553,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); }}
+                    onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); }}
                     className="rounded bg-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-600"
                   >
                     Cancel

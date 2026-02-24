@@ -79,7 +79,17 @@ export type ScheduleActivityType =
   | "training"
   | "gym"
   | "recovery"
-  | "pre_activation";
+  | "pre_activation"
+  | "video_analysis"
+  | "meeting"
+  | "traveling"
+  | "physio"
+  | "medical"
+  | "media"
+  | "rest_off"
+  | "match"
+  | "team_building"
+  | "individual";
 
 export interface ScheduleRow {
   id: string;
@@ -87,4 +97,5 @@ export interface ScheduleRow {
   activity_type: ScheduleActivityType;
   sort_order?: number;
   created_at?: string;
+  notes?: string | null;
 }

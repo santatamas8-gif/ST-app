@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
+import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { TrendCharts } from "@/components/TrendCharts";
 import { StaffDashboard } from "@/components/StaffDashboard";
 
@@ -25,6 +26,7 @@ type ScheduleItemToday = {
   sort_order: number;
   start_time: string | null;
   end_time: string | null;
+  notes: string | null;
 };
 
 type DashboardData = {
@@ -181,6 +183,16 @@ export default function DashboardPage() {
     gym: "Gym",
     recovery: "Recovery",
     pre_activation: "Pre-activation",
+    video_analysis: "Video analysis",
+    meeting: "Meeting",
+    traveling: "Traveling",
+    physio: "Physio",
+    medical: "Medical",
+    media: "Media",
+    rest_off: "Rest/Off",
+    match: "Match",
+    team_building: "Team building",
+    individual: "Individual",
   };
   const SCHEDULE_PILL_COLORS: Record<string, string> = {
     breakfast: "bg-amber-500/40",
@@ -190,8 +202,17 @@ export default function DashboardPage() {
     gym: "bg-purple-500/40",
     recovery: "bg-emerald-500/40",
     pre_activation: "bg-orange-500/40",
+    video_analysis: "bg-cyan-500/40",
+    meeting: "bg-sky-500/40",
+    traveling: "bg-amber-600/40",
+    physio: "bg-teal-500/40",
+    medical: "bg-red-500/40",
+    media: "bg-pink-500/40",
+    rest_off: "bg-zinc-500/40",
+    match: "bg-rose-500/40",
+    team_building: "bg-violet-500/40",
+    individual: "bg-lime-500/40",
   };
-
   const summaryLine = allDone
     ? "You're all set for today."
     : !wellnessSubmitted && !rpeSubmitted
@@ -248,14 +269,19 @@ export default function DashboardPage() {
                           ? `${item.start_time}–${item.end_time}`
                           : item.start_time
                       : "—";
+                    const notes = item.notes?.trim();
                     return (
                       <div
                         key={item.id}
-                        className="flex w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/80"
+                        className="flex w-40 shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/80"
                       >
                         <div className={`w-1 shrink-0 ${pill}`} aria-hidden />
                         <div className="min-w-0 flex-1 px-3 py-2">
-                          <p className="truncate font-medium text-white text-sm">{label}</p>
+                          <p className="flex items-center gap-2 font-medium text-white text-sm">
+                            {label}
+                            <ScheduleIcon type={item.activity_type} />
+                          </p>
+                          {notes ? <p className="text-xs text-zinc-400">{notes}</p> : null}
                           <p className="text-xs text-zinc-400">{timeStr}</p>
                         </div>
                       </div>
