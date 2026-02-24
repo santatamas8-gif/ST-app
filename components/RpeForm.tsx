@@ -24,7 +24,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
 
   const durationNum = duration ? parseInt(duration, 10) : 0;
   const load = durationNum > 0 && rpe >= 1 ? sessionLoad(durationNum, rpe) : null;
-  const canSubmit = durationNum >= 1 && !loading;
+  const canSubmit = durationNum >= 1 && durationNum <= 300 && !loading;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +32,10 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
     setSuccess(false);
     if (!durationNum || durationNum < 1) {
       setError("Duration must be at least 1 minute.");
+      return;
+    }
+    if (durationNum > 300) {
+      setError("Duration must be at most 300 minutes.");
       return;
     }
     setLoading(true);
@@ -68,7 +72,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
 
   return (
     <div
-      className="rounded-xl border border-zinc-800 p-6 shadow-lg"
+      className="rounded-xl border border-zinc-800 p-4 shadow-lg sm:p-6"
       style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
     >
       {hasSubmittedToday && (
@@ -77,7 +81,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
           <span className="text-sm font-medium text-emerald-400">Session logged today</span>
         </div>
       )}
-      <h2 className="mb-5 text-lg font-semibold text-white">Log session (RPE)</h2>
+      <h2 className="mb-5 text-lg font-semibold text-white">Log session</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="rpe-date" className="block text-sm font-medium text-zinc-300">
@@ -96,10 +100,12 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
           <label htmlFor="rpe-duration" className="block text-sm font-medium text-zinc-300">
             Session duration (minutes)
           </label>
+          <p className="mt-0.5 text-xs text-zinc-500">1–300 minutes</p>
           <input
             id="rpe-duration"
             type="number"
             min={1}
+            max={300}
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             required
@@ -108,13 +114,14 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
           />
         </div>
 
-        <div className="rounded-xl bg-zinc-800/60 px-4 py-5" style={{ borderRadius: 10 }}>
+        <div className="rounded-xl bg-zinc-800/60 px-4 py-5 sm:px-5" style={{ borderRadius: 10 }}>
           <div className="flex items-baseline justify-between">
             <label htmlFor="rpe-slider" className="text-sm font-medium text-zinc-300">
               RPE (1–10)
             </label>
             <span className="text-4xl font-bold tabular-nums text-white">{rpe}</span>
           </div>
+          <p className="mt-0.5 text-xs text-zinc-500">1 = very easy, 10 = max effort</p>
           <input
             id="rpe-slider"
             type="range"
@@ -124,12 +131,22 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
             onChange={(e) => setRpe(Number(e.target.value))}
             className="mt-3 h-4 w-full appearance-none rounded-full bg-zinc-600 accent-emerald-500"
           />
+          <div className="mt-1 flex justify-between text-xs text-zinc-500">
+            <span>Very light</span>
+            <span>Max</span>
+          </div>
         </div>
 
         {load != null && (
-          <p className="rounded-lg bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-300">
-            Load = Duration × RPE: <strong className="text-white">{load}</strong>
-          </p>
+          <div
+            className="rounded-lg border border-emerald-500/20 px-4 py-3"
+            style={{ backgroundColor: "rgba(16, 185, 129, 0.08)" }}
+          >
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Calculated load</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-white">
+              {load} <span className="text-sm font-normal text-zinc-400">(duration × RPE)</span>
+            </p>
+          </div>
         )}
 
         {error && (
