@@ -46,23 +46,25 @@ const METRICS: { key: MetricKey; label: string; max?: number }[] = [
 ];
 
 /** Returns green / yellow / red for bar color based on metric and value (higher is better for mood, quality, motivation, wellness, sleep_duration; lower is better for fatigue, soreness, stress). */
-function getBarColor(key: MetricKey, value: number): string {
+function getBarColor(key: MetricKey, value: number | string): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return BAR_GREEN;
   if (key === "load") return BAR_GREEN;
   if (key === "sleep_duration") {
-    if (value >= 8) return BAR_GREEN;
-    if (value >= 6) return BAR_YELLOW;
+    if (n >= 8) return BAR_GREEN;
+    if (n >= 6) return BAR_YELLOW;
     return BAR_RED;
   }
   const highGood = ["sleep_quality", "mood", "motivation", "wellness"].includes(key);
   if (highGood) {
-    if (value >= 7) return BAR_GREEN;
-    if (value >= 4) return BAR_YELLOW;
+    if (n >= 7) return BAR_GREEN;
+    if (n >= 4) return BAR_YELLOW;
     return BAR_RED;
   }
   const lowGood = ["fatigue", "soreness", "stress"].includes(key);
   if (lowGood) {
-    if (value <= 3) return BAR_GREEN;
-    if (value <= 6) return BAR_YELLOW;
+    if (n <= 3) return BAR_GREEN;
+    if (n <= 6) return BAR_YELLOW;
     return BAR_RED;
   }
   return BAR_GREEN;
