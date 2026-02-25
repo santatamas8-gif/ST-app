@@ -43,6 +43,15 @@ type DashboardData = {
   playersWithStatus?: PlayerWithStatus[];
 };
 
+function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -213,6 +222,7 @@ export default function DashboardPage() {
     team_building: "bg-violet-500/40",
     individual: "bg-lime-500/40",
   };
+
   const summaryLine = allDone
     ? "You're all set for today."
     : !wellnessSubmitted && !rpeSubmitted
@@ -262,7 +272,7 @@ export default function DashboardPage() {
                 <div className="flex gap-3" style={{ minWidth: "min-content" }}>
                   {todayScheduleItems.map((item) => {
                     const label = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
-                    const pill = SCHEDULE_PILL_COLORS[item.activity_type] ?? "bg-zinc-500/40";
+                    const accentColor = "#10b981";
                     const timeStr =
                       item.start_time != null
                         ? item.end_time != null
@@ -273,16 +283,28 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex w-40 shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/80"
+                        className="flex w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700/90 bg-zinc-800/95 ring-1 ring-zinc-700/50 transition-all hover:ring-zinc-600/60 hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+                        style={{
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05) inset",
+                        }}
                       >
-                        <div className={`w-1 shrink-0 ${pill}`} aria-hidden />
-                        <div className="min-w-0 flex-1 px-3 py-2">
-                          <p className="flex items-center gap-2 font-medium text-white text-sm">
+                        <div
+                          className="w-1.5 shrink-0 rounded-l-lg"
+                          style={{ backgroundColor: accentColor, minHeight: "100%" }}
+                          aria-hidden
+                        />
+                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                          <p className="flex items-center gap-2 text-sm font-medium text-white">
                             {label}
                             <ScheduleIcon type={item.activity_type} />
                           </p>
-                          {notes ? <p className="text-xs text-zinc-400">{notes}</p> : null}
-                          <p className="text-xs text-zinc-400">{timeStr}</p>
+                          {notes ? (
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
+                              <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                              {notes}
+                            </p>
+                          ) : null}
+                          <p className="text-xs text-zinc-500">{timeStr}</p>
                         </div>
                       </div>
                     );

@@ -11,6 +11,15 @@ import {
 import type { ScheduleActivityType } from "@/lib/types";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 
+function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 const ACTIVITY_LABELS: Record<ScheduleActivityType, string> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
@@ -390,7 +399,12 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       {ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type}
                       <ScheduleIcon type={item.activity_type} />
                     </p>
-                    {item.notes?.trim() ? <p className="text-xs text-zinc-400">{item.notes.trim()}</p> : null}
+                    {item.notes?.trim() ? (
+                      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
+                        <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                        {item.notes.trim()}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-zinc-400">
                       {timeStr != null ? timeStr : isAdmin && !isEditing ? (
                         <button
@@ -447,14 +461,17 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   )}
                   {isAdmin && editingNotesId === item.id ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        type="text"
-                        value={editingNotesValue}
-                        onChange={(e) => setEditingNotesValue(e.target.value)}
-                        placeholder="Notes (max 100)"
-                        maxLength={100}
-                        className="w-40 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
-                      />
+                      <span className="flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-900 px-2 py-1">
+                        <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                        <input
+                          type="text"
+                          value={editingNotesValue}
+                          onChange={(e) => setEditingNotesValue(e.target.value)}
+                          placeholder="Location (e.g. Room #4, Arena bistro)"
+                          maxLength={100}
+                          className="w-36 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+                        />
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleSaveNotes(item.id, editingNotesValue)}
@@ -476,9 +493,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                         <button
                           type="button"
                           onClick={() => { setEditingNotesId(item.id); setEditingNotesValue(item.notes ?? ""); }}
-                          className="text-xs text-zinc-500 hover:text-zinc-400"
+                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400"
                         >
-                          Notes
+                          <LocationPinIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          Location
                         </button>
                       )}
                       {canEdit && !isEditing && (
