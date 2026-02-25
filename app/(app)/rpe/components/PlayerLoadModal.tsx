@@ -119,7 +119,7 @@ export function PlayerLoadModal({
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center rounded-lg bg-zinc-900/40 text-sm text-zinc-500">
-                Nincs adat
+                No data
               </div>
             )}
           </div>
@@ -130,7 +130,7 @@ export function PlayerLoadModal({
             href={`/players/${userId}`}
             className="inline-flex items-center rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-600"
           >
-            Teljes előzmény
+            Full history
           </Link>
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   updateScheduleItemNotes,
 } from "@/app/actions/schedule";
 import type { ScheduleActivityType } from "@/lib/types";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
@@ -373,7 +374,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
       {selectedDate && (
         <div className="rounded-xl border border-zinc-800 p-5" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
           <h2 className="mb-4 text-lg font-semibold text-white">
-            Program for {selectedDate}
+            Program for {selectedDate}{getDateContextLabel(selectedDate)}
           </h2>
           {timeSaveError && (
             <p className="mb-2 text-sm text-red-400">{timeSaveError}</p>

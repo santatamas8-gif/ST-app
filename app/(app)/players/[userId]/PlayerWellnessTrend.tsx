@@ -13,6 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 
 const BG_CARD = "#11161c";
@@ -273,7 +274,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                             className="rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm shadow-lg"
                             style={{ borderColor: "#27272a", backgroundColor: BG_CARD }}
                           >
-                            <p className="font-medium text-zinc-300">Date: {fullDate}</p>
+                            <p className="font-medium text-zinc-300">Date: {fullDate}{getDateContextLabel(fullDate)}</p>
                             <p className="mt-1 font-medium text-white">{label}: {formatTooltipValue(key, value)}</p>
                           </div>
                         );

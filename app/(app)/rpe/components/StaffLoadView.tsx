@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { SessionRow } from "@/lib/types";
+import { useSearchShortcut } from "@/lib/useSearchShortcut";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart } from "./LoadBarChart";
@@ -73,6 +75,8 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useSearchShortcut(searchInputRef);
 
   const last7 = useMemo(() => getLast7Dates(), []);
   const prev7 = useMemo(() => getPrev7Dates(), []);
@@ -188,7 +192,7 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">RPE / Load</h1>
           <p className="mt-1 text-zinc-400">
-            Terhelés monitoring – napi és heti load, acute/chronic, kockázat.
+            Load monitoring – daily and weekly load, acute/chronic, risk.
           </p>
         </div>
 
@@ -198,21 +202,35 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
           style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
         >
           <label className="flex items-center gap-2 text-sm text-zinc-400">
-            Dátum
+            Date
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </label>
-          <input
-            type="search"
-            placeholder="Játékos keresés"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-48"
-          />
+          <button
+            type="button"
+            onClick={() => setSelectedDate(todayISO())}
+            className="min-h-[44px] min-w-[44px] rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/80"
+          >
+            Today
+          </button>
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="search"
+              placeholder="Search players"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-20 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-48"
+              aria-label="Search players"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+              / or Ctrl+K
+            </span>
+          </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
             <input
               type="checkbox"
@@ -220,27 +238,27 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
               onChange={(e) => setOnlyAtRisk(e.target.checked)}
               className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500"
             />
-            Csak rizikós játékosok
+            Only at-risk players
           </label>
         </div>
 
         {/* KPI row */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <LoadKpiCard
-            label="Mai csapatterhelés"
+            label="Today's team load"
             value={totalTeamLoadToday}
             status="normal"
           />
-          <LoadKpiCard label="Heti terhelés (7 nap)" value={weeklyLoad} status="normal" />
-          <LoadKpiCard label="Acute load (7 nap)" value={acuteLoad} status="normal" />
+          <LoadKpiCard label="Weekly load (7 days)" value={weeklyLoad} status="normal" />
+          <LoadKpiCard label="Acute load (7 days)" value={acuteLoad} status="normal" />
           <LoadKpiCard
-            label="Chronic load (28 nap átlag)"
+            label="Chronic load (28-day avg)"
             value={chronicHasEnoughData && chronicLoad != null ? Math.round(chronicLoad) : "—"}
             status="normal"
-            sublabel={!chronicHasEnoughData ? "Legalább 28 nap adat kell" : undefined}
+            sublabel={!chronicHasEnoughData ? "At least 28 days of data required" : undefined}
           />
           <LoadKpiCard
-            label="At-risk játékosok"
+            label="At-risk players"
             value={atRiskCount}
             status={atRiskStatus}
           />
@@ -269,18 +287,18 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
         >
           {tableRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-zinc-400">Nincs session a kiválasztott napon.</p>
+              <p className="text-zinc-400">No sessions for the selected date.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-zinc-900/95">
                   <tr className="border-b border-zinc-700 text-zinc-400">
-                    <th className="px-4 py-3 font-medium">Játékos</th>
-                    <th className="px-4 py-3 font-medium">Dátum</th>
+                    <th className="px-4 py-3 font-medium">Player</th>
+                    <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">Load</th>
                     <th className="px-4 py-3 font-medium">Spike</th>
-                    <th className="px-4 py-3 font-medium">Státusz</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-zinc-300">
@@ -298,12 +316,12 @@ export function StaffLoadView({ list, emailByUserId }: StaffLoadViewProps) {
                           <button
                             type="button"
                             onClick={() => setModalUserId(userId)}
-                            className="font-medium text-emerald-400 hover:underline"
+                            className="min-h-[44px] rounded font-medium text-emerald-400 hover:underline"
                           >
                             {emailByUserId[userId] ?? userId}
                           </button>
                         </td>
-                        <td className="px-4 py-3">{selectedDate}</td>
+                        <td className="px-4 py-3">{selectedDate}<span className="text-zinc-500">{getDateContextLabel(selectedDate)}</span></td>
                         <td className="px-4 py-3 tabular-nums">{load}</td>
                         <td className="px-4 py-3 tabular-nums">
                           {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}

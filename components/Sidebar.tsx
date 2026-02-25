@@ -56,7 +56,7 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center rounded-lg px-2.5 py-2 text-xs font-medium transition ${
+                className={`flex min-h-[44px] items-center rounded-lg px-2.5 py-2 text-xs font-medium transition ${
                   isActive ? "bg-emerald-600/20 text-emerald-400" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                 }`}
               >
@@ -73,7 +73,7 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+              className={`flex min-h-[44px] items-center rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 isActive
                   ? "bg-emerald-600/20 text-emerald-400"
                   : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
@@ -94,7 +94,7 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
         <form action="/api/auth/signout" method="post" className="mt-2">
           <button
             type="submit"
-            className="w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-800 hover:text-white"
+            className="min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-800 hover:text-white"
           >
             Sign out
           </button>
@@ -108,7 +108,7 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
         <form action="/api/auth/signout" method="post">
           <button
             type="submit"
-            className="rounded-lg px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-800 hover:text-white"
+            className="min-h-[44px] min-w-[44px] rounded-lg px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-800 hover:text-white"
           >
             Sign out
           </button>

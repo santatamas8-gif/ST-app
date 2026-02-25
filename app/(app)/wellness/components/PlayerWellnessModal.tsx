@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { BadgeScore } from "./BadgeScore";
@@ -214,7 +215,7 @@ export function PlayerWellnessModal({
                     key={r.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm"
                   >
-                    <span className="text-zinc-300">{r.date}</span>
+                    <span className="text-zinc-300">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></span>
                     <span className="flex items-center gap-1.5 text-zinc-400">
                       Wellness: {w != null ? w.toFixed(1) : "—"}
                       {" · "}

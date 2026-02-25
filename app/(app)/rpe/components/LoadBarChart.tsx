@@ -39,7 +39,7 @@ export function TeamLoadBarChart({
   return (
     <div className={className}>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-zinc-400">Utolsó 7 nap – Csapat terhelés</h3>
+        <h3 className="text-sm font-medium text-zinc-400">Last 7 days – Team load</h3>
         <span
           className={`text-xs font-medium ${
             trend === "up" ? "text-amber-400" : trend === "down" ? "text-emerald-400" : "text-zinc-400"
@@ -68,7 +68,7 @@ export function TeamLoadBarChart({
           </ResponsiveContainer>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-            Nincs adat
+            No data
           </div>
         )}
       </div>
@@ -90,7 +90,7 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
 
   return (
     <div className={className}>
-      <h3 className="mb-2 text-sm font-medium text-zinc-400">Játékos terhelés (napi load)</h3>
+      <h3 className="mb-2 text-sm font-medium text-zinc-400">Player load (daily)</h3>
       <div className="h-64">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -121,7 +121,7 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
           </ResponsiveContainer>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-            Nincs adat
+            No data
           </div>
         )}
       </div>

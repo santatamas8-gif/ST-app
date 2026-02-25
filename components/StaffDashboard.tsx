@@ -123,7 +123,10 @@ export function StaffDashboard({
   const avgWellness = metrics.todayWellness ?? null;
   const totalLoad = metrics.totalTeamLoadToday ?? 0;
   const atRisk = attentionToday?.atRisk ?? [];
-  const highRiskCount = atRisk.length;
+  const missingWellness = attentionToday?.missingWellness ?? [];
+  const missingCount = missingWellness.length;
+  const atRiskCount = atRisk.length;
+  const highRiskCount = atRiskCount;
 
   const submissionPct = totalPlayers > 0 ? Math.round((submitted / totalPlayers) * 100) : 0;
 

@@ -4,6 +4,7 @@ import { runQuery } from "@/lib/supabase/safeQuery";
 import { Card } from "@/components/Card";
 import { RpeForm } from "@/components/RpeForm";
 import type { SessionRow } from "@/lib/types";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { StaffLoadView } from "./components/StaffLoadView";
 
 export default async function RpePage() {
@@ -91,7 +92,7 @@ export default async function RpePage() {
                   <tbody className="text-zinc-300">
                     {list.map((r) => (
                       <tr key={r.id} className="border-b border-zinc-800">
-                        <td className="py-3 pr-4">{r.date}</td>
+                        <td className="py-3 pr-4">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></td>
                         <td className="py-3 pr-4">{r.duration}</td>
                         <td className="py-3 pr-4">{r.rpe ?? "—"}</td>
                         <td className="py-3">{r.load ?? "—"}</td>

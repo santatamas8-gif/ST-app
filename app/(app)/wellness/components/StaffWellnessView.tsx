@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { WellnessRow } from "@/lib/types";
+import { useSearchShortcut } from "@/lib/useSearchShortcut";
+import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { KpiCard } from "./KpiCard";
@@ -72,6 +74,8 @@ export function StaffWellnessView({
   const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useSearchShortcut(searchInputRef);
 
   const filteredAndSorted = useMemo(() => {
     let rows = list.filter((r) => r.date === selectedDate);
@@ -147,9 +151,16 @@ export function StaffWellnessView({
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </label>
+            <button
+              type="button"
+              onClick={() => setSelectedDate(todayISO())}
+              className="min-h-[44px] min-w-[44px] rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/80"
+            >
+              Today
+            </button>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
               <input
                 type="checkbox"
@@ -161,13 +172,20 @@ export function StaffWellnessView({
             </label>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-4">
-            <input
-              type="search"
-              placeholder="Search by name or email"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56"
-            />
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="search"
+                placeholder="Search by name or email"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-20 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56"
+                aria-label="Search players"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+                / or Ctrl+K
+              </span>
+            </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -272,13 +290,13 @@ export function StaffWellnessView({
                           <button
                             type="button"
                             onClick={() => setModalUserId(r.user_id)}
-                            className="font-medium text-emerald-400 hover:underline"
+                            className="min-h-[44px] rounded font-medium text-emerald-400 hover:underline"
                           >
                             {displayName}
                           </button>
                           {atRisk && <RiskBadge />}
                         </td>
-                        <td className="px-4 py-3">{r.date}</td>
+                        <td className="px-4 py-3">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></td>
                         <td className="px-4 py-3">{r.bed_time ?? "—"}</td>
                         <td className="px-4 py-3">{r.wake_time ?? "—"}</td>
                         <td className="px-4 py-3">
