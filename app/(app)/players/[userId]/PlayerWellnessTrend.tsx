@@ -83,8 +83,9 @@ function avg(values: (number | null)[]): number | null {
   return Math.round((sum / valid.length) * 100) / 100;
 }
 
-function formatTooltipValue(key: MetricKey, value: number): string {
-  return key === "sleep_duration" ? `${value}h` : String(value);
+function formatTooltipValue(key: MetricKey, value: number | string): string {
+  const n = typeof value === "number" ? value : Number(value);
+  return key === "sleep_duration" ? `${n}h` : String(value);
 }
 
 interface PlayerWellnessTrendProps {
