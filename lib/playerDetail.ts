@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { WellnessRow } from "@/lib/types";
 import type { SessionRow } from "@/lib/types";
 
-const DAYS = 14;
+const DAYS = 28;
 
 function getDateRange(days: number): { from: string; to: string } {
   const to = new Date();
@@ -23,7 +23,7 @@ export async function getPlayerDetail(userId: string, viewerId: string, viewerRo
   const { from, to } = getDateRange(DAYS);
 
   const [profileRes, wellnessRes, sessionsRes] = await Promise.all([
-    supabase.from("profiles").select("email").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("email, full_name").eq("id", userId).maybeSingle(),
     supabase
       .from("wellness")
       .select("*")
@@ -40,9 +40,13 @@ export async function getPlayerDetail(userId: string, viewerId: string, viewerRo
       .order("date", { ascending: false }),
   ]);
 
-  const playerEmail = (profileRes.data as { email?: string } | null)?.email ?? "—";
+  const profile = profileRes.data as { email?: string; full_name?: string | null } | null;
+  const email = profile?.email ?? "—";
+  const fullName = profile?.full_name;
+  const displayName =
+    fullName && typeof fullName === "string" && fullName.trim() ? fullName.trim() : email;
   const wellness = (wellnessRes.data ?? []) as WellnessRow[];
   const sessions = (sessionsRes.data ?? []) as SessionRow[];
 
-  return { error: null, playerEmail, wellness, sessions, from, to };
+  return { error: null, playerEmail: email, displayName, wellness, sessions, from, to };
 }

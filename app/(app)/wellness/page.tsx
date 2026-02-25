@@ -1,10 +1,10 @@
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
-import { Card } from "@/components/Card";
 import { DailyWellnessForm } from "@/components/DailyWellnessForm";
 import type { WellnessRow } from "@/lib/types";
 import { StaffWellnessView } from "./components/StaffWellnessView";
+import { PlayerWellnessTrend } from "../players/[userId]/PlayerWellnessTrend";
 
 export default async function WellnessPage() {
   const user = await getAppUser();
@@ -17,7 +17,7 @@ export default async function WellnessPage() {
     .from("wellness")
     .select("*")
     .order("date", { ascending: false })
-    .limit(isPlayer ? 14 : 100);
+    .limit(isPlayer ? 28 : 100);
 
   if (isPlayer) {
     query = query.eq("user_id", user.id);
@@ -73,6 +73,27 @@ export default async function WellnessPage() {
   if (isPlayer) {
     const today = new Date().toISOString().slice(0, 10);
     const hasSubmittedToday = list.some((r) => r.date === today);
+
+    const dates: string[] = [];
+    const end = new Date();
+    for (let i = 0; i < 28; i++) {
+      const d = new Date(end);
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    const from = dates[dates.length - 1];
+    const to = dates[0];
+    const { data: sessionRows } = await supabase
+      .from("sessions")
+      .select("date, load")
+      .eq("user_id", user.id)
+      .gte("date", from)
+      .lte("date", to);
+    const loadByDate: Record<string, number> = {};
+    (sessionRows ?? []).forEach((s: { date: string; load: number | null }) => {
+      loadByDate[s.date] = (loadByDate[s.date] ?? 0) + (s.load ?? 0);
+    });
+
     return (
       <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
         <div className="mx-auto max-w-2xl space-y-6">
@@ -98,48 +119,16 @@ export default async function WellnessPage() {
 
           <DailyWellnessForm hasSubmittedToday={hasSubmittedToday} />
 
-          <Card title="Recent entries">
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold text-white">Your 7-day & 28-day averages</h2>
             {list.length === 0 ? (
-              <p className="text-zinc-400">No wellness entries yet.</p>
+              <p className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-6 text-zinc-400" style={{ borderRadius: 12 }}>
+                No wellness entries yet. Submit your first entry above to see your trends here.
+              </p>
             ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-700 text-zinc-400">
-                    <th className="pb-2 pr-4 font-medium">Date</th>
-                    <th className="pb-2 pr-4 font-medium">Bed time</th>
-                    <th className="pb-2 pr-4 font-medium">Wake time</th>
-                    <th className="pb-2 pr-4 font-medium">Sleep (h)</th>
-                    <th className="pb-2 pr-4 font-medium">Sleep quality</th>
-                    <th className="pb-2 pr-4 font-medium">Fatigue</th>
-                    <th className="pb-2 pr-4 font-medium">Soreness</th>
-                    <th className="pb-2 pr-4 font-medium">Stress</th>
-                    <th className="pb-2 pr-4 font-medium">Mood</th>
-                    <th className="pb-2 pr-4 font-medium">Motivation</th>
-                    <th className="pb-2 font-medium">Illness</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-300">
-                  {list.map((r) => (
-                    <tr key={r.id} className="border-b border-zinc-800">
-                      <td className="py-3 pr-4">{r.date}</td>
-                      <td className="py-3 pr-4">{r.bed_time ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.wake_time ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}</td>
-                      <td className="py-3 pr-4">{r.sleep_quality ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.fatigue ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.soreness ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.stress ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.mood ?? "—"}</td>
-                      <td className="py-3 pr-4">{r.motivation ?? "—"}</td>
-                      <td className="py-3">{r.illness === true ? "Yes" : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          </Card>
+              <PlayerWellnessTrend wellness={list} dates={dates} loadByDate={loadByDate} />
+            )}
+          </div>
         </div>
       </div>
     );

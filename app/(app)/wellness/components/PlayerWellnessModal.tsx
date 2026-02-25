@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -11,7 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
-import { wellnessAverageFromRow } from "@/utils/wellness";
+import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { BadgeScore } from "./BadgeScore";
 
@@ -37,27 +38,45 @@ export function PlayerWellnessModal({
   allRows,
   onClose,
 }: PlayerWellnessModalProps) {
-  const playerRows = allRows
-    .filter((r) => r.user_id === userId)
-    .sort((a, b) => (b.date > a.date ? 1 : -1))
-    .slice(0, 7);
-  const latest = playerRows[0];
-  const hasEnoughHistory = playerRows.length >= 2;
+  const sortedByDate = useMemo(
+    () =>
+      allRows
+        .filter((r) => r.user_id === userId)
+        .sort((a, b) => (b.date > a.date ? 1 : -1)),
+    [allRows, userId]
+  );
+  const last7 = useMemo(() => sortedByDate.slice(0, 7), [sortedByDate]);
+  const last28 = useMemo(() => sortedByDate.slice(0, 28), [sortedByDate]);
+  const latest = sortedByDate[0] ?? null;
+  const hasEnoughHistory = last7.length >= 2;
 
-  const chartWellness = playerRows
-    .slice()
-    .reverse()
-    .map((r) => ({
-      date: formatShortDate(r.date),
-      wellness: wellnessAverageFromRow(r) ?? 0,
-    }));
-  const chartSleep = playerRows
-    .slice()
-    .reverse()
-    .map((r) => ({
-      date: formatShortDate(r.date),
-      hours: r.sleep_duration ?? 0,
-    }));
+  const avg7Wellness = useMemo(() => averageWellness(last7), [last7]);
+  const avg7Sleep = useMemo(() => averageSleepHours(last7), [last7]);
+  const avg28Wellness = useMemo(() => averageWellness(last28), [last28]);
+  const avg28Sleep = useMemo(() => averageSleepHours(last28), [last28]);
+
+  const chartWellness = useMemo(
+    () =>
+      last7
+        .slice()
+        .reverse()
+        .map((r) => ({
+          date: formatShortDate(r.date),
+          wellness: wellnessAverageFromRow(r) ?? 0,
+        })),
+    [last7]
+  );
+  const chartSleep = useMemo(
+    () =>
+      last7
+        .slice()
+        .reverse()
+        .map((r) => ({
+          date: formatShortDate(r.date),
+          hours: r.sleep_duration ?? 0,
+        })),
+    [last7]
+  );
 
   return (
     <div
@@ -87,6 +106,46 @@ export function PlayerWellnessModal({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+
+        {/* 7-day / 28-day averages */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div
+            className="rounded-lg border border-zinc-700 px-3 py-2.5"
+            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+          >
+            <p className="text-xs font-medium text-zinc-500">7-day average</p>
+            <p className="mt-1 text-sm text-white">
+              {avg7Wellness != null || avg7Sleep != null ? (
+                <>
+                  Wellness: <span className="font-semibold text-emerald-400">{avg7Wellness != null ? avg7Wellness.toFixed(1) : "—"}</span>
+                  {avg7Sleep != null && (
+                    <> · Sleep: <span className="font-semibold">{avg7Sleep.toFixed(1)}h</span></>
+                  )}
+                </>
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
+          <div
+            className="rounded-lg border border-zinc-700 px-3 py-2.5"
+            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+          >
+            <p className="text-xs font-medium text-zinc-500">28-day average</p>
+            <p className="mt-1 text-sm text-white">
+              {avg28Wellness != null || avg28Sleep != null ? (
+                <>
+                  Wellness: <span className="font-semibold text-emerald-400">{avg28Wellness != null ? avg28Wellness.toFixed(1) : "—"}</span>
+                  {avg28Sleep != null && (
+                    <> · Sleep: <span className="font-semibold">{avg28Sleep.toFixed(1)}h</span></>
+                  )}
+                </>
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
         </div>
 
         {latest && (
@@ -137,29 +196,45 @@ export function PlayerWellnessModal({
 
         <div className="mt-6">
           <h3 className="text-sm font-medium text-zinc-400">Last 7 entries</h3>
-          {playerRows.length === 0 ? (
+          {last7.length === 0 ? (
             <p className="mt-2 text-sm text-zinc-500">No entries for this player in loaded data.</p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {playerRows.map((r) => {
+              {last7.map((r) => {
                 const w = wellnessAverageFromRow(r);
+                const sleep = r.sleep_duration;
+                const sleepStyle =
+                  sleep != null
+                    ? sleep >= 8
+                      ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
+                      : { backgroundColor: "rgba(239, 68, 68, 0.25)", color: "#f87171" }
+                    : undefined;
                 return (
                   <li
                     key={r.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm"
                   >
                     <span className="text-zinc-300">{r.date}</span>
-                    <span className="text-zinc-400">
-                      Wellness: {w != null ? w.toFixed(1) : "—"} · Sleep: {r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}
+                    <span className="flex items-center gap-1.5 text-zinc-400">
+                      Wellness: {w != null ? w.toFixed(1) : "—"}
+                      {" · "}
+                      Sleep:{" "}
+                      {sleep != null ? (
+                        <span className="inline-flex rounded px-1.5 py-0.5 font-medium tabular-nums" style={sleepStyle}>
+                          {sleep}h
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </li>
                 );
               })}
             </ul>
           )}
-          {playerRows.length > 0 && playerRows.length < 7 && (
+          {last7.length > 0 && sortedByDate.length < 7 && (
             <p className="mt-2 text-xs text-amber-500/90">
-              History requires last-7-days endpoint for full trend. Showing {playerRows.length} available.
+              Showing {sortedByDate.length} available. View full history for more.
             </p>
           )}
         </div>

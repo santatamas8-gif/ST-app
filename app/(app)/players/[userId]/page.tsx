@@ -5,7 +5,7 @@ import { Card } from "@/components/Card";
 import { getPlayerDetail } from "@/lib/playerDetail";
 import { getAvailability } from "@/app/actions/availability";
 import { AvailabilityPerDay } from "./AvailabilityPerDay";
-import type { WellnessRow } from "@/lib/types";
+import { PlayerWellnessTrend } from "./PlayerWellnessTrend";
 
 export default async function PlayerDetailPage({
   params,
@@ -16,7 +16,7 @@ export default async function PlayerDetailPage({
   const user = await getAppUser();
   if (!user) return null;
 
-  const { error, playerEmail, wellness, sessions, from, to } = await getPlayerDetail(
+  const { error, playerEmail, displayName, wellness, sessions, from, to } = await getPlayerDetail(
     userId,
     user.id,
     user.role
@@ -26,11 +26,9 @@ export default async function PlayerDetailPage({
   const { data: availabilityList } = await getAvailability(userId, from!, to!);
   const availabilityByDate = new Map(availabilityList.map((a) => [a.date, a.status]));
 
-  const wellnessByDate = new Map<string, WellnessRow>();
-  wellness.forEach((r) => wellnessByDate.set(r.date, r));
-  const loadByDate = new Map<string, number>();
+  const loadByDate: Record<string, number> = {};
   sessions.forEach((s) => {
-    loadByDate.set(s.date, (loadByDate.get(s.date) ?? 0) + (s.load ?? 0));
+    loadByDate[s.date] = (loadByDate[s.date] ?? 0) + (s.load ?? 0);
   });
 
   const dates: string[] = [];
@@ -44,44 +42,13 @@ export default async function PlayerDetailPage({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-white">
-        ← Dashboard
+      <Link href="/wellness" className="text-sm text-zinc-400 hover:text-white">
+        ← Wellness
       </Link>
-      <h1 className="text-2xl font-bold tracking-tight text-white">{playerEmail}</h1>
-      <p className="text-zinc-400">Trend (last 14 days) and daily availability.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-white">{displayName}</h1>
+      <p className="text-zinc-400">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
 
-      <Card title="Trend">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-700 text-zinc-400">
-                <th className="pb-2 pr-4 font-medium">Date</th>
-                <th className="pb-2 pr-4 font-medium">Sleep (h)</th>
-                <th className="pb-2 pr-4 font-medium">Quality</th>
-                <th className="pb-2 pr-4 font-medium">Fatigue</th>
-                <th className="pb-2 pr-4 font-medium">Mood</th>
-                <th className="pb-2 font-medium">Load</th>
-              </tr>
-            </thead>
-            <tbody className="text-zinc-300">
-              {dates.map((date) => {
-                const w = wellnessByDate.get(date);
-                const load = loadByDate.get(date) ?? 0;
-                return (
-                  <tr key={date} className="border-b border-zinc-800">
-                    <td className="py-2 pr-4">{date}</td>
-                    <td className="py-2 pr-4">{w?.sleep_duration != null ? `${w.sleep_duration}h` : "—"}</td>
-                    <td className="py-2 pr-4">{w?.sleep_quality ?? "—"}</td>
-                    <td className="py-2 pr-4">{w?.fatigue ?? "—"}</td>
-                    <td className="py-2 pr-4">{w?.mood ?? "—"}</td>
-                    <td className="py-2">{load || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
 
       {(user.role === "admin" || user.role === "staff") && (
         <Card title="Availability (by day)">
