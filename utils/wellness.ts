@@ -1,7 +1,7 @@
 import type { WellnessRow } from "@/lib/types";
 
 /**
- * Wellness average from one row: average of sleep_quality, (11-soreness), (11-fatigue), (11-stress), mood.
+ * Wellness average from one row: average of sleep_quality, (11-soreness), (11-fatigue), (11-stress), mood, motivation.
  * Each is 1–10; we invert soreness/fatigue/stress so higher = worse.
  */
 export function wellnessAverageFromRow(row: WellnessRow): number | null {
@@ -11,6 +11,7 @@ export function wellnessAverageFromRow(row: WellnessRow): number | null {
   if (row.fatigue != null) values.push(11 - row.fatigue);
   if (row.stress != null) values.push(11 - row.stress);
   if (row.mood != null) values.push(row.mood);
+  if (row.motivation != null) values.push(row.motivation);
   if (values.length === 0) return null;
   const sum = values.reduce((a, b) => a + b, 0);
   return Math.round((sum / values.length) * 10) / 10;

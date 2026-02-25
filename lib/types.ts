@@ -29,6 +29,8 @@ export interface WellnessRow {
   fatigue: number | null;
   stress: number | null;
   mood: number | null;
+  motivation: number | null;
+  illness: boolean | null;
   bodyweight: number | null;
   body_parts: BodyPartsMap | null;
   created_at?: string;

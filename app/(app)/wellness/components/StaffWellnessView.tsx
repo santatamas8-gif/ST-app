@@ -45,6 +45,8 @@ function isAtRisk(r: WellnessRow): boolean {
   if (r.soreness != null && r.soreness >= 7) return true;
   if (r.stress != null && r.stress >= 7) return true;
   if (r.mood != null && r.mood <= 3) return true;
+  if (r.motivation != null && r.motivation <= 3) return true;
+  if (r.illness === true) return true;
   return false;
 }
 
@@ -55,12 +57,14 @@ function todayISO() {
 interface StaffWellnessViewProps {
   list: WellnessRow[];
   emailByUserId: Record<string, string>;
+  displayNameByUserId: Record<string, string>;
   totalPlayers: number | null;
 }
 
 export function StaffWellnessView({
   list,
   emailByUserId,
+  displayNameByUserId,
   totalPlayers,
 }: StaffWellnessViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -75,7 +79,7 @@ export function StaffWellnessView({
     if (query) {
       rows = rows.filter((r) => {
         const email = (emailByUserId[r.user_id] ?? "").toLowerCase();
-        const name = email; // we use email as display name
+        const name = (displayNameByUserId[r.user_id] ?? "").toLowerCase();
         return name.includes(query) || email.includes(query);
       });
     }
@@ -92,7 +96,7 @@ export function StaffWellnessView({
       rows = [...rows].sort((a, b) => (b.fatigue ?? 0) - (a.fatigue ?? 0));
     }
     return rows;
-  }, [list, selectedDate, searchQuery, onlyAtRisk, sortBy, emailByUserId]);
+  }, [list, selectedDate, searchQuery, onlyAtRisk, sortBy, emailByUserId, displayNameByUserId]);
 
   const summaryForDate = useMemo(() => {
     const rowsForDate = list.filter((r) => r.date === selectedDate);
@@ -100,10 +104,19 @@ export function StaffWellnessView({
     const atRiskCount = new Set(rowsForDate.filter(isAtRisk).map((r) => r.user_id)).size;
     const avgWellness = averageWellness(rowsForDate);
     const missing = totalPlayers != null ? Math.max(0, totalPlayers - submitted) : null;
-    return { submitted, atRiskCount, avgWellness, missing, total: totalPlayers };
+    const total = totalPlayers ?? null;
+    return { submitted, atRiskCount, avgWellness, missing, total };
   }, [list, selectedDate, totalPlayers]);
 
-  const modalUser = modalUserId ? emailByUserId[modalUserId] ?? modalUserId : null;
+  const yesterdayAvg = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    const yesterday = d.toISOString().slice(0, 10);
+    const rowsYesterday = list.filter((r) => r.date === yesterday);
+    return rowsYesterday.length > 0 ? averageWellness(rowsYesterday) : null;
+  }, [list, selectedDate]);
+
+  const modalUser = modalUserId ? (displayNameByUserId[modalUserId] ?? emailByUserId[modalUserId] ?? modalUserId) : null;
 
   return (
     <div
@@ -117,69 +130,88 @@ export function StaffWellnessView({
           <p className="mt-1 text-zinc-400">
             Daily wellness submissions (sleep, fatigue, soreness, stress, mood).
           </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Table below based on selected date and filters.
+          </p>
         </div>
 
-        {/* FILTER BAR */}
+        {/* FILTER BAR – two rows */}
         <div
-          className="flex flex-wrap items-center gap-4 rounded-xl p-4"
+          className="rounded-xl p-4"
           style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
         >
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
-            Date
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-zinc-400">
+              Date
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={onlyAtRisk}
+                onChange={(e) => setOnlyAtRisk(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
+              />
+              Only at-risk
+            </label>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
             <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              type="search"
+              placeholder="Search by name or email"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </label>
-          <input
-            type="search"
-            placeholder="Search by name or email"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56"
-          />
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              checked={onlyAtRisk}
-              onChange={(e) => setOnlyAtRisk(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
-            />
-            Only at-risk
-          </label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="newest">Newest</option>
-            <option value="lowestWellness">Lowest wellness</option>
-            <option value="highestFatigue">Highest fatigue</option>
-          </select>
+            >
+              <option value="newest">Newest</option>
+              <option value="lowestWellness">Lowest wellness</option>
+              <option value="highestFatigue">Highest fatigue</option>
+            </select>
+          </div>
         </div>
 
-        {/* SUMMARY STRIP */}
+        {/* SUMMARY STRIP – icons, clickable at-risk, trend, “of X players” */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            label="Submitted"
+            label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-emerald-400">✓</span> Submitted</span>}
             value={
               summaryForDate.total != null
                 ? `${summaryForDate.submitted} / ${summaryForDate.total}`
                 : `${summaryForDate.submitted} submissions`
             }
+            sublabel={summaryForDate.total != null ? `of ${summaryForDate.total} players` : undefined}
           />
           <KpiCard
-            label="Avg wellness score"
+            label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-zinc-400">◇</span> Avg wellness score</span>}
             value={
               summaryForDate.avgWellness != null
                 ? summaryForDate.avgWellness.toFixed(1)
                 : "—"
             }
+            sublabel={
+              summaryForDate.avgWellness != null && yesterdayAvg != null
+                ? (() => {
+                    const diff = summaryForDate.avgWellness - yesterdayAvg;
+                    if (diff === 0) return "— vs yesterday";
+                    return diff > 0
+                      ? `↑ ${diff.toFixed(1)} vs yesterday`
+                      : `↓ ${(-diff).toFixed(1)} vs yesterday`;
+                  })()
+                : undefined
+            }
           />
           <KpiCard
-            label="At-risk count"
+            label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-red-400">!</span> At-risk</span>}
             value={
               summaryForDate.atRiskCount > 0 ? (
                 <span className="text-red-400">{summaryForDate.atRiskCount}</span>
@@ -187,9 +219,15 @@ export function StaffWellnessView({
                 summaryForDate.atRiskCount
               )
             }
+            sublabel="Sleep, fatigue, soreness, stress, mood, motivation, illness."
+            onClick={summaryForDate.atRiskCount > 0 ? () => setOnlyAtRisk(true) : undefined}
           />
           {summaryForDate.missing != null && (
-            <KpiCard label="Missing submissions" value={summaryForDate.missing} />
+            <KpiCard
+              label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-amber-400">−</span> Missing</span>}
+              value={summaryForDate.missing}
+              sublabel="not submitted"
+            />
           )}
         </div>
 
@@ -220,12 +258,14 @@ export function StaffWellnessView({
                     <th className="px-4 py-3 font-medium">Soreness</th>
                     <th className="px-4 py-3 font-medium">Stress</th>
                     <th className="px-4 py-3 font-medium">Mood</th>
+                    <th className="px-4 py-3 font-medium">Motivation</th>
+                    <th className="px-4 py-3 font-medium">Illness</th>
                   </tr>
                 </thead>
                 <tbody className="text-zinc-300">
                   {filteredAndSorted.map((r) => {
                     const atRisk = isAtRisk(r);
-                    const displayName = emailByUserId[r.user_id] ?? r.user_id;
+                    const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
                     return (
                       <RiskRowHighlight key={r.id} isAtRisk={atRisk}>
                         <td className="px-4 py-3">
@@ -241,8 +281,21 @@ export function StaffWellnessView({
                         <td className="px-4 py-3">{r.date}</td>
                         <td className="px-4 py-3">{r.bed_time ?? "—"}</td>
                         <td className="px-4 py-3">{r.wake_time ?? "—"}</td>
-                        <td className="px-4 py-3 tabular-nums">
-                          {r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}
+                        <td className="px-4 py-3">
+                          {r.sleep_duration != null ? (
+                            <span
+                              className="inline-flex rounded-md px-2 py-0.5 tabular-nums font-medium"
+                              style={
+                                r.sleep_duration >= 8
+                                  ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
+                                  : { backgroundColor: "rgba(239, 68, 68, 0.25)", color: "#f87171" }
+                              }
+                            >
+                              {r.sleep_duration}h
+                            </span>
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <BadgeScore value={r.sleep_quality} type="goodHigh" />
@@ -258,6 +311,16 @@ export function StaffWellnessView({
                         </td>
                         <td className="px-4 py-3">
                           <BadgeScore value={r.mood} type="badLow" />
+                        </td>
+                        <td className="px-4 py-3">
+                          <BadgeScore value={r.motivation} type="goodHigh" />
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.illness === true ? (
+                            <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">Yes</span>
+                          ) : (
+                            <span className="text-zinc-500">—</span>
+                          )}
                         </td>
                       </RiskRowHighlight>
                     );
@@ -287,7 +350,7 @@ export function StaffWellnessView({
                 {filteredAndSorted
                   .filter((r) => splitBodyParts(r.body_parts).soreness.length > 0)
                   .map((r) => {
-                    const displayName = emailByUserId[r.user_id] ?? r.user_id;
+                    const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
                     const { soreness } = splitBodyParts(r.body_parts);
                     return (
                       <li key={r.id} className="border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
@@ -332,7 +395,7 @@ export function StaffWellnessView({
                 {filteredAndSorted
                   .filter((r) => splitBodyParts(r.body_parts).pain.length > 0)
                   .map((r) => {
-                    const displayName = emailByUserId[r.user_id] ?? r.user_id;
+                    const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
                     const { pain } = splitBodyParts(r.body_parts);
                     return (
                       <li key={r.id} className="border-b border-zinc-800 pb-3 last:border-0 last:pb-0">

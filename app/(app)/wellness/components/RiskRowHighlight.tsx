@@ -9,10 +9,13 @@ interface RiskRowHighlightProps {
 }
 
 export function RiskRowHighlight({ isAtRisk, children, className = "" }: RiskRowHighlightProps) {
+  const rowStyle = isAtRisk
+    ? { backgroundColor: "rgba(239, 68, 68, 0.12)" }
+    : { backgroundColor: "rgba(16, 185, 129, 0.08)" };
   return (
     <tr
       className={`border-b border-zinc-800 transition-colors hover:bg-zinc-800/50 ${className}`}
-      style={isAtRisk ? { backgroundColor: "rgba(239, 68, 68, 0.08)" } : undefined}
+      style={rowStyle}
     >
       {children}
     </tr>

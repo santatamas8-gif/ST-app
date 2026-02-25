@@ -44,17 +44,22 @@ export default async function WellnessPage() {
   }
 
   let emailByUserId: Record<string, string> = {};
+  let displayNameByUserId: Record<string, string> = {};
   let totalPlayers: number | null = null;
   if (!isPlayer) {
     if (list.length > 0) {
       const userIds = [...new Set(list.map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, email")
+        .select("id, email, full_name")
         .in("id", userIds);
       if (profiles) {
         for (const p of profiles) {
-          emailByUserId[p.id] = p.email ?? "—";
+          const email = p.email ?? "—";
+          emailByUserId[p.id] = email;
+          const name = (p as { full_name?: string | null }).full_name;
+          displayNameByUserId[p.id] =
+            (name && typeof name === "string" && name.trim()) ? name.trim() : email;
         }
       }
     }
@@ -109,7 +114,9 @@ export default async function WellnessPage() {
                     <th className="pb-2 pr-4 font-medium">Fatigue</th>
                     <th className="pb-2 pr-4 font-medium">Soreness</th>
                     <th className="pb-2 pr-4 font-medium">Stress</th>
-                    <th className="pb-2 font-medium">Mood</th>
+                    <th className="pb-2 pr-4 font-medium">Mood</th>
+                    <th className="pb-2 pr-4 font-medium">Motivation</th>
+                    <th className="pb-2 font-medium">Illness</th>
                   </tr>
                 </thead>
                 <tbody className="text-zinc-300">
@@ -123,7 +130,9 @@ export default async function WellnessPage() {
                       <td className="py-3 pr-4">{r.fatigue ?? "—"}</td>
                       <td className="py-3 pr-4">{r.soreness ?? "—"}</td>
                       <td className="py-3 pr-4">{r.stress ?? "—"}</td>
-                      <td className="py-3">{r.mood ?? "—"}</td>
+                      <td className="py-3 pr-4">{r.mood ?? "—"}</td>
+                      <td className="py-3 pr-4">{r.motivation ?? "—"}</td>
+                      <td className="py-3">{r.illness === true ? "Yes" : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -140,6 +149,7 @@ export default async function WellnessPage() {
     <StaffWellnessView
       list={list}
       emailByUserId={emailByUserId}
+      displayNameByUserId={displayNameByUserId}
       totalPlayers={totalPlayers}
     />
   );

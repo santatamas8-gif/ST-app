@@ -14,6 +14,7 @@ const FIELDS = [
   { key: "soreness", label: "Soreness (1–10)", inverted: true },
   { key: "stress", label: "Stress (1–10)", inverted: true },
   { key: "mood", label: "Mood (1–10)", inverted: false },
+  { key: "motivation", label: "Motivation (1–10)", inverted: false },
 ] as const;
 
 interface DailyWellnessFormProps {
@@ -28,6 +29,8 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   const [soreness, setSoreness] = useState(5);
   const [stress, setStress] = useState(5);
   const [mood, setMood] = useState(5);
+  const [motivation, setMotivation] = useState(5);
+  const [illness, setIllness] = useState(false);
   const [bodyParts, setBodyParts] = useState<BodyPartsState>({});
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -38,12 +41,13 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     return sleepDurationHours(bedTime, wakeTime);
   }, [bedTime, wakeTime]);
 
-  const values = { fatigue, soreness, stress, mood };
+  const values = { fatigue, soreness, stress, mood, motivation };
   const setters = {
     fatigue: setFatigue,
     soreness: setSoreness,
     stress: setStress,
     mood: setMood,
+    motivation: setMotivation,
   };
 
   const allScalesValid =
@@ -56,7 +60,9 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     values.stress >= 1 &&
     values.stress <= 10 &&
     values.mood >= 1 &&
-    values.mood <= 10;
+    values.mood <= 10 &&
+    values.motivation >= 1 &&
+    values.motivation <= 10;
   const canSubmit = allScalesValid && !loading && !hasSubmittedToday;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -79,6 +85,8 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
       soreness,
       stress,
       mood,
+      motivation,
+      illness,
       bed_time: bedTime || undefined,
       wake_time: wakeTime || undefined,
       body_parts: bodyPartsForDb,
@@ -195,6 +203,17 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             />
           </div>
         ))}
+        <div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-zinc-300">
+            <input
+              type="checkbox"
+              checked={illness}
+              onChange={(e) => setIllness(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
+            />
+            Illness today (e.g. cold, fever, stomach)
+          </label>
+        </div>
         <div>
           <label className="block text-sm font-medium text-zinc-300">
             Body map – soreness & pain (optional)

@@ -43,6 +43,8 @@ export async function submitDailyWellness(data: {
   soreness: number;
   stress: number;
   mood: number;
+  motivation?: number;
+  illness?: boolean;
   bed_time?: string;
   wake_time?: string;
   body_parts?: Record<string, { s: number; p: number }>;
@@ -91,6 +93,8 @@ export async function submitDailyWellness(data: {
     fatigue: data.fatigue,
     stress: data.stress,
     mood: data.mood,
+    motivation: data.motivation ?? null,
+    illness: data.illness ?? false,
     bodyweight: null,
     body_parts: bodyPartsFiltered,
   });

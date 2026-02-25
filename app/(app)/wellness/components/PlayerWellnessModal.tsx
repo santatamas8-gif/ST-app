@@ -103,6 +103,14 @@ export function PlayerWellnessModal({
               <BadgeScore value={latest.stress} type="badHigh" />
               <span className="text-zinc-500">Mood</span>
               <BadgeScore value={latest.mood} type="badLow" />
+              <span className="text-zinc-500">Motivation</span>
+              <BadgeScore value={latest.motivation} type="goodHigh" />
+              <span className="text-zinc-500">Illness</span>
+              {latest.illness === true ? (
+                <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">Yes</span>
+              ) : (
+                <span className="text-zinc-500">—</span>
+              )}
             </div>
             {latest.body_parts && Object.keys(latest.body_parts).length > 0 && (
               <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2">

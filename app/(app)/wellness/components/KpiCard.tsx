@@ -6,21 +6,33 @@ const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 interface KpiCardProps {
-  label: string;
+  label: ReactNode;
   value: ReactNode;
-  sublabel?: string;
+  sublabel?: ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-export function KpiCard({ label, value, sublabel, className = "" }: KpiCardProps) {
-  return (
-    <div
-      className={`rounded-xl p-4 ${className}`}
-      style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
-    >
+export function KpiCard({ label, value, sublabel, className = "", onClick }: KpiCardProps) {
+  const content = (
+    <>
       <p className="text-sm font-medium text-zinc-400">{label}</p>
       <p className="mt-1.5 text-2xl font-bold text-white">{value}</p>
       {sublabel != null && <p className="mt-1 text-xs text-zinc-500">{sublabel}</p>}
+    </>
+  );
+  const wrapperClass = `rounded-xl p-4 ${className}`.trim();
+  const style = { backgroundColor: BG_CARD, borderRadius: CARD_RADIUS };
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`w-full text-left ${wrapperClass}`} style={style}>
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className={wrapperClass} style={style}>
+      {content}
     </div>
   );
 }
