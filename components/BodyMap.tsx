@@ -88,13 +88,61 @@ function BodyFigure({
   value,
   mode,
   onPartClick,
+  zoom,
+  pan,
+  onZoomPanChange,
 }: {
   parsed: ParsedSvg | null;
   view: "front" | "back";
   value: BodyPartsState;
   mode: "soreness" | "pain";
   onPartClick: (partId: string) => void;
+  zoom: number;
+  pan: { x: number; y: number };
+  onZoomPanChange: (zoom: number, pan: { x: number; y: number }) => void;
 }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const lastTouchRef = React.useRef<{ x: number; y: number } | null>(null);
+  const lastPinchRef = React.useRef<{ distance: number; zoom: number } | null>(null);
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+        lastPinchRef.current = { distance: d, zoom };
+        lastTouchRef.current = null;
+      } else if (e.touches.length === 1) {
+        lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        lastPinchRef.current = null;
+      }
+    },
+    [zoom]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && lastPinchRef.current) {
+        e.preventDefault();
+        const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+        const ratio = d / lastPinchRef.current.distance;
+        const newZoom = Math.min(3, Math.max(1, lastPinchRef.current.zoom * ratio));
+        onZoomPanChange(newZoom, pan);
+      } else if (e.touches.length === 1 && lastTouchRef.current) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - lastTouchRef.current.x;
+        const dy = e.touches[0].clientY - lastTouchRef.current.y;
+        lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        onZoomPanChange(zoom, { x: pan.x + dx, y: pan.y + dy });
+      }
+    },
+    [zoom, pan, onZoomPanChange]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchRef.current = null;
+    lastPinchRef.current = null;
+  }, []);
+
   if (!parsed) {
     return (
       <div
@@ -110,9 +158,21 @@ function BodyFigure({
 
   return (
     <div
-      className="touch-none select-none overflow-hidden rounded-xl border border-zinc-600"
-      style={{ maxWidth: 320, backgroundColor: PANEL_BG }}
+      ref={containerRef}
+      className="relative select-none overflow-hidden rounded-xl border border-zinc-600"
+      style={{ maxWidth: 320, backgroundColor: PANEL_BG, touchAction: "none" }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
+      <div
+        className="origin-center transition-transform duration-100"
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          minHeight: 400,
+        }}
+      >
       <svg viewBox={viewBox} className="h-auto w-full" style={{ minHeight: 400 }} aria-hidden>
         {/* Background outline (body silhouette on dark panel) */}
         {background && (
@@ -196,6 +256,35 @@ function BodyFigure({
           );
         })}
       </svg>
+      </div>
+      <div className="absolute bottom-2 right-2 flex flex-col gap-1 rounded-lg bg-zinc-800/90 p-1 shadow-lg">
+        <button
+          type="button"
+          onClick={() => onZoomPanChange(Math.min(3, zoom + 0.25), pan)}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => onZoomPanChange(Math.max(1, zoom - 0.25), pan)}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+        {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
+          <button
+            type="button"
+            onClick={() => onZoomPanChange(1, { x: 0, y: 0 })}
+            className="flex h-8 items-center justify-center rounded-md text-xs text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
+            aria-label="Reset zoom"
+          >
+            Reset
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -211,6 +300,13 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [parsedFront, setParsedFront] = useState<ParsedSvg | null>(null);
   const [parsedBack, setParsedBack] = useState<ParsedSvg | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  const handleZoomPanChange = useCallback((newZoom: number, newPan: { x: number; y: number }) => {
+    setZoom(newZoom);
+    setPan(newPan);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -324,7 +420,7 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
         <span className="text-xs font-medium text-zinc-500">View:</span>
         <button
           type="button"
-          onClick={() => setCurrentView("front")}
+          onClick={() => { setCurrentView("front"); setZoom(1); setPan({ x: 0, y: 0 }); }}
           className={`rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
             currentView === "front"
               ? "bg-emerald-500 text-white"
@@ -335,7 +431,7 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
         </button>
         <button
           type="button"
-          onClick={() => setCurrentView("back")}
+          onClick={() => { setCurrentView("back"); setZoom(1); setPan({ x: 0, y: 0 }); }}
           className={`rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
             currentView === "back"
               ? "bg-emerald-500 text-white"
@@ -346,6 +442,10 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
         </button>
       </div>
 
+      <p className="text-xs text-zinc-500 sm:hidden">
+        Pinch to zoom, drag to pan. Use +/− to zoom in on body parts.
+      </p>
+
       <div className="mx-auto">
         <BodyFigure
           parsed={parsed}
@@ -353,6 +453,9 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
           value={value}
           mode={mode}
           onPartClick={handlePartClick}
+          zoom={zoom}
+          pan={pan}
+          onZoomPanChange={handleZoomPanChange}
         />
       </div>
 
