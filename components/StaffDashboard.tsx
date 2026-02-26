@@ -66,7 +66,7 @@ type StaffDashboardProps = {
   chart7: { date: string; load: number; wellness: number | null }[];
   playersWithStatus?: PlayerWithStatus[];
   isAdmin?: boolean;
-  todayScheduleItems?: { id: string; activity_type: string; sort_order: number; start_time: string | null; end_time: string | null; notes?: string | null }[];
+  todayScheduleItems?: { id: string; activity_type: string; sort_order: number; start_time: string | null; end_time: string | null; notes?: string | null; opponent?: string | null; team_a?: string | null; team_b?: string | null }[];
   onRefreshData?: () => Promise<void>;
 };
 
@@ -283,27 +283,12 @@ export function StaffDashboard({
                       team_building: "Team building",
                       individual: "Individual",
                     };
-                    const SCHEDULE_PILL: Record<string, string> = {
-                      breakfast: "bg-amber-500/40",
-                      lunch: "bg-amber-500/40",
-                      dinner: "bg-amber-500/40",
-                      training: "bg-blue-500/40",
-                      gym: "bg-purple-500/40",
-                      recovery: "bg-emerald-500/40",
-                      pre_activation: "bg-orange-500/40",
-                      video_analysis: "bg-cyan-500/40",
-                      meeting: "bg-sky-500/40",
-                      traveling: "bg-amber-600/40",
-                      physio: "bg-teal-500/40",
-                      medical: "bg-red-500/40",
-                      media: "bg-pink-500/40",
-                      rest_off: "bg-zinc-500/40",
-                      match: "bg-rose-500/40",
-                      team_building: "bg-violet-500/40",
-                      individual: "bg-lime-500/40",
-                    };
-                    const label = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
-                    const pill = SCHEDULE_PILL[item.activity_type] ?? "bg-zinc-500/40";
+                    const baseLabel = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
+                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
+                      ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
+                      : item.activity_type === "match" && item.opponent?.trim()
+                        ? `${baseLabel} vs. ${item.opponent.trim()}`
+                        : baseLabel;
                     const timeStr =
                       item.start_time != null
                         ? item.end_time != null
@@ -311,24 +296,40 @@ export function StaffDashboard({
                           : item.start_time
                         : "—";
                     const notes = item.notes?.trim();
+                    const isMatch = item.activity_type === "match";
                     return (
                       <div
                         key={item.id}
-                        className="flex w-40 shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/80"
+                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-lg shadow-black/25 transition-all duration-200 ${
+                          isMatch
+                            ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
+                            : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"
+                        }`}
                       >
-                        <div className={`w-1 shrink-0 ${pill}`} aria-hidden />
-                        <div className="min-w-0 flex-1 px-3 py-2">
-                          <p className="flex items-center gap-2 font-medium text-white text-sm">
-                            {label}
-                            <ScheduleIcon type={item.activity_type} />
+                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                          <p
+                            className={`tabular-nums font-semibold ${
+                              isMatch
+                                ? "text-base text-amber-400"
+                                : "text-sm text-emerald-400"
+                            }`}
+                          >
+                            {timeStr}
+                          </p>
+                          <p
+                            className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${
+                              isMatch ? "text-sm" : "text-xs"
+                            }`}
+                          >
+                            {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}
+                            <span>{label}</span>
                           </p>
                           {notes ? (
-                            <p className="flex items-center gap-1.5 text-xs text-zinc-400">
+                            <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                               <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
                               {notes}
                             </p>
                           ) : null}
-                          <p className="text-xs text-zinc-400">{timeStr}</p>
                         </div>
                       </div>
                     );

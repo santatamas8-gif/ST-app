@@ -7,6 +7,7 @@ import {
   removeScheduleItem,
   updateScheduleItemTime,
   updateScheduleItemNotes,
+  updateScheduleItemMatchTeams,
 } from "@/app/actions/schedule";
 import type { ScheduleActivityType } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
@@ -70,10 +71,19 @@ type ScheduleItem = {
   start_time: string | null;
   end_time: string | null;
   notes?: string | null;
+  opponent?: string | null;
+  team_a?: string | null;
+  team_b?: string | null;
 };
 
 function formatItemLabel(item: ScheduleItem): string {
   const label = ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type;
+  if (item.activity_type === "match") {
+    const a = item.team_a?.trim();
+    const b = item.team_b?.trim();
+    if (a && b) return `${a} vs. ${b}`;
+    if (item.opponent?.trim()) return `${label} vs. ${item.opponent.trim()}`;
+  }
   return item.notes?.trim() ? `${label} (${item.notes.trim()})` : label;
 }
 
@@ -128,6 +138,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
   const [addNotes, setAddNotes] = useState("");
+  const [addTeamA, setAddTeamA] = useState("");
+  const [addTeamB, setAddTeamB] = useState("");
+  const [editingMatchTeamsId, setEditingMatchTeamsId] = useState<string | null>(null);
+  const [editingTeamA, setEditingTeamA] = useState("");
+  const [editingTeamB, setEditingTeamB] = useState("");
   const [timeSaveError, setTimeSaveError] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
@@ -190,7 +205,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     } else setMonth((m) => m + 1);
   }
 
-  async function handleAdd(activity_type: ScheduleActivityType, startTime?: string | null, endTime?: string | null, notes?: string | null) {
+  async function handleAdd(activity_type: ScheduleActivityType, startTime?: string | null, endTime?: string | null, notes?: string | null, team_a?: string | null, team_b?: string | null) {
     if (!selectedDate || !canEdit) return;
     setTimeSaveError(null);
     if (startTime != null || endTime != null) {
@@ -201,7 +216,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
       }
     }
     setAddLoading(true);
-    await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null, notes ?? null);
+    await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null, notes ?? null, undefined, activity_type === "match" ? team_a ?? null : undefined, activity_type === "match" ? team_b ?? null : undefined);
     const { data } = await getScheduleForMonth(from, to);
     setScheduleItems(data ?? []);
     setAddLoading(false);
@@ -209,6 +224,8 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     setAddStart("");
     setAddEnd("");
     setAddNotes("");
+    setAddTeamA("");
+    setAddTeamB("");
   }
 
   async function handleSaveNotes(id: string, notes: string) {
@@ -218,6 +235,17 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     setScheduleItems(data ?? []);
     setEditingNotesId(null);
     setEditingNotesValue("");
+  }
+
+  async function handleSaveMatchTeams(id: string, team_a: string, team_b: string) {
+    const a = team_a.trim().slice(0, 100) || null;
+    const b = team_b.trim().slice(0, 100) || null;
+    await updateScheduleItemMatchTeams(id, a, b);
+    const { data } = await getScheduleForMonth(from, to);
+    setScheduleItems(data ?? []);
+    setEditingMatchTeamsId(null);
+    setEditingTeamA("");
+    setEditingTeamB("");
   }
 
   async function handleSetTime(id: string, startTime: string | null, endTime: string | null) {
@@ -397,9 +425,48 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 font-medium text-white text-sm">
-                      {ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type}
-                      <ScheduleIcon type={item.activity_type} />
+                      {item.activity_type === "match"
+                        ? (item.team_a?.trim() && item.team_b?.trim()
+                          ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
+                          : item.opponent?.trim()
+                            ? `Match vs. ${item.opponent.trim()}`
+                            : "Match")
+                        : (ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type)}
+                      {item.activity_type !== "match" && <ScheduleIcon type={item.activity_type} />}
                     </p>
+                    {item.activity_type === "match" && isAdmin && (
+                      editingMatchTeamsId === item.id ? (
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingTeamA}
+                            onChange={(e) => setEditingTeamA(e.target.value)}
+                            placeholder="Team A"
+                            maxLength={100}
+                            className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                          />
+                          <span className="text-zinc-500 text-sm">vs.</span>
+                          <input
+                            type="text"
+                            value={editingTeamB}
+                            onChange={(e) => setEditingTeamB(e.target.value)}
+                            placeholder="Team B"
+                            maxLength={100}
+                            className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                          />
+                          <button type="button" onClick={() => handleSaveMatchTeams(item.id, editingTeamA, editingTeamB)} className="text-emerald-400 hover:text-emerald-300 text-sm">Save</button>
+                          <button type="button" onClick={() => { setEditingMatchTeamsId(null); setEditingTeamA(""); setEditingTeamB(""); }} className="text-zinc-400 hover:text-zinc-300 text-sm">Cancel</button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setEditingMatchTeamsId(item.id); setEditingTeamA(item.team_a ?? ""); setEditingTeamB(item.team_b ?? ""); }}
+                          className="text-xs text-amber-400 hover:text-amber-300"
+                        >
+                          {(item.team_a?.trim() && item.team_b?.trim()) ? `Edit teams` : "Set teams"}
+                        </button>
+                      )
+                    )}
                     {item.notes?.trim() ? (
                       <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                         <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
@@ -554,6 +621,27 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                     aria-label="End time (24h)"
                     title="24h format, e.g. 09:00 or 14:30"
                   />
+                  {addingType === "match" && (
+                    <>
+                      <input
+                        type="text"
+                        value={addTeamA}
+                        onChange={(e) => setAddTeamA(e.target.value)}
+                        placeholder="Team A (e.g. Real Madrid)"
+                        maxLength={100}
+                        className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                      />
+                      <span className="text-zinc-500 text-sm">vs.</span>
+                      <input
+                        type="text"
+                        value={addTeamB}
+                        onChange={(e) => setAddTeamB(e.target.value)}
+                        placeholder="Team B (e.g. FC Barcelona)"
+                        maxLength={100}
+                        className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                      />
+                    </>
+                  )}
                   <input
                     type="text"
                     value={addNotes}
@@ -564,7 +652,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   />
                   <button
                     type="button"
-                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null)}
+                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
                     disabled={addLoading}
                     className="rounded bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
                   >
@@ -572,7 +660,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); }}
+                    onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
                     className="rounded bg-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-600"
                   >
                     Cancel

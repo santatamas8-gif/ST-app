@@ -67,7 +67,7 @@ export async function GET() {
     const supabaseForSchedule = await createClient();
     const { data: todayRows } = await supabaseForSchedule
       .from("schedule")
-      .select("id, activity_type, sort_order, start_time, end_time, notes")
+      .select("id, activity_type, sort_order, start_time, end_time, notes, opponent, team_a, team_b")
       .eq("date", today)
       .order("sort_order", { ascending: true });
 
@@ -78,6 +78,9 @@ export async function GET() {
       start_time: r.start_time != null ? String(r.start_time).slice(0, 5) : null,
       end_time: r.end_time != null ? String(r.end_time).slice(0, 5) : null,
       notes: (r as { notes?: string | null }).notes ?? null,
+      opponent: (r as { opponent?: string | null }).opponent ?? null,
+      team_a: (r as { team_a?: string | null }).team_a ?? null,
+      team_b: (r as { team_b?: string | null }).team_b ?? null,
     }));
     const todayScheduleItems = [...raw].sort((a, b) => {
       const aStart = a.start_time ?? "zzz";

@@ -27,6 +27,9 @@ type ScheduleItemToday = {
   start_time: string | null;
   end_time: string | null;
   notes: string | null;
+  opponent?: string | null;
+  team_a?: string | null;
+  team_b?: string | null;
 };
 
 type DashboardData = {
@@ -271,8 +274,12 @@ export default function DashboardPage() {
               <div className="overflow-x-auto p-4">
                 <div className="flex gap-3" style={{ minWidth: "min-content" }}>
                   {todayScheduleItems.map((item) => {
-                    const label = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
-                    const accentColor = "#10b981";
+                    const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
+                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
+                      ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
+                      : item.activity_type === "match" && item.opponent?.trim()
+                        ? `${baseLabel} vs. ${item.opponent.trim()}`
+                        : baseLabel;
                     const timeStr =
                       item.start_time != null
                         ? item.end_time != null
@@ -280,31 +287,40 @@ export default function DashboardPage() {
                           : item.start_time
                       : "—";
                     const notes = item.notes?.trim();
+                    const isMatch = item.activity_type === "match";
                     return (
                       <div
                         key={item.id}
-                        className="flex w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700/90 bg-zinc-800/95 ring-1 ring-zinc-700/50 transition-all hover:ring-zinc-600/60 hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
-                        style={{
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05) inset",
-                        }}
+                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-lg shadow-black/25 transition-all duration-200 ${
+                          isMatch
+                            ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
+                            : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"
+                        }`}
                       >
-                        <div
-                          className="w-1.5 shrink-0 rounded-l-lg"
-                          style={{ backgroundColor: accentColor, minHeight: "100%" }}
-                          aria-hidden
-                        />
                         <div className="min-w-0 flex-1 px-3 py-2.5">
-                          <p className="flex items-center gap-2 text-sm font-medium text-white">
-                            {label}
-                            <ScheduleIcon type={item.activity_type} />
+                          <p
+                            className={`tabular-nums font-semibold ${
+                              isMatch
+                                ? "text-base text-amber-400"
+                                : "text-sm text-emerald-400"
+                            }`}
+                          >
+                            {timeStr}
+                          </p>
+                          <p
+                            className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${
+                              isMatch ? "text-sm" : "text-xs"
+                            }`}
+                          >
+                            {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}
+                            <span>{label}</span>
                           </p>
                           {notes ? (
-                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
+                            <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                               <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
                               {notes}
                             </p>
                           ) : null}
-                          <p className="text-xs text-zinc-500">{timeStr}</p>
                         </div>
                       </div>
                     );

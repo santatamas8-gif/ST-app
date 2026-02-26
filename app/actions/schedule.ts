@@ -13,6 +13,9 @@ export type ScheduleItemRow = {
   start_time: string | null;
   end_time: string | null;
   notes?: string | null;
+  opponent?: string | null;
+  team_a?: string | null;
+  team_b?: string | null;
 };
 
 export async function getScheduleForMonth(
@@ -25,7 +28,7 @@ export async function getScheduleForMonth(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schedule")
-    .select("id, date, activity_type, sort_order, start_time, end_time, notes")
+    .select("id, date, activity_type, sort_order, start_time, end_time, notes, opponent, team_a, team_b")
     .gte("date", from)
     .lte("date", to)
     .order("date", { ascending: true })
@@ -65,12 +68,27 @@ function truncateNotes(notes: string | null | undefined): string | null {
   return t === "" ? null : t.slice(0, 100);
 }
 
+function truncateOpponent(opponent: string | null | undefined): string | null {
+  if (opponent == null || typeof opponent !== "string") return null;
+  const t = opponent.trim();
+  return t === "" ? null : t.slice(0, 100);
+}
+
+function truncateTeam(team: string | null | undefined): string | null {
+  if (team == null || typeof team !== "string") return null;
+  const t = team.trim();
+  return t === "" ? null : t.slice(0, 100);
+}
+
 export async function addScheduleItem(
   date: string,
   activity_type: ScheduleActivityType,
   startTime?: string | null,
   endTime?: string | null,
-  notes?: string | null
+  notes?: string | null,
+  opponent?: string | null,
+  team_a?: string | null,
+  team_b?: string | null
 ): Promise<{ error?: string }> {
   const user = await getAppUser();
   if (!user) return { error: "Not authenticated" };
@@ -94,6 +112,10 @@ export async function addScheduleItem(
   }
 
   const notesVal = truncateNotes(notes);
+  const isMatch = activity_type === "match";
+  const teamAVal = isMatch ? truncateTeam(team_a) : null;
+  const teamBVal = isMatch ? truncateTeam(team_b) : null;
+  const opponentVal = isMatch && !teamAVal && !teamBVal ? truncateOpponent(opponent) : null;
 
   const { error } = await supabase.from("schedule").insert({
     date,
@@ -102,6 +124,9 @@ export async function addScheduleItem(
     ...(start != null && { start_time: start }),
     ...(end != null && { end_time: end }),
     ...(notesVal != null && { notes: notesVal }),
+    ...(opponentVal != null && { opponent: opponentVal }),
+    ...(teamAVal != null && { team_a: teamAVal }),
+    ...(teamBVal != null && { team_b: teamBVal }),
   });
 
   if (error) return { error: error.message };
@@ -119,6 +144,31 @@ export async function updateScheduleItemNotes(id: string, notes: string | null):
 
   const supabase = await createClient();
   const { error } = await supabase.from("schedule").update({ notes: notesVal }).eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/** Update match teams for a schedule item (only used for activity_type = match). */
+export async function updateScheduleItemMatchTeams(
+  id: string,
+  team_a: string | null,
+  team_b: string | null
+): Promise<{ error?: string }> {
+  const user = await getAppUser();
+  if (!user) return { error: "Not authenticated" };
+  if (user.role !== "admin") return { error: "Only admin can edit match teams." };
+
+  const supabase = await createClient();
+  const teamAVal = truncateTeam(team_a);
+  const teamBVal = truncateTeam(team_b);
+
+  const { error } = await supabase
+    .from("schedule")
+    .update({ team_a: teamAVal, team_b: teamBVal, opponent: null })
+    .eq("id", id);
 
   if (error) return { error: error.message };
   revalidatePath("/schedule");
