@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
+import { updateTeamSettings } from "@/app/actions/teamSettings";
 import {
   LineChart,
   Line,
@@ -68,6 +69,8 @@ type StaffDashboardProps = {
   isAdmin?: boolean;
   todayScheduleItems?: { id: string; activity_type: string; sort_order: number; start_time: string | null; end_time: string | null; notes?: string | null; opponent?: string | null; team_a?: string | null; team_b?: string | null }[];
   onRefreshData?: () => Promise<void>;
+  userDisplayName?: string;
+  teamSettings?: { team_name: string | null; team_logo_url: string | null };
 };
 
 function formatShortDate(dateStr: string) {
@@ -76,11 +79,11 @@ function formatShortDate(dateStr: string) {
 }
 
 const STATUS_OPTIONS = [
-  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/60 shadow-[0_0_24px_rgba(16,185,129,0.2)]", tintClass: "bg-emerald-500/15" },
-  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/60 shadow-[0_0_24px_rgba(245,158,11,0.2)]", tintClass: "bg-amber-500/15" },
-  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/60 shadow-[0_0_24px_rgba(249,115,22,0.2)]", tintClass: "bg-orange-500/15" },
-  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/60 shadow-[0_0_24px_rgba(239,68,68,0.2)]", tintClass: "bg-red-500/15" },
-  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/60 shadow-[0_0_24px_rgba(14,165,233,0.2)]", tintClass: "bg-sky-500/15" },
+  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/60 shadow-[0_0_24px_rgba(16,185,129,0.2)]", tintClass: "bg-emerald-500/15", borderLClass: "border-l-emerald-500" },
+  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/60 shadow-[0_0_24px_rgba(245,158,11,0.2)]", tintClass: "bg-amber-500/15", borderLClass: "border-l-amber-500" },
+  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/60 shadow-[0_0_24px_rgba(249,115,22,0.2)]", tintClass: "bg-orange-500/15", borderLClass: "border-l-orange-500" },
+  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/60 shadow-[0_0_24px_rgba(239,68,68,0.2)]", tintClass: "bg-red-500/15", borderLClass: "border-l-red-500" },
+  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/60 shadow-[0_0_24px_rgba(14,165,233,0.2)]", tintClass: "bg-sky-500/15", borderLClass: "border-l-sky-500" },
 ] as const;
 
 export function StaffDashboard({
@@ -91,6 +94,8 @@ export function StaffDashboard({
   isAdmin = false,
   todayScheduleItems = [],
   onRefreshData,
+  userDisplayName,
+  teamSettings,
 }: StaffDashboardProps) {
   const router = useRouter();
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -106,6 +111,11 @@ export function StaffDashboard({
   const [pendingNotes, setPendingNotes] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetPlayerIdRef = useRef<string | null>(null);
+  const [editingTeam, setEditingTeam] = useState(false);
+  const [teamNameInput, setTeamNameInput] = useState("");
+  const [teamLogoInput, setTeamLogoInput] = useState("");
+  const [savingTeam, setSavingTeam] = useState(false);
+  const [teamSaveError, setTeamSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -233,7 +243,7 @@ export function StaffDashboard({
 
   function getStatusStyle(status: string) {
     const opt = STATUS_OPTIONS.find((o) => o.value === status) ?? STATUS_OPTIONS[0];
-    return { pillClass: opt.pillClass, badgeClass: opt.badgeClass, label: opt.label, ringClass: opt.ringClass, tintClass: opt.tintClass };
+    return { pillClass: opt.pillClass, badgeClass: opt.badgeClass, label: opt.label, ringClass: opt.ringClass, tintClass: opt.tintClass, borderLClass: opt.borderLClass };
   }
 
   return (
@@ -242,27 +252,103 @@ export function StaffDashboard({
       style={{ backgroundColor: BG_PAGE }}
     >
       <div className="mx-auto max-w-7xl space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Performance Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Elite football – today&apos;s overview
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-2xl font-bold tracking-tight text-white">
+            Welcome, {userDisplayName ?? "User"}!
           </p>
+          <div className="flex flex-wrap items-center gap-4">
+            {editingTeam && isAdmin ? (
+              <>
+                <input
+                  type="text"
+                  value={teamNameInput}
+                  onChange={(e) => setTeamNameInput(e.target.value)}
+                  placeholder="Team name"
+                  maxLength={200}
+                  className="rounded border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white placeholder-zinc-500 w-48"
+                />
+                <input
+                  type="url"
+                  value={teamLogoInput}
+                  onChange={(e) => setTeamLogoInput(e.target.value)}
+                  placeholder="Logo image URL"
+                  maxLength={500}
+                  className="rounded border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white placeholder-zinc-500 w-64"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTeamSaveError(null);
+                    setSavingTeam(true);
+                    const err = await updateTeamSettings(teamNameInput.trim() || null, teamLogoInput.trim() || null);
+                    setSavingTeam(false);
+                    if (err?.error) setTeamSaveError(err.error);
+                    else {
+                      setEditingTeam(false);
+                      await onRefreshData?.();
+                    }
+                  }}
+                  disabled={savingTeam}
+                  className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {savingTeam ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTeam(false);
+                    setTeamNameInput(teamSettings?.team_name ?? "");
+                    setTeamLogoInput(teamSettings?.team_logo_url ?? "");
+                    setTeamSaveError(null);
+                  }}
+                  className="rounded bg-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-600"
+                >
+                  Cancel
+                </button>
+                {teamSaveError && <span className="text-sm text-red-400">{teamSaveError}</span>}
+              </>
+            ) : (
+              <>
+                {teamSettings?.team_name && (
+                  <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                )}
+                {teamSettings?.team_logo_url && (
+                  <img
+                    src={teamSettings.team_logo_url}
+                    alt="Team logo"
+                    className="h-10 w-auto object-contain"
+                  />
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTeam(true);
+                      setTeamNameInput(teamSettings?.team_name ?? "");
+                      setTeamLogoInput(teamSettings?.team_logo_url ?? "");
+                    }}
+                    className="text-sm text-amber-400 hover:text-amber-300"
+                  >
+                    Edit team
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
+          <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">Today&apos;s Schedule</h2>
           <div
             className="overflow-hidden rounded-xl border border-zinc-800"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
             {todayScheduleItems.length === 0 ? (
-              <p className="px-5 py-6 text-zinc-400">No schedule items today.</p>
+              <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
             ) : (
               <div className="overflow-x-auto p-4">
-                <div className="flex gap-3" style={{ minWidth: "min-content" }}>
+                <div className="flex gap-4" style={{ minWidth: "min-content" }}>
                   {todayScheduleItems.map((item) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       breakfast: "Breakfast",
@@ -343,14 +429,14 @@ export function StaffDashboard({
         {/* PLAYERS – ID cards */}
         {playersWithStatus.length > 0 && (
           <div ref={statusDropdownRef}>
-            <h2 className="mb-4 text-lg font-semibold text-white">Players</h2>
+            <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">Players</h2>
             {statusError && (
               <p className="mb-2 text-sm text-red-400">{statusError}</p>
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {playersWithStatus.map((p) => {
                 const effectiveStatus = statusOverrides[p.id] ?? p.status;
-                const { pillClass, badgeClass, label, ringClass, tintClass } = getStatusStyle(effectiveStatus);
+                const { pillClass, badgeClass, label, ringClass, tintClass, borderLClass } = getStatusStyle(effectiveStatus);
                 const displayName = (p.full_name && p.full_name.trim()) || p.email;
                 const avatarUrl = avatarOverrides[p.id] ?? p.avatar_url ?? null;
                 const monogram = (displayName[0] ?? "?").toUpperCase();
@@ -360,7 +446,7 @@ export function StaffDashboard({
                 return (
                   <div
                     key={p.id}
-                    className={`relative flex overflow-visible rounded-xl border border-zinc-800 ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
+                    className={`relative flex overflow-visible rounded-xl border-l-4 border border-zinc-800 ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
                     style={{
                       backgroundColor: BG_CARD,
                       borderRadius: CARD_RADIUS,
@@ -563,10 +649,13 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <p className="text-sm font-medium text-zinc-400">
+            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <span className="text-emerald-400" aria-hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+              </span>
               Players Submitted Today
             </p>
-            <p className="mt-2 text-2xl font-bold text-white">
+            <p className="mt-2 text-2xl font-bold tabular-nums text-white">
               {submitted} <span className="text-zinc-500">/ {totalPlayers}</span>
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
@@ -583,10 +672,13 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <p className="text-sm font-medium text-zinc-400">
+            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <span className="text-emerald-400" aria-hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+              </span>
               Average Wellness Score Today
             </p>
-            <p className={`mt-2 text-3xl font-bold ${wellnessColor}`}>
+            <p className={`mt-2 text-3xl font-bold tabular-nums ${wellnessColor}`}>
               {avgWellness != null ? avgWellness.toFixed(1) : "—"}
             </p>
           </div>
@@ -595,20 +687,26 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <p className="text-sm font-medium text-zinc-400">
+            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <span className="text-emerald-400" aria-hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+              </span>
               Total Team Load Today
             </p>
-            <p className="mt-2 text-3xl font-bold text-white">{totalLoad}</p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white">{totalLoad}</p>
           </div>
 
           <div
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <p className="text-sm font-medium text-zinc-400">
+            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <span className="text-red-400" aria-hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              </span>
               High Risk Players
             </p>
-            <p className="mt-2 text-3xl font-bold text-white">
+            <p className="mt-2 text-3xl font-bold tabular-nums text-white">
               {highRiskCount}
               {highRiskCount > 0 && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-red-500/20 px-2 py-0.5 text-sm font-medium text-red-400">
@@ -624,8 +722,8 @@ export function StaffDashboard({
           className="rounded-xl p-5"
           style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
         >
-          <h2 className="text-lg font-semibold text-white">
-            ⚠ At Risk Players
+          <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+            At risk players
           </h2>
           {atRisk.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -634,25 +732,31 @@ export function StaffDashboard({
                 const f = p.fatigue ?? 0;
                 const critical = w < 5 || f > 7;
                 const badge = critical ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400";
+                const leftBorder = critical ? "border-l-red-500" : "border-l-amber-500";
                 return (
                   <li
                     key={p.user_id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-900/60 px-4 py-3"
+                    className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border-l-4 bg-zinc-900/60 px-4 py-3 ${leftBorder}`}
                   >
-                    <Link
-                      href={`/players/${p.user_id}`}
-                      className="font-medium text-white hover:text-emerald-400 hover:underline"
-                    >
-                      {(p.full_name && p.full_name.trim()) || p.email}
-                    </Link>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-zinc-400">
-                        Wellness: {p.wellness != null ? p.wellness.toFixed(1) : "—"}
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">At risk player</p>
+                      <Link
+                        href={`/players/${p.user_id}`}
+                        className="font-semibold text-white hover:text-emerald-400 hover:underline"
+                      >
+                        {(p.full_name && p.full_name.trim()) || p.email}
+                      </Link>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
+                        <span className="text-zinc-500">Wellness:</span> {p.wellness != null ? p.wellness.toFixed(1) : "—"}
                       </span>
-                      <span className="text-zinc-400">
-                        Fatigue: {p.fatigue ?? "—"}
+                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
+                        <span className="text-zinc-500">Fatigue:</span> {p.fatigue ?? "—"}
                       </span>
-                      <span className="text-zinc-400">Load: {p.load ?? 0}</span>
+                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
+                        <span className="text-zinc-500">Load:</span> {p.load ?? 0}
+                      </span>
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${badge}`}
                       >
@@ -676,10 +780,11 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <h3 className="text-sm font-medium text-zinc-400">
+            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Average wellness
             </h3>
-            <div className="mt-3 h-40">
+            <p className="mt-1 text-xs text-zinc-500">Team average</p>
+            <div className="mt-3 h-40 min-h-[160px]">
               {chartDataWellness.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartDataWellness} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -715,10 +820,11 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <h3 className="text-sm font-medium text-zinc-400">
+            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Team load
             </h3>
-            <div className="mt-3 h-40">
+            <p className="mt-1 text-xs text-zinc-500">Team total</p>
+            <div className="mt-3 h-40 min-h-[160px]">
               {chartDataLoad.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartDataLoad} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -748,10 +854,14 @@ export function StaffDashboard({
             className="rounded-xl p-5"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <h3 className="text-sm font-medium text-zinc-400">
+            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Submission compliance %
             </h3>
-            <div className="mt-3 h-40">
+            <p className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+              <span className="text-lg font-bold tabular-nums text-emerald-400">{submissionPct}%</span>
+              submitted today
+            </p>
+            <div className="mt-3 h-40 min-h-[160px]">
               {donutData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -796,19 +906,29 @@ export function StaffDashboard({
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href="/wellness"
-            className="block rounded-xl p-4 transition opacity-90 hover:opacity-100"
+            className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <span className="font-medium text-white">Wellness summary</span>
-            <p className="mt-1 text-sm text-zinc-400">View all entries</p>
+            <span className="text-emerald-400" aria-hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="font-semibold text-white">Wellness summary</span>
+              <p className="mt-1 text-sm text-zinc-400">View and manage all wellness entries</p>
+            </div>
           </Link>
           <Link
             href="/rpe"
-            className="block rounded-xl p-4 transition opacity-90 hover:opacity-100"
+            className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
             style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
           >
-            <span className="font-medium text-white">RPE / sessions</span>
-            <p className="mt-1 text-sm text-zinc-400">View all entries</p>
+            <span className="text-emerald-400" aria-hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="font-semibold text-white">RPE / sessions</span>
+              <p className="mt-1 text-sm text-zinc-400">View and manage RPE sessions</p>
+            </div>
           </Link>
         </div>
       </div>

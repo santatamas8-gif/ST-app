@@ -93,8 +93,28 @@ export async function GET() {
         ? { activity_type: todayScheduleItems[0].activity_type }
         : null;
 
+    const supabaseForProfile = await createClient();
+    const { data: profile } = await supabaseForProfile
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    const userDisplayName = (profile?.full_name && profile.full_name.trim()) || user.email || "User";
+
+    const { data: teamRow } = await supabaseForProfile
+      .from("team_settings")
+      .select("team_name, team_logo_url")
+      .limit(1)
+      .maybeSingle();
+    const teamSettings = {
+      team_name: teamRow?.team_name ?? null,
+      team_logo_url: teamRow?.team_logo_url ?? null,
+    };
+
     return NextResponse.json({
       role: user.role,
+      userDisplayName,
+      teamSettings,
       metrics,
       chart7: data.chart7,
       chart28: data.chart28,

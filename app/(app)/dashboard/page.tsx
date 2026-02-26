@@ -34,6 +34,8 @@ type ScheduleItemToday = {
 
 type DashboardData = {
   role?: string;
+  userDisplayName?: string;
+  teamSettings?: { team_name: string | null; team_logo_url: string | null };
   metrics: any;
   chart7: { date: string; load: number; wellness: number | null }[];
   chart28: any[];
@@ -173,6 +175,8 @@ export default function DashboardPage() {
         isAdmin={role === "admin"}
         todayScheduleItems={data.todayScheduleItems ?? []}
         onRefreshData={loadDashboard}
+        userDisplayName={data.userDisplayName ?? undefined}
+        teamSettings={data.teamSettings ?? undefined}
       />
     );
   }
@@ -234,9 +238,29 @@ export default function DashboardPage() {
         ? "Fill in wellness to complete today."
         : "Log your session (RPE) to complete today.";
 
+  const teamSettings = data.teamSettings;
+  const userDisplayName = data.userDisplayName ?? "User";
+
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
       <div className="mx-auto max-w-6xl space-y-8">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+          <p className="text-2xl font-bold tracking-tight text-white">Welcome, {userDisplayName}!</p>
+          {(teamSettings?.team_name || teamSettings?.team_logo_url) && (
+            <div className="flex flex-wrap items-center gap-3">
+              {teamSettings?.team_name && (
+                <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+              )}
+              {teamSettings?.team_logo_url && (
+                <img
+                  src={teamSettings.team_logo_url}
+                  alt="Team logo"
+                  className="h-10 w-auto object-contain"
+                />
+              )}
+            </div>
+          )}
+        </div>
         <p className="text-zinc-400">{summaryLine}</p>
 
         {!allDone && (
