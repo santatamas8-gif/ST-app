@@ -145,8 +145,8 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
 
   return (
     <div
-      className="rounded-xl border border-zinc-800 p-5 shadow-lg"
-      style={{ backgroundColor: "#11161c", borderRadius: 12 }}
+      className="rounded-xl border p-5 shadow-lg"
+      style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}
     >
       <h2 className="mb-1 text-lg font-semibold text-white">Daily wellness</h2>
       <p className="mb-4 text-sm text-zinc-400">{SCALE_HELPER}</p>

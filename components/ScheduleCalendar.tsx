@@ -306,7 +306,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   return (
     <div className="space-y-6">
       {!canEdit && (
-        <div className="rounded-xl border border-zinc-800 px-4 py-3" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
+        <div className="rounded-xl border px-4 py-3" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
           <p className="text-sm font-medium text-zinc-400">Next session</p>
           <p className="mt-1 text-base font-semibold text-white">
             {nextSessionSummary ?? "No upcoming sessions"}
@@ -332,7 +332,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-800" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
+      <div className="overflow-x-auto rounded-xl border" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-zinc-700">
@@ -400,7 +400,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
       {loading && <p className="text-sm text-zinc-500">Loading…</p>}
 
       {selectedDate && (
-        <div className="rounded-xl border border-zinc-800 p-5" style={{ backgroundColor: "#11161c", borderRadius: 12 }}>
+        <div className="rounded-xl border p-5" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
           <h2 className="mb-4 text-lg font-semibold text-white">
             Program for {selectedDate}{getDateContextLabel(selectedDate)}
           </h2>

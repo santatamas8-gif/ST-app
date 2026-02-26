@@ -35,8 +35,6 @@ function intensityOpacity(value: number): number {
   return Math.min(1, Math.max(0, 0.35 + (value / 10) * 0.65));
 }
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 type SortOption = "newest" | "lowestWellness" | "highestFatigue";
@@ -125,7 +123,7 @@ export function StaffWellnessView({
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-6">
         {/* HEADER */}
@@ -142,7 +140,7 @@ export function StaffWellnessView({
         {/* FILTER BAR – two rows */}
         <div
           className="rounded-xl p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-zinc-400">
@@ -252,7 +250,7 @@ export function StaffWellnessView({
         {/* TABLE */}
         <div
           className="overflow-hidden rounded-xl"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filteredAndSorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -357,7 +355,7 @@ export function StaffWellnessView({
           }) && (
           <div
             className="rounded-xl border border-zinc-700 px-4 py-4 sm:px-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <h3 className="text-sm font-medium text-zinc-400">Body parts</h3>
 

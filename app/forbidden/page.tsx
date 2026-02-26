@@ -4,7 +4,7 @@ export default function ForbiddenPage() {
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4"
-      style={{ backgroundColor: "#0b0f14" }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-md rounded-xl border border-amber-900/50 bg-amber-950/20 p-6" style={{ borderRadius: 12 }}>
         <h1 className="text-xl font-semibold text-amber-400">Access denied</h1>

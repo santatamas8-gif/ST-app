@@ -6,8 +6,6 @@ import type { ProfileRow } from "./page";
 import { createUser, updateUserRole } from "@/app/actions/admin-users";
 import type { UserRole } from "@/lib/types";
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 type RoleFilter = "all" | "admin" | "staff" | "player";
@@ -95,7 +93,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
@@ -172,7 +170,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
         {/* Toolbar */}
         <div
           className="flex flex-wrap items-center gap-4 rounded-xl p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <input
             type="search"
@@ -203,7 +201,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
         {/* Table */}
         <div
           className="overflow-hidden rounded-xl"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -388,7 +386,7 @@ function CreateUserModal({
     >
       <div
         className="w-full max-w-md rounded-xl p-6 shadow-xl"
-        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
@@ -537,7 +535,7 @@ function DeleteConfirmModal({
     >
       <div
         className="w-full max-w-md rounded-xl p-6 shadow-xl"
-        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-bold text-red-400">Delete user</h2>

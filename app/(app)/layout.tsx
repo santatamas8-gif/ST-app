@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAppUser } from "@/lib/auth";
 import { getPlayerCheckInStatus } from "@/lib/checkInStatus";
 import { Sidebar } from "@/components/Sidebar";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default async function AppLayout({
   children,
@@ -17,11 +18,13 @@ export default async function AppLayout({
       : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 md:flex-row">
-      <Sidebar role={user.role} userEmail={user.email} todoToday={todoToday} />
-      <main className="min-w-0 flex-1 overflow-auto">
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-      </main>
-    </div>
+    <ThemeProvider>
+      <div className="flex min-h-screen flex-col md:flex-row" style={{ backgroundColor: "var(--page-bg)" }}>
+        <Sidebar role={user.role} userEmail={user.email} todoToday={todoToday} />
+        <main className="min-w-0 flex-1 overflow-auto">
+          <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        </main>
+      </div>
+    </ThemeProvider>
   );
 }

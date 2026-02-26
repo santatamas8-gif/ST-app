@@ -17,8 +17,6 @@ import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/ut
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { BadgeScore } from "./BadgeScore";
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 function formatShortDate(dateStr: string) {
@@ -90,7 +88,7 @@ export function PlayerWellnessModal({
     >
       <div
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl p-6 shadow-xl"
-        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
@@ -252,7 +250,7 @@ export function PlayerWellnessModal({
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} domain={[0, 10]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: BG_CARD,
+                        backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
                       }}
@@ -285,7 +283,7 @@ export function PlayerWellnessModal({
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: BG_CARD,
+                        backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
                       }}

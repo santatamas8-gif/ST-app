@@ -11,7 +11,7 @@ export default async function SchedulePage() {
   return (
     <div
       className={isPlayer ? "min-h-screen px-4 py-8 sm:px-6 lg:px-8" : "space-y-6"}
-      style={isPlayer ? { backgroundColor: "#0b0f14" } : undefined}
+      style={isPlayer ? { backgroundColor: "var(--page-bg)" } : undefined}
     >
       <div className={isPlayer ? "mx-auto max-w-4xl space-y-6" : ""}>
         <div>

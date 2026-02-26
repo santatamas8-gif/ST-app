@@ -6,8 +6,6 @@ import { LoadKpiCard } from "./LoadKpiCard";
 import { TeamLoadBarChart } from "./LoadBarChart";
 import { RpeForm } from "@/components/RpeForm";
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 function todayISO() {
@@ -68,7 +66,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
@@ -83,7 +81,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
         {/* Date */}
         <div
           className="flex flex-wrap items-center gap-4 rounded-xl p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <label className="flex items-center gap-2 text-sm text-zinc-400">
             Date
@@ -126,7 +124,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
           <div className="flex flex-col gap-4">
             <div
               className="rounded-xl p-4"
-              style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
@@ -167,7 +165,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
           </h2>
           <div
             className="overflow-hidden rounded-xl"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             {list.length === 0 ? (
               <p className="py-8 text-center text-zinc-400">No sessions yet.</p>

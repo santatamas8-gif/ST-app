@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 interface KpiCardProps {
@@ -22,7 +21,7 @@ export function KpiCard({ label, value, sublabel, className = "", onClick }: Kpi
     </>
   );
   const wrapperClass = `rounded-xl p-4 ${className}`.trim();
-  const style = { backgroundColor: BG_CARD, borderRadius: CARD_RADIUS };
+  const style = { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS };
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className={`w-full text-left ${wrapperClass}`} style={style}>

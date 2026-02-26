@@ -29,7 +29,7 @@ export default async function RpePage() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
         <div className="mx-auto max-w-2xl space-y-6">
           <h1 className="text-2xl font-bold tracking-tight text-white">RPE</h1>
           <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-4" style={{ borderRadius: 12 }}>

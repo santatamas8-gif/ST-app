@@ -1,5 +1,3 @@
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 function Skeleton({ className = "" }: { className?: string }) {
@@ -15,7 +13,7 @@ export default function WellnessLoading() {
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
@@ -24,7 +22,7 @@ export default function WellnessLoading() {
         </div>
         <div
           className="flex flex-wrap gap-4 rounded-xl p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-10 w-56" />
@@ -36,7 +34,7 @@ export default function WellnessLoading() {
             <div
               key={i}
               className="rounded-xl p-4"
-              style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
             >
               <Skeleton className="h-4 w-24" />
               <Skeleton className="mt-2 h-8 w-16" />
@@ -45,7 +43,7 @@ export default function WellnessLoading() {
         </div>
         <div
           className="overflow-hidden rounded-xl"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <div className="border-b border-zinc-700 px-4 py-3">
             <div className="flex gap-4">

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 export default function RpeError({
@@ -19,12 +18,12 @@ export default function RpeError({
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: "#0b0f14" }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-md">
         <div
           className="rounded-xl border border-red-900/50 bg-red-950/20 p-6"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <h2 className="text-lg font-semibold text-red-400">Hiba történt</h2>
           <p className="mt-2 text-sm text-zinc-400">

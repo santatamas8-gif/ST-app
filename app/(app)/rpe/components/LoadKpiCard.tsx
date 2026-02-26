@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 type Status = "normal" | "warning" | "danger";
@@ -32,7 +31,7 @@ export function LoadKpiCard({
   return (
     <div
       className={`rounded-xl p-4 ${className}`}
-      style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+      style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
     >
       <p className="text-sm font-medium text-zinc-400">{label}</p>
       <p className={`mt-1.5 text-2xl font-bold ${valueColor}`}>{value}</p>

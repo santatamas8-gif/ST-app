@@ -16,7 +16,6 @@ import type { WellnessRow } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 const BAR_GREEN = "#22c55e";
@@ -164,7 +163,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
       {/* Top: select 7 or 28 – only that average is shown */}
       <div
         className="rounded-xl border border-zinc-700 p-4"
-        style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
       >
         <div className="flex flex-col items-center justify-center gap-3">
           <div className="flex gap-2 sm:gap-3">
@@ -232,7 +231,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
           <div
             key={key}
             className="rounded-xl border border-zinc-700 p-4"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-medium text-white">{label}</h4>
@@ -272,7 +271,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         return (
                           <div
                             className="rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm shadow-lg"
-                            style={{ borderColor: "#27272a", backgroundColor: BG_CARD }}
+                            style={{ borderColor: "#27272a", backgroundColor: "var(--card-bg)" }}
                           >
                             <p className="font-medium text-zinc-300">Date: {fullDate}{getDateContextLabel(fullDate)}</p>
                             <p className="mt-1 font-medium text-white">{label}: {formatTooltipValue(key, value)}</p>

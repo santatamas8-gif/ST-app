@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="h-9 w-64 animate-pulse rounded bg-zinc-800" />
           <div className="h-4 w-96 max-w-full animate-pulse rounded bg-zinc-800" />
@@ -126,11 +126,11 @@ export default function DashboardPage() {
 
   if (err) {
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
         <div className="mx-auto max-w-md">
           <div
             className="rounded-xl border border-red-900/50 bg-red-950/20 p-6"
-            style={{ backgroundColor: "#11161c", borderRadius: 12 }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: 12 }}
           >
             <h2 className="text-lg font-semibold text-red-400">Dashboard error</h2>
             <p className="mt-2 text-sm text-zinc-400">{err}</p>
@@ -187,7 +187,7 @@ export default function DashboardPage() {
   const rpeSubmitted = chart7.some((p) => p.date === todayISO && (p.load ?? 0) > 0);
   const allDone = wellnessSubmitted && rpeSubmitted;
 
-  const CARD_BG = "#11161c";
+  const CARD_BG = "var(--card-bg)";
   const CARD_RADIUS = "12px";
   const todayScheduleItems = data.todayScheduleItems ?? [];
 
@@ -242,7 +242,7 @@ export default function DashboardPage() {
   const userDisplayName = data.userDisplayName ?? "User";
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
+    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
           <p className="text-2xl font-bold tracking-tight text-white">Welcome, {userDisplayName}!</p>
@@ -289,8 +289,8 @@ export default function DashboardPage() {
         <section>
           <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
           <div
-            className="overflow-hidden rounded-xl border border-zinc-800"
-            style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+            className="overflow-hidden rounded-xl border"
+            style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }}
           >
             {todayScheduleItems.length === 0 ? (
               <p className="px-5 py-6 text-zinc-400">No schedule items today.</p>

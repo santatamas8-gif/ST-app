@@ -13,7 +13,6 @@ import {
   LabelList,
 } from "recharts";
 
-const BG_CARD = "#11161c";
 
 function formatShortDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -55,7 +54,7 @@ export function TwoWeekComparisonChart({
               <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: BG_CARD,
+                  backgroundColor: "var(--card-bg)",
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}
@@ -129,7 +128,7 @@ export function TeamLoadBarChart({
               <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: BG_CARD,
+                  backgroundColor: "var(--card-bg)",
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}
@@ -182,7 +181,7 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
               <YAxis stroke="#71717a" tick={{ fontSize: 10 }} width={36} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: BG_CARD,
+                  backgroundColor: "var(--card-bg)",
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}

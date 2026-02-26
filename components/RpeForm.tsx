@@ -6,7 +6,7 @@ import { submitSession } from "@/app/actions/sessions";
 import { sessionLoad } from "@/utils/load";
 
 const today = new Date().toISOString().slice(0, 10);
-const CARD_BG = "#11161c";
+const CARD_BG = "var(--card-bg)";
 const CARD_RADIUS = "12px";
 
 interface RpeFormProps {

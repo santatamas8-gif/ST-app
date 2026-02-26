@@ -21,8 +21,6 @@ import {
   Legend,
 } from "recharts";
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
@@ -249,7 +247,7 @@ export function StaffDashboard({
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
@@ -341,8 +339,8 @@ export function StaffDashboard({
         <section>
           <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">Today&apos;s Schedule</h2>
           <div
-            className="overflow-hidden rounded-xl border border-zinc-800"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            className="overflow-hidden rounded-xl border"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }}
           >
             {todayScheduleItems.length === 0 ? (
               <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
@@ -446,10 +444,11 @@ export function StaffDashboard({
                 return (
                   <div
                     key={p.id}
-                    className={`relative flex overflow-visible rounded-xl border-l-4 border border-zinc-800 ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
+                    className={`relative flex overflow-visible rounded-xl border-l-4 border ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
                     style={{
-                      backgroundColor: BG_CARD,
+                      backgroundColor: "var(--card-bg)",
                       borderRadius: CARD_RADIUS,
+                      borderColor: "var(--card-border)",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.04) inset",
                     }}
                   >
@@ -647,7 +646,7 @@ export function StaffDashboard({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -670,7 +669,7 @@ export function StaffDashboard({
 
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -685,7 +684,7 @@ export function StaffDashboard({
 
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -698,7 +697,7 @@ export function StaffDashboard({
 
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-red-400" aria-hidden>
@@ -720,7 +719,7 @@ export function StaffDashboard({
         {/* SECTION 2 – AT RISK PLAYERS PANEL */}
         <div
           className="rounded-xl p-5"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             At risk players
@@ -778,7 +777,7 @@ export function StaffDashboard({
         <div className="grid gap-4 lg:grid-cols-3">
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Average wellness
@@ -793,7 +792,7 @@ export function StaffDashboard({
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} domain={[0, 10]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: BG_CARD,
+                        backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
                       }}
@@ -818,7 +817,7 @@ export function StaffDashboard({
 
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Team load
@@ -833,7 +832,7 @@ export function StaffDashboard({
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: BG_CARD,
+                        backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
                       }}
@@ -852,7 +851,7 @@ export function StaffDashboard({
 
           <div
             className="rounded-xl p-5"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Submission compliance %
@@ -881,7 +880,7 @@ export function StaffDashboard({
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: BG_CARD,
+                        backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
                       }}
@@ -907,7 +906,7 @@ export function StaffDashboard({
           <Link
             href="/wellness"
             className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
@@ -920,7 +919,7 @@ export function StaffDashboard({
           <Link
             href="/rpe"
             className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>

@@ -9,8 +9,6 @@ import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
 
-const BG_PAGE = "#0b0f14";
-const BG_CARD = "#11161c";
 const CARD_RADIUS = "12px";
 
 function todayISO() {
@@ -290,7 +288,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
   return (
     <div
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ backgroundColor: BG_PAGE }}
+      style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
@@ -303,7 +301,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
         {/* Date + Search */}
         <div
           className="flex flex-wrap items-center justify-between gap-4 rounded-xl p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1.5 text-xs text-zinc-500">
@@ -382,7 +380,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           <div className="flex flex-col gap-4">
             <div
               className="rounded-xl p-4"
-              style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
@@ -418,7 +416,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
             </div>
             <div
               className="rounded-xl p-4"
-              style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
@@ -448,7 +446,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
         {/* Compare two weeks – compact controls, paired charts */}
         <section
           className="space-y-4 rounded-xl border border-zinc-700/80 p-4"
-          style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">Compare two weeks</h2>
           <div className="flex flex-wrap items-center gap-3 gap-y-2">
@@ -519,7 +517,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           </h2>
           <div
             className="overflow-hidden rounded-xl"
-            style={{ backgroundColor: BG_CARD, borderRadius: CARD_RADIUS }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
           {sortedTableRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">

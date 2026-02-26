@@ -2,8 +2,6 @@
 
 import { useEffect } from "react";
 
-const BG = "#0b0f14";
-const CARD = "#11161c";
 
 export default function Error({
   error,
@@ -20,11 +18,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: BG }}>
+    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-md">
         <div
           className="rounded-xl border border-red-900/50 bg-red-950/20 p-6"
-          style={{ backgroundColor: CARD, borderRadius: 12 }}
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: 12 }}
         >
           <h1 className="text-lg font-semibold text-red-400">Something went wrong</h1>
           <p className="mt-2 text-sm text-zinc-400">
