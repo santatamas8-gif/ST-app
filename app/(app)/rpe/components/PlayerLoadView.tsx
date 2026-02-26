@@ -60,7 +60,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
     const prevSum = list
       .filter((s) => prevN.includes(s.date))
       .reduce((a, s) => a + (s.load ?? 0), 0);
-    const trend =
+    const trend: "up" | "down" | "stable" =
       prevSum === 0 ? "stable" : periodSum > prevSum ? "up" : periodSum < prevSum ? "down" : "stable";
     return { todayLoad, myLoadChartData, periodSum, trend };
   }, [list, selectedDate, lastN, prevN]);
