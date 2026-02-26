@@ -1,11 +1,9 @@
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
-import { Card } from "@/components/Card";
-import { RpeForm } from "@/components/RpeForm";
 import type { SessionRow } from "@/lib/types";
-import { getDateContextLabel } from "@/lib/dateContext";
 import { StaffLoadView } from "./components/StaffLoadView";
+import { PlayerLoadView } from "./components/PlayerLoadView";
 
 export default async function RpePage() {
   const user = await getAppUser();
@@ -18,7 +16,7 @@ export default async function RpePage() {
     .from("sessions")
     .select("*")
     .order("date", { ascending: false })
-    .limit(isPlayer ? 14 : 100);
+    .limit(isPlayer ? 35 : 100);
 
   if (isPlayer) {
     query = query.eq("user_id", user.id);
@@ -45,15 +43,20 @@ export default async function RpePage() {
   }
 
   let emailByUserId: Record<string, string> = {};
+  let displayNameByUserId: Record<string, string> = {};
   if (!isPlayer && list.length > 0) {
     const userIds = [...new Set(list.map((r) => r.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, email")
+      .select("id, email, full_name")
       .in("id", userIds);
     if (profiles) {
       for (const p of profiles) {
-        emailByUserId[p.id] = p.email ?? "—";
+        const email = p.email ?? "—";
+        emailByUserId[p.id] = email;
+        const name = (p as { full_name?: string | null }).full_name;
+        displayNameByUserId[p.id] =
+          name && typeof name === "string" && name.trim() ? name.trim() : email;
       }
     }
   }
@@ -62,53 +65,15 @@ export default async function RpePage() {
     const today = new Date().toISOString().slice(0, 10);
     const hasSubmittedToday = list.some((r) => r.date === today);
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "#0b0f14" }}>
-        <div className="mx-auto max-w-2xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              RPE
-            </h1>
-            <p className="mt-1 text-zinc-400">
-              Log session duration and RPE; load is calculated automatically.
-            </p>
-          </div>
-
-          <RpeForm hasSubmittedToday={hasSubmittedToday} />
-
-          <Card title="Recent sessions">
-            {list.length === 0 ? (
-              <p className="py-6 text-center text-zinc-400">No sessions yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-700 text-zinc-400">
-                      <th className="pb-2 pr-4 font-medium">Date</th>
-                      <th className="pb-2 pr-4 font-medium">Duration (min)</th>
-                      <th className="pb-2 pr-4 font-medium">RPE</th>
-                      <th className="pb-2 font-medium">Load</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-zinc-300">
-                    {list.map((r) => (
-                      <tr key={r.id} className="border-b border-zinc-800">
-                        <td className="py-3 pr-4">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></td>
-                        <td className="py-3 pr-4">{r.duration}</td>
-                        <td className="py-3 pr-4">{r.rpe ?? "—"}</td>
-                        <td className="py-3">{r.load ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
+      <PlayerLoadView list={list} hasSubmittedToday={hasSubmittedToday} />
     );
   }
 
   return (
-    <StaffLoadView list={list} emailByUserId={emailByUserId} />
+    <StaffLoadView
+      list={list}
+      emailByUserId={emailByUserId}
+      displayNameByUserId={displayNameByUserId}
+    />
   );
 }
