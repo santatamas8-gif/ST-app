@@ -1,6 +1,6 @@
 "use server";
 
-import { getAppUser } from "@/lib/auth";
+import { getAppUser, isImmutableAdminEmail } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -85,11 +85,35 @@ export async function createUser(data: {
 
 export async function updateUserRole(userId: string, newRole: UserRole) {
   const appUser = await getAppUser();
-  if (!appUser || appUser.role !== "admin") {
-    return { error: "Only admin can change roles." };
-  }
+  if (!appUser) return { error: "Not authenticated." };
   if (newRole !== "admin" && newRole !== "staff" && newRole !== "player") {
     return { error: "Invalid role." };
+  }
+
+  const isPrimaryAdminPromotingSelf = userId === appUser.id && isImmutableAdminEmail(appUser.email) && newRole === "admin";
+  if (!isPrimaryAdminPromotingSelf && appUser.role !== "admin") {
+    return { error: "Only admin can change roles." };
+  }
+
+  if (newRole !== "admin") {
+    if (userId === appUser.id && isImmutableAdminEmail(appUser.email)) {
+      return { error: "The primary admin cannot be demoted." };
+    }
+    const supabase = await createClient();
+    const { data: profile } = await supabase.from("profiles").select("email").eq("id", userId).maybeSingle();
+    if (profile?.email && isImmutableAdminEmail(profile.email)) {
+      return { error: "The primary admin cannot be demoted." };
+    }
+    try {
+      const admin = createAdminClient();
+      const { data: authData } = await admin.auth.admin.getUserById(userId);
+      const targetEmail = authData?.user?.email ?? null;
+      if (isImmutableAdminEmail(targetEmail)) {
+        return { error: "The primary admin cannot be demoted." };
+      }
+    } catch {
+      /* if admin client unavailable, profile check above already ran */
+    }
   }
 
   const supabase = await createClient();
@@ -99,4 +123,48 @@ export async function updateUserRole(userId: string, newRole: UserRole) {
   revalidatePath("/admin/users");
   revalidatePath("/users");
   return { success: true };
+}
+
+export async function getReclaimAdminStatus(): Promise<{
+  notLoggedIn?: boolean;
+  alreadyAdmin?: boolean;
+  canReclaim?: boolean;
+}> {
+  const appUser = await getAppUser();
+  if (!appUser) return { notLoggedIn: true };
+  if (appUser.role === "admin") return { alreadyAdmin: true };
+  if (isImmutableAdminEmail(appUser.email)) return { canReclaim: true };
+  return {};
+}
+
+export async function reclaimAdminRole(): Promise<{ error?: string }> {
+  const appUser = await getAppUser();
+  if (!appUser) return { error: "Not authenticated." };
+  if (!isImmutableAdminEmail(appUser.email)) {
+    return { error: "Only the primary admin can use this." };
+  }
+  if (appUser.role === "admin") {
+    return {};
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ role: "admin" }).eq("id", appUser.id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/users");
+  revalidatePath("/users");
+  revalidatePath("/reclaim-admin");
+  return {};
+}
+
+export async function updateUserFullName(userId: string, fullName: string): Promise<{ error?: string }> {
+  const appUser = await getAppUser();
+  if (!appUser || appUser.role !== "admin") {
+    return { error: "Only admin can change names." };
+  }
+  const trimmed = (fullName ?? "").trim();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ full_name: trimmed || null }).eq("id", userId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/users");
+  revalidatePath("/users");
+  return {};
 }

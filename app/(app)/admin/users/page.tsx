@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAppUser } from "@/lib/auth";
+import { getAppUser, isImmutableAdminEmail } from "@/lib/auth";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import { AdminUsersView } from "./AdminUsersView";
 
@@ -9,6 +9,8 @@ export type ProfileRow = {
   role: string;
   created_at: string | null;
   full_name?: string | null;
+  /** True for the primary admin (IMMUTABLE_ADMIN_EMAIL); cannot be deleted or demoted */
+  isPrimaryAdmin?: boolean;
 };
 
 function supabaseHostFromUrl(url: string | undefined): string {
@@ -40,6 +42,7 @@ export default async function AdminUsersPage() {
     role: p.role ?? "player",
     created_at: p.created_at ?? null,
     full_name: p.full_name ?? null,
+    isPrimaryAdmin: p.id === user?.id ? isImmutableAdminEmail(user.email ?? "") : isImmutableAdminEmail(p.email ?? ""),
   }));
 
   const loadError = queryError;

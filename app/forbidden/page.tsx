@@ -11,12 +11,20 @@ export default function ForbiddenPage() {
         <p className="mt-2 text-sm text-zinc-400">
           You don&apos;t have permission to view this page.
         </p>
-        <Link
-          href="/dashboard"
-          className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-        >
-          Back to Dashboard
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/dashboard"
+            className="inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Back to Dashboard
+          </Link>
+          <Link
+            href="/reclaim-admin"
+            className="inline-block rounded-lg border border-amber-600 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/10"
+          >
+            Primary admin? Restore your role
+          </Link>
+        </div>
       </div>
     </div>
   );

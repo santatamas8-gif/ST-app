@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProfileRow } from "./page";
-import { createUser, updateUserRole } from "@/app/actions/admin-users";
+import { createUser, updateUserRole, updateUserFullName } from "@/app/actions/admin-users";
 import type { UserRole } from "@/lib/types";
 
 const CARD_RADIUS = "12px";
@@ -29,6 +29,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
   const [createOpen, setCreateOpen] = useState(false);
   const [successResult, setSuccessResult] = useState<{ email: string; role: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
@@ -74,6 +75,15 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
     return result;
   }
 
+  async function handleNameChange(userId: string, fullName: string) {
+    const result = await updateUserFullName(userId, fullName);
+    if (!result.error) {
+      setEditingNameId(null);
+      router.refresh();
+    }
+    return result;
+  }
+
   async function handleDelete(userId: string) {
     const res = await fetch("/api/admin/delete-user", {
       method: "POST",
@@ -101,7 +111,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             Users
           </h1>
           <p className="mt-1 text-zinc-400">
-            Create staff and player accounts. Edit roles. All UI in English.
+            Create staff and player accounts. Edit names and roles. All UI in English.
           </p>
         </div>
 
@@ -224,7 +234,26 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                 <tbody className="text-zinc-300">
                   {filtered.map((u) => (
                     <tr key={u.id} className="border-b border-zinc-800 hover:bg-zinc-800/50">
-                      <td className="px-4 py-3">{u.full_name || "—"}</td>
+                      <td className="px-4 py-3">
+                        {editingNameId === u.id ? (
+                          <NameEditRow
+                            currentName={u.full_name ?? ""}
+                            onSave={(name) => handleNameChange(u.id, name)}
+                            onCancel={() => setEditingNameId(null)}
+                          />
+                        ) : (
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span>{u.full_name || "—"}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingNameId(u.id)}
+                              className="text-emerald-400 hover:underline"
+                            >
+                              Edit name
+                            </button>
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{u.email}</td>
                       <td className="px-4 py-3 capitalize">{u.role}</td>
                       <td className="px-4 py-3">
@@ -243,6 +272,8 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                               onSave={(newRole) => handleRoleChange(u.id, newRole)}
                               onCancel={() => setEditingId(null)}
                             />
+                          ) : u.isPrimaryAdmin && u.role === "admin" ? (
+                            <span className="text-xs text-zinc-500" title="Primary admin cannot be demoted">—</span>
                           ) : (
                             <button
                               type="button"
@@ -255,9 +286,15 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(u)}
-                            disabled={currentUserId === u.id}
+                            disabled={currentUserId === u.id || !!u.isPrimaryAdmin}
                             className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-xs text-red-400 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            title={currentUserId === u.id ? "You cannot delete your own account" : "Delete user"}
+                            title={
+                              u.isPrimaryAdmin
+                                ? "Primary admin cannot be removed"
+                                : currentUserId === u.id
+                                  ? "You cannot delete your own account"
+                                  : "Delete user"
+                            }
                           >
                             Delete
                           </button>
@@ -328,6 +365,57 @@ function RoleEditRow({
         <option value="staff">Staff</option>
         <option value="player">Player</option>
       </select>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={loading}
+        className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500 disabled:opacity-50"
+      >
+        {loading ? "Saving…" : "Save"}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
+      >
+        Cancel
+      </button>
+      {error && <span className="text-xs text-red-400">{error}</span>}
+    </div>
+  );
+}
+
+function NameEditRow({
+  currentName,
+  onSave,
+  onCancel,
+}: {
+  currentName: string;
+  onSave: (name: string) => Promise<{ error?: string }>;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(currentName);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setError(null);
+    setLoading(true);
+    const result = await onSave(name);
+    setLoading(false);
+    if (result.error) setError(result.error);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Full name"
+        className="min-w-[120px] rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+        autoFocus
+      />
       <button
         type="button"
         onClick={handleSave}

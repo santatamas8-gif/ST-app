@@ -169,7 +169,7 @@ export function ChatMessageList({
         <button
           type="button"
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-6 rounded-full bg-zinc-700 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-zinc-600"
+          className="absolute bottom-4 right-6 min-h-[44px] min-w-[44px] rounded-full bg-zinc-700 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-zinc-600"
           title="Scroll to bottom"
           aria-label="Scroll to bottom"
         >

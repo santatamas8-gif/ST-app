@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAppUser } from "@/lib/auth";
+import { getAppUser, isImmutableAdminEmail } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
@@ -43,6 +43,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Server configuration error (missing service role key)." },
       { status: 500 }
+    );
+  }
+
+  const { data: authUser } = await admin.auth.admin.getUserById(userId);
+  const targetEmail = authUser?.user?.email ?? null;
+  if (isImmutableAdminEmail(targetEmail)) {
+    return NextResponse.json(
+      { error: "The primary admin cannot be removed." },
+      { status: 403 }
     );
   }
 

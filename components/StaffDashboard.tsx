@@ -110,6 +110,8 @@ export function StaffDashboard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetPlayerIdRef = useRef<string | null>(null);
   const [editingTeam, setEditingTeam] = useState(false);
+  const [editLabelRevealed, setEditLabelRevealed] = useState(false);
+  const teamBlockRef = useRef<HTMLButtonElement>(null);
   const [teamNameInput, setTeamNameInput] = useState("");
   const [teamLogoInput, setTeamLogoInput] = useState("");
   const [savingTeam, setSavingTeam] = useState(false);
@@ -120,6 +122,9 @@ export function StaffDashboard({
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
         setDropdownOpenId(null);
         setAvatarMenuOpenId(null);
+      }
+      if (teamBlockRef.current && !teamBlockRef.current.contains(e.target as Node)) {
+        setEditLabelRevealed(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -305,33 +310,50 @@ export function StaffDashboard({
                 </button>
                 {teamSaveError && <span className="text-sm text-red-400">{teamSaveError}</span>}
               </>
-            ) : (
-              <>
-                {teamSettings?.team_name && (
-                  <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
-                )}
-                {teamSettings?.team_logo_url && (
-                  <img
-                    src={teamSettings.team_logo_url}
-                    alt="Team logo"
-                    className="h-10 w-auto object-contain"
-                  />
-                )}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
+            ) : (teamSettings?.team_name || teamSettings?.team_logo_url) ? (
+              isAdmin ? (
+                <button
+                  ref={teamBlockRef}
+                  type="button"
+                  onClick={() => {
+                    if (editLabelRevealed) {
                       setEditingTeam(true);
                       setTeamNameInput(teamSettings?.team_name ?? "");
                       setTeamLogoInput(teamSettings?.team_logo_url ?? "");
-                    }}
-                    className="text-sm text-amber-400 hover:text-amber-300"
-                  >
-                    Edit team
-                  </button>
-                )}
-              </>
-            )}
+                      setEditLabelRevealed(false);
+                    } else {
+                      setEditLabelRevealed(true);
+                    }
+                  }}
+                  className="group flex flex-wrap items-center gap-3 rounded-lg py-1 pr-1 text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                >
+                  {teamSettings?.team_name && (
+                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                  )}
+                  {teamSettings?.team_logo_url && (
+                    <img
+                      src={teamSettings.team_logo_url}
+                      alt="Team logo"
+                      className="h-10 w-auto object-contain"
+                    />
+                  )}
+                  <span className={`text-sm text-amber-400 transition-opacity group-hover:opacity-100 group-focus:opacity-100 ${editLabelRevealed ? "opacity-100" : "opacity-0"}`}>Edit team</span>
+                </button>
+              ) : (
+                <>
+                  {teamSettings?.team_name && (
+                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                  )}
+                  {teamSettings?.team_logo_url && (
+                    <img
+                      src={teamSettings.team_logo_url}
+                      alt="Team logo"
+                      className="h-10 w-auto object-contain"
+                    />
+                  )}
+                </>
+              )
+            ) : null}
           </div>
         </div>
 

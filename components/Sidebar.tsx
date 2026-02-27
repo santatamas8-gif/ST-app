@@ -1,10 +1,23 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MessageCircle, Calendar, Palette } from "lucide-react";
 import type { UserRole } from "@/lib/types";
-import { ThemeSelector } from "@/components/ThemeSelector";
 import { useTheme } from "@/components/ThemeProvider";
+import { THEMES, type ThemeId } from "@/lib/themes";
+
+/** Chat, Schedule, Theme are only in the header as logos – exclude from sidebar list */
+const HEADER_ONLY_HREFS = ["/chat", "/schedule"];
+
+const THEME_SWATCH: Record<ThemeId, string> = {
+  black: "#0b0f14",
+  green: "#0d1f1a",
+  navy: "#0f172a",
+  brown: "#1c1917",
+  purple: "#1e1b2e",
+};
 
 const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
   { href: "/dashboard", label: "Dashboard" },
@@ -23,11 +36,27 @@ interface SidebarProps {
   todoToday?: { wellnessDone: boolean; rpeDone: boolean } | null;
   /** Number of unread chat messages (red badge on Chat link). */
   unreadChatCount?: number;
+  /** True for admin or primary admin when staff (so they can open Users and reclaim admin). */
+  canAccessUsers?: boolean;
 }
 
-export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: SidebarProps) {
+export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAccessUsers = false }: SidebarProps) {
   const pathname = usePathname();
-  const { themeId } = useTheme();
+  const { themeId, setThemeId } = useTheme();
+  const [themePopoverOpen, setThemePopoverOpen] = useState(false);
+  const themePopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!themePopoverOpen) return;
+    const close = (e: MouseEvent) => {
+      if (themePopoverRef.current && !themePopoverRef.current.contains(e.target as Node)) {
+        setThemePopoverOpen(false);
+      }
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [themePopoverOpen]);
+
   const activeNavClass =
     themeId === "black"
       ? "bg-emerald-600/20 text-emerald-400"
@@ -40,7 +69,10 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: Sid
   const sidebarLabelClass = themeId === "black" ? "text-zinc-400" : "text-zinc-300";
 
   const visibleItems = navItems.filter(
-    (item) => !item.roles || item.roles.includes(role)
+    (item) => !item.roles || item.roles.includes(role) || (item.href === "/admin/users" && canAccessUsers)
+  );
+  const sidebarNavItems = visibleItems.filter(
+    (item) => !HEADER_ONLY_HREFS.includes(item.href)
   );
 
   const needsTodo = (href: string) => {
@@ -66,12 +98,78 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: Sid
 
   return (
     <aside className="flex w-full flex-col border-b border-zinc-800 md:h-full md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: "var(--card-bg)" }}>
-      <div className="flex h-14 items-center justify-between border-b border-zinc-800 px-4 md:h-16 md:justify-start md:px-5">
-        <Link href="/dashboard" className="text-lg font-bold tracking-tight text-white transition-opacity duration-200 hover:opacity-90 md:text-xl">
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-zinc-800 px-4 md:h-16 md:px-5">
+        <Link href="/dashboard" className="shrink-0 text-lg font-bold tracking-tight text-white transition-opacity duration-200 hover:opacity-90 md:text-xl">
           ST AMS
         </Link>
-        <nav className="flex gap-1 md:hidden">
-          {visibleItems.map((item) => {
+        <div className="flex items-center gap-1.5 md:gap-2 md:ml-auto">
+          <Link
+            href="/chat"
+            className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
+              pathname === "/chat" || pathname.startsWith("/chat/")
+                ? "bg-emerald-600/25 text-emerald-400"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            }`}
+            title="Chat"
+            aria-label="Chat"
+          >
+            <MessageCircle className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                {unreadChatCount > 99 ? "99+" : unreadChatCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/schedule"
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+              pathname === "/schedule"
+                ? "bg-emerald-600/25 text-emerald-400"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            }`}
+            title="Schedule"
+            aria-label="Schedule"
+          >
+            <Calendar className="h-5 w-5" />
+          </Link>
+          <div className="relative" ref={themePopoverRef}>
+            <button
+              type="button"
+              onClick={() => setThemePopoverOpen((o) => !o)}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition text-zinc-400 hover:bg-zinc-800 hover:text-white`}
+              title="Theme"
+              aria-label="Theme"
+              aria-expanded={themePopoverOpen}
+            >
+              <Palette className="h-5 w-5" />
+            </button>
+            {themePopoverOpen && (
+              <div
+                className="absolute left-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl"
+                style={{ borderRadius: "10px" }}
+              >
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setThemeId(t.id);
+                      setThemePopoverOpen(false);
+                    }}
+                    title={t.name}
+                    className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      themeId === t.id ? "border-emerald-400 ring-2 ring-emerald-400/30" : "border-zinc-600 hover:border-zinc-500"
+                    }`}
+                    style={{ backgroundColor: THEME_SWATCH[t.id] }}
+                    aria-label={t.name}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <nav className="flex gap-1 md:hidden shrink-0">
+          {sidebarNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
@@ -88,7 +186,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: Sid
         </nav>
       </div>
       <nav className="hidden flex-1 space-y-0.5 p-3 md:block">
-        {visibleItems.map((item) => {
+        {sidebarNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
@@ -103,9 +201,6 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: Sid
           );
         })}
       </nav>
-      <div className="hidden md:block">
-        <ThemeSelector />
-      </div>
       <div className="hidden border-t border-zinc-800 p-3 md:block">
         <p className={`truncate px-3 py-2 text-xs ${sidebarMutedClass}`} title={userEmail}>
           {userEmail}
@@ -123,7 +218,6 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: Sid
         </form>
       </div>
       <div className="flex flex-col gap-2 border-t border-zinc-800 px-4 py-2 md:hidden">
-        <ThemeSelector />
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <p className={`truncate text-xs ${sidebarMutedClass}`} title={userEmail}>{userEmail}</p>

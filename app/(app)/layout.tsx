@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getAppUser } from "@/lib/auth";
+import { getAppUser, isAdmin, isImmutableAdminEmail } from "@/lib/auth";
 import { getPlayerCheckInStatus } from "@/lib/checkInStatus";
 import { getUnreadTotal } from "@/app/actions/chat";
 import { Sidebar } from "@/components/Sidebar";
@@ -19,11 +19,12 @@ export default async function AppLayout({
       ? await getPlayerCheckInStatus(user.id)
       : null;
   const unreadChatCount = await getUnreadTotal();
+  const canAccessUsers = isAdmin(user.role) || (user.role === "staff" && isImmutableAdminEmail(user.email));
 
   return (
     <ThemeProvider>
       <div className="flex min-h-screen flex-col md:flex-row" style={{ backgroundColor: "var(--page-bg)" }}>
-        <Sidebar role={user.role} userEmail={user.email} todoToday={todoToday} unreadChatCount={unreadChatCount} />
+        <Sidebar role={user.role} userEmail={user.email} todoToday={todoToday} unreadChatCount={unreadChatCount} canAccessUsers={canAccessUsers} />
         <main className="min-w-0 flex-1 overflow-auto">
           <Suspense fallback={<div className="p-4 sm:p-6 lg:p-8" />}>
             <div className="p-4 sm:p-6 lg:p-8">{children}</div>

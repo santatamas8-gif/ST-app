@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
 
+/**
+ * Role-based access: admin (full), staff (read + schedule/players/wellness), player (own data only).
+ * Layouts and pages use getAppUser().role and isAdmin/isStaff to guard routes and UI.
+ */
 const ROLES_TABLE = "profiles";
 
 export async function getAuthUser() {
@@ -50,6 +54,21 @@ export function isAdmin(role: UserRole): boolean {
   return role === "admin";
 }
 
+export function isStaff(role: UserRole): boolean {
+  return role === "admin" || role === "staff";
+}
+
 export function canAccessUsers(role: UserRole): boolean {
   return role === "admin";
+}
+
+/**
+ * Primary admin email from env (IMMUTABLE_ADMIN_EMAIL). This user cannot be deleted or demoted by anyone.
+ * Set in .env.local and on Vercel (e.g. IMMUTABLE_ADMIN_EMAIL=your@email.com). Server-side only.
+ * Protection: updateUserRole (self + other admins), delete-user API, reclaimAdminRole (only this email can reclaim).
+ */
+export function isImmutableAdminEmail(email: string | null | undefined): boolean {
+  const immutable = process.env.IMMUTABLE_ADMIN_EMAIL?.trim().toLowerCase();
+  if (!immutable) return false;
+  return (email ?? "").trim().toLowerCase() === immutable;
 }
