@@ -315,7 +315,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-lg shadow-black/25 transition-all duration-200 ${
+                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
                             ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
                             : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"

@@ -38,17 +38,24 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
     dateLabel: formatDate(p.date),
   }));
 
-  const chartClass = "rounded-xl border border-zinc-800 bg-zinc-900/50 p-4";
+  const chartClass = "rounded-xl border border-zinc-800/90 bg-zinc-900/50 p-4 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)]";
+  const chartStyle = { boxShadow: "var(--card-shadow)" };
 
   return (
     <div className="space-y-6">
       {/* 7-day: Load only */}
-      <div className={chartClass}>
+      <div className={chartClass} style={chartStyle}>
         <h3 className="text-sm font-medium text-zinc-400">Load (last 7 days)</h3>
         <p className="mt-0.5 text-xs text-zinc-500">Training load over the past week.</p>
         <div className="mt-4 h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data7} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="areaLoadGradient" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.45} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
               <XAxis dataKey="dateLabel" stroke="#71717a" tick={{ fontSize: 11 }} />
               <YAxis stroke="#71717a" tick={{ fontSize: 11 }} tickFormatter={(v) => (v ? String(v) : "0")} />
@@ -58,14 +65,24 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
                 formatter={(value: number) => [value, "Load"]}
                 labelFormatter={(label) => label}
               />
-              <Area type="monotone" dataKey="load" name="Load" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+              <Area
+                type="monotone"
+                dataKey="load"
+                name="Load"
+                stroke="#10b981"
+                strokeWidth={2}
+                fill="url(#areaLoadGradient)"
+                isAnimationActive
+                animationDuration={600}
+                animationEasing="ease-out"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* 28-day: one metric at a time (tabs) */}
-      <div className={chartClass}>
+      <div className={chartClass} style={chartStyle}>
         <h3 className="text-sm font-medium text-zinc-400">28-day trend</h3>
         <div className="mt-2 flex gap-2">
           {(["load", "wellness", "sleep"] as const).map((t) => (
@@ -73,7 +90,7 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
               key={t}
               type="button"
               onClick={() => setTab28(t)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors duration-200 ${
                 tab28 === t ? "bg-emerald-600 text-white" : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
               }`}
             >
@@ -99,13 +116,45 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
                 labelFormatter={(label) => label}
               />
               {tab28 === "load" && (
-                <Line type="monotone" dataKey="load" name="Load" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="load"
+                  name="Load"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive
+                  animationDuration={500}
+                  animationEasing="ease-out"
+                />
               )}
               {tab28 === "wellness" && (
-                <Line type="monotone" dataKey="wellness" name="Wellness" stroke="#a78bfa" strokeWidth={2} dot={false} connectNulls />
+                <Line
+                  type="monotone"
+                  dataKey="wellness"
+                  name="Wellness"
+                  stroke="#a78bfa"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                  isAnimationActive
+                  animationDuration={500}
+                  animationEasing="ease-out"
+                />
               )}
               {tab28 === "sleep" && (
-                <Line type="monotone" dataKey="sleepHours" name="Sleep (h/night)" stroke="#38bdf8" strokeWidth={2} dot={false} connectNulls />
+                <Line
+                  type="monotone"
+                  dataKey="sleepHours"
+                  name="Sleep (h/night)"
+                  stroke="#38bdf8"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                  isAnimationActive
+                  animationDuration={500}
+                  animationEasing="ease-out"
+                />
               )}
             </LineChart>
           </ResponsiveContainer>

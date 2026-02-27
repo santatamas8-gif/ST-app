@@ -101,3 +101,25 @@ export interface ScheduleRow {
   created_at?: string;
   notes?: string | null;
 }
+
+export interface ChatRoomRow {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at?: string;
+}
+
+export interface ChatMessageRow {
+  id: string;
+  room_id: string;
+  user_id: string;
+  body: string;
+  attachment_url: string | null;
+  created_at?: string;
+}
+
+export interface ChatRoomMemberRow {
+  room_id: string;
+  user_id: string;
+  added_at?: string;
+}

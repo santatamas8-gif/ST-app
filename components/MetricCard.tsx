@@ -29,7 +29,8 @@ export function MetricCard({
 
   return (
     <div
-      className={`rounded-xl border ${borderClass} bg-zinc-900/50 p-4 shadow-lg`}
+      className={`rounded-xl border ${borderClass} bg-zinc-900/50 p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]`}
+      style={{ boxShadow: "var(--card-shadow)" }}
     >
       <p className="text-sm font-medium text-zinc-400">{title}</p>
       <p className="mt-1 text-2xl font-bold tabular-nums text-white">

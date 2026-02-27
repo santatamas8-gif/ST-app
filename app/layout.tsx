@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { PwaProvider } from "@/components/PwaProvider";
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ST AMS",
@@ -19,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="hu" className="dark">
-      <body className="antialiased font-sans">
+      <body className={`${plusJakarta.variable} font-sans antialiased`}>
         {children}
         <PwaProvider />
       </body>

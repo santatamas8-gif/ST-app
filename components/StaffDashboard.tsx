@@ -384,7 +384,7 @@ export function StaffDashboard({
                     return (
                       <div
                         key={item.id}
-                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-lg shadow-black/25 transition-all duration-200 ${
+                        className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
                             ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
                             : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"
@@ -444,12 +444,12 @@ export function StaffDashboard({
                 return (
                   <div
                     key={p.id}
-                    className={`relative flex overflow-visible rounded-xl border-l-4 border ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
+                    className={`relative flex overflow-visible rounded-xl border-l-4 border transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
                     style={{
                       backgroundColor: "var(--card-bg)",
                       borderRadius: CARD_RADIUS,
                       borderColor: "var(--card-border)",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.04) inset",
+                      boxShadow: "var(--card-shadow)",
                     }}
                   >
                     <div className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
@@ -645,8 +645,8 @@ export function StaffDashboard({
         {/* SECTION 1 – TOP KPI ROW */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -668,8 +668,8 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -683,8 +683,8 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-emerald-400" aria-hidden>
@@ -696,8 +696,8 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
               <span className="text-red-400" aria-hidden>
@@ -718,8 +718,8 @@ export function StaffDashboard({
 
         {/* SECTION 2 – AT RISK PLAYERS PANEL */}
         <div
-          className="rounded-xl p-5"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className="rounded-xl p-5 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)]"
+          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
         >
           <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             At risk players
@@ -776,8 +776,8 @@ export function StaffDashboard({
         {/* SECTION 3 – MINI CHARTS ROW */}
         <div className="grid gap-4 lg:grid-cols-3">
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Average wellness
@@ -787,6 +787,12 @@ export function StaffDashboard({
               {chartDataWellness.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartDataWellness} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="wellnessLineGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} domain={[0, 10]} />
@@ -801,9 +807,12 @@ export function StaffDashboard({
                     <Line
                       type="monotone"
                       dataKey="wellness"
-                      stroke="#10b981"
+                      stroke="url(#wellnessLineGradient)"
                       strokeWidth={2}
-                      dot={{ fill: "#10b981" }}
+                      dot={{ fill: "#10b981", strokeWidth: 0 }}
+                      isAnimationActive
+                      animationDuration={600}
+                      animationEasing="ease-out"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -816,8 +825,8 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Last 7 days – Team load
@@ -827,6 +836,12 @@ export function StaffDashboard({
               {chartDataLoad.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartDataLoad} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="loadBarGradient" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
@@ -838,7 +853,14 @@ export function StaffDashboard({
                       }}
                       formatter={(v: number) => [v, "Load"]}
                     />
-                    <Bar dataKey="load" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="load"
+                      fill="url(#loadBarGradient)"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive
+                      animationDuration={600}
+                      animationEasing="ease-out"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -850,8 +872,8 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
               Submission compliance %
@@ -873,6 +895,9 @@ export function StaffDashboard({
                       paddingAngle={2}
                       dataKey="value"
                       nameKey="name"
+                      isAnimationActive
+                      animationDuration={500}
+                      animationEasing="ease-out"
                     >
                       {donutData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
@@ -905,8 +930,8 @@ export function StaffDashboard({
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href="/wellness"
-            className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
@@ -918,8 +943,8 @@ export function StaffDashboard({
           </Link>
           <Link
             href="/rpe"
-            className="flex items-start gap-3 rounded-xl p-4 transition opacity-90 hover:opacity-100"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className="flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>

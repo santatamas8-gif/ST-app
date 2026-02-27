@@ -12,6 +12,7 @@ const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
   { href: "/players", label: "Players", roles: ["admin", "staff"] },
   { href: "/wellness", label: "Wellness" },
   { href: "/rpe", label: "RPE" },
+  { href: "/chat", label: "Chat" },
   { href: "/admin/users", label: "Users", roles: ["admin"] },
 ];
 
@@ -20,9 +21,11 @@ interface SidebarProps {
   userEmail: string;
   /** Player only: today's check-in status. Show dot when not done. */
   todoToday?: { wellnessDone: boolean; rpeDone: boolean } | null;
+  /** Number of unread chat messages (red badge on Chat link). */
+  unreadChatCount?: number;
 }
 
-export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
+export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const { themeId } = useTheme();
   const activeNavClass =
@@ -53,13 +56,18 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
       {needsTodo(item.href) && (
         <span className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400" title="To do today" aria-hidden />
       )}
+      {item.href === "/chat" && unreadChatCount > 0 && (
+        <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white" title="Unread messages" aria-label={`${unreadChatCount} unread`}>
+          {unreadChatCount > 99 ? "99+" : unreadChatCount}
+        </span>
+      )}
     </>
   );
 
   return (
     <aside className="flex w-full flex-col border-b border-zinc-800 md:h-full md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: "var(--card-bg)" }}>
       <div className="flex h-14 items-center justify-between border-b border-zinc-800 px-4 md:h-16 md:justify-start md:px-5">
-        <Link href="/dashboard" className="text-lg font-bold text-white md:text-xl">
+        <Link href="/dashboard" className="text-lg font-bold tracking-tight text-white transition-opacity duration-200 hover:opacity-90 md:text-xl">
           ST AMS
         </Link>
         <nav className="flex gap-1 md:hidden">
@@ -86,9 +94,9 @@ export function Sidebar({ role, userEmail, todoToday }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-h-[44px] items-center rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                isActive ? activeNavClass : inactiveNavClass
-              }`}
+                className={`flex min-h-[44px] items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  isActive ? activeNavClass : inactiveNavClass
+                }`}
             >
               {linkContent(item)}
             </Link>
