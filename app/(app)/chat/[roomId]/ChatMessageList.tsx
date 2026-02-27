@@ -37,7 +37,7 @@ export function ChatMessageList({
   lastReadAt,
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const firstUnreadRef = useRef<HTMLDivElement>(null);
+  const firstUnreadRef = useRef<HTMLLIElement>(null);
   const initialScrollDone = useRef(false);
   const prevLengthRef = useRef(messages.length);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
