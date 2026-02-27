@@ -138,7 +138,7 @@ export async function getMessages(roomId: string): Promise<ChatMessageRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("chat_messages")
-    .select("id, room_id, user_id, body, attachment_url, created_at")
+    .select("id, room_id, user_id, body, attachment_url, reply_to_message_id, created_at")
     .eq("room_id", roomId)
     .order("created_at", { ascending: true });
 
@@ -149,7 +149,8 @@ export async function getMessages(roomId: string): Promise<ChatMessageRow[]> {
 export async function sendMessage(
   roomId: string,
   body: string,
-  attachmentUrl?: string | null
+  attachmentUrl?: string | null,
+  replyToMessageId?: string | null
 ): Promise<{ error?: string }> {
   const user = await getAppUser();
   if (!user) return { error: "Not authenticated" };
@@ -164,6 +165,7 @@ export async function sendMessage(
     user_id: user.id,
     body: trimmed || "",
     attachment_url: attachmentUrl ?? null,
+    reply_to_message_id: replyToMessageId ?? null,
   });
 
   if (error) return { error: error.message };
@@ -203,6 +205,8 @@ export async function setLastRead(roomId: string): Promise<void> {
     { user_id: user.id, room_id: roomId, last_read_at: new Date().toISOString() },
     { onConflict: "user_id,room_id" }
   );
+  revalidatePath("/chat");
+  revalidatePath(`/chat/${roomId}`);
 }
 
 export async function getUnreadTotal(): Promise<number> {
@@ -228,14 +232,95 @@ export async function getUnreadTotal(): Promise<number> {
 
   const { data: messages } = await supabase
     .from("chat_messages")
-    .select("id, room_id, created_at")
+    .select("id, room_id, created_at, user_id")
     .in("room_id", roomIds);
   let count = 0;
   for (const m of messages ?? []) {
+    if (m.user_id === user.id) continue;
     const last = lastReadByRoom[m.room_id] ?? "1970-01-01T00:00:00Z";
     if (m.created_at && m.created_at > last) count++;
   }
   return count;
+}
+
+/** Unread count per room id (for rooms the user is a member of). */
+export async function getUnreadByRoom(): Promise<Record<string, number>> {
+  const user = await getAppUser();
+  if (!user) return {};
+
+  const supabase = await createClient();
+  const { data: memberRows } = await supabase
+    .from("chat_room_members")
+    .select("room_id")
+    .eq("user_id", user.id);
+  const roomIds = (memberRows ?? []).map((r) => r.room_id);
+  if (roomIds.length === 0) return {};
+
+  const { data: readRows } = await supabase
+    .from("chat_room_reads")
+    .select("room_id, last_read_at")
+    .eq("user_id", user.id);
+  const lastReadByRoom: Record<string, string> = {};
+  for (const r of readRows ?? []) {
+    lastReadByRoom[r.room_id] = r.last_read_at;
+  }
+
+  const { data: messages } = await supabase
+    .from("chat_messages")
+    .select("id, room_id, created_at, user_id")
+    .in("room_id", roomIds);
+  const countByRoom: Record<string, number> = {};
+  for (const rid of roomIds) countByRoom[rid] = 0;
+  for (const m of messages ?? []) {
+    if (m.user_id === user.id) continue;
+    const last = lastReadByRoom[m.room_id] ?? "1970-01-01T00:00:00Z";
+    if (m.created_at && m.created_at > last) countByRoom[m.room_id]++;
+  }
+  return countByRoom;
+}
+
+/** Last message (body snippet + created_at) per room id, for rooms the user is in. */
+export async function getLastMessageByRoom(): Promise<
+  Record<string, { body: string | null; created_at: string }>
+> {
+  const user = await getAppUser();
+  if (!user) return {};
+
+  const supabase = await createClient();
+  const { data: memberRows } = await supabase
+    .from("chat_room_members")
+    .select("room_id")
+    .eq("user_id", user.id);
+  const roomIds = (memberRows ?? []).map((r) => r.room_id);
+  if (roomIds.length === 0) return {};
+
+  const { data: messages } = await supabase
+    .from("chat_messages")
+    .select("room_id, body, created_at")
+    .in("room_id", roomIds)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  const lastByRoom: Record<string, { body: string | null; created_at: string }> = {};
+  for (const m of messages ?? []) {
+    if (!lastByRoom[m.room_id])
+      lastByRoom[m.room_id] = { body: m.body ?? null, created_at: m.created_at ?? "" };
+  }
+  return lastByRoom;
+}
+
+/** Last read timestamp for this user in the room (for initial scroll position). */
+export async function getLastReadAt(roomId: string): Promise<string | null> {
+  const user = await getAppUser();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("chat_room_reads")
+    .select("last_read_at")
+    .eq("user_id", user.id)
+    .eq("room_id", roomId)
+    .maybeSingle();
+  return data?.last_read_at ?? null;
 }
 
 export async function getLikesForRoom(roomId: string): Promise<Record<string, { count: number; userLiked: boolean }>> {

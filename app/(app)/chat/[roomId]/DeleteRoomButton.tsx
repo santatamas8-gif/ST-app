@@ -22,18 +22,22 @@ export function DeleteRoomButton({ roomId }: { roomId: string }) {
     router.refresh();
   }
 
+  const label = loading ? "Deleting…" : confirm ? "Confirm delete room" : "Delete room";
   return (
     <button
       type="button"
       onClick={handleDelete}
       disabled={loading}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
+      title={label}
+      aria-label={label}
+      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
         confirm
           ? "bg-red-600 text-white hover:bg-red-500"
           : "border border-red-500/50 text-red-400 hover:bg-red-500/10"
       }`}
     >
-      {loading ? "Deleting…" : confirm ? "Confirm delete room" : "Delete room"}
+      <span aria-hidden>🗑️</span>
+      <span className={(loading || confirm) ? "inline" : "hidden sm:inline"}>{label}</span>
     </button>
   );
 }

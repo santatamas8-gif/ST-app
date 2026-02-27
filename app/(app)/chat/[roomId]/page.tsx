@@ -2,13 +2,14 @@ import { getAppUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getMessages, getRoomMembers, getAvailableUsersToAdd, getLikesForRoom } from "@/app/actions/chat";
+import { getMessages, getRoomMembers, getAvailableUsersToAdd, getLikesForRoom, getLastReadAt } from "@/app/actions/chat";
 import { SendMessageForm } from "./SendMessageForm";
 import { ChatRoomRealtime } from "./ChatRoomRealtime";
 import { RoomMembersManager } from "./RoomMembersManager";
 import { DeleteRoomButton } from "./DeleteRoomButton";
 import { ChatMessageList } from "./ChatMessageList";
 import { MarkRoomRead } from "./MarkRoomRead";
+import { ReplyProvider } from "./ReplyContext";
 
 export default async function ChatRoomPage({
   params,
@@ -56,31 +57,47 @@ export default async function ChatRoomPage({
   }
 
   const isAdmin = user.role === "admin";
-  const members = isAdmin ? await getRoomMembers(roomId) : [];
-  const availableUsers = isAdmin ? await getAvailableUsersToAdd(roomId) : [];
-  const likesByMessage = await getLikesForRoom(roomId);
+  const [membersList, availableUsersList, likesByMessage, lastReadAt] = await Promise.all([
+    isAdmin ? getRoomMembers(roomId) : Promise.resolve([]),
+    isAdmin ? getAvailableUsersToAdd(roomId) : Promise.resolve([]),
+    getLikesForRoom(roomId),
+    getLastReadAt(roomId),
+  ]);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 sm:h-[calc(100vh-6rem)]">
       <MarkRoomRead roomId={roomId} />
       <ChatRoomRealtime roomId={roomId} />
-      <div className="flex shrink-0 flex-wrap items-center gap-4">
-        <Link href="/chat" className="text-zinc-400 hover:text-white">
+      <header
+        className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border px-4 py-3 sm:gap-4 sm:px-5 sm:py-3"
+        style={{
+          backgroundColor: "var(--card-bg)",
+          borderColor: "var(--card-border)",
+        }}
+      >
+        <Link
+          href="/chat"
+          className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
+          aria-label="Back to chat list"
+        >
           ← Chat
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-white">{room.name}</h1>
+        <span className="hidden text-zinc-600 sm:inline" aria-hidden>|</span>
+        <h1 className="min-w-0 flex-1 truncate text-xl font-bold tracking-tight text-white sm:text-2xl">
+          {room.name}
+        </h1>
         {isAdmin && (
-          <>
-            <DeleteRoomButton roomId={roomId} />
+          <div className="flex flex-shrink-0 items-center gap-2">
             <RoomMembersManager
-            roomId={roomId}
-            members={members}
-            availableUsers={availableUsers}
-            currentUserId={user.id}
-          />
-          </>
+              roomId={roomId}
+              members={membersList}
+              availableUsers={availableUsersList}
+              currentUserId={user.id}
+            />
+            <DeleteRoomButton roomId={roomId} />
+          </div>
         )}
-      </div>
+      </header>
       <div
         className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border"
         style={{
@@ -89,17 +106,20 @@ export default async function ChatRoomPage({
           borderColor: "var(--card-border)",
         }}
       >
-        <ChatMessageList
-          messages={messages}
-          displayNameByUserId={displayNameByUserId}
-          currentUserId={user.id}
-          isAdmin={isAdmin}
-          roomId={roomId}
-          likesByMessage={likesByMessage}
-        />
-        <div className="shrink-0 p-4">
-          <SendMessageForm roomId={roomId} />
-        </div>
+        <ReplyProvider>
+          <ChatMessageList
+            messages={messages}
+            displayNameByUserId={displayNameByUserId}
+            currentUserId={user.id}
+            isAdmin={isAdmin}
+            roomId={roomId}
+            likesByMessage={likesByMessage}
+            lastReadAt={lastReadAt}
+          />
+          <div className="shrink-0 p-4">
+            <SendMessageForm roomId={roomId} />
+          </div>
+        </ReplyProvider>
       </div>
     </div>
   );

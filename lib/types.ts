@@ -115,6 +115,7 @@ export interface ChatMessageRow {
   user_id: string;
   body: string;
   attachment_url: string | null;
+  reply_to_message_id?: string | null;
   created_at?: string;
 }
 
