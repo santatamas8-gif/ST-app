@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -19,14 +19,14 @@ const THEME_SWATCH: Record<ThemeId, string> = {
   purple: "#1e1b2e",
 };
 
-const navItems: { href: string; label: string; roles?: UserRole[] }[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/players", label: "Players", roles: ["admin", "staff"] },
-  { href: "/wellness", label: "Wellness" },
-  { href: "/rpe", label: "RPE" },
-  { href: "/chat", label: "Chat" },
-  { href: "/admin/users", label: "Users", roles: ["admin"] },
+const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRole[] }[] = [
+  { href: "/dashboard", label: "Dashboard", icon: Home },
+  { href: "/schedule", label: "Schedule", icon: Calendar },
+  { href: "/players", label: "Players", icon: Users, roles: ["admin", "staff"] },
+  { href: "/wellness", label: "Wellness", icon: HeartPulse },
+  { href: "/rpe", label: "RPE", icon: Activity },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/admin/users", label: "Users", icon: UserCog, roles: ["admin"] },
 ];
 
 interface SidebarProps {
@@ -84,7 +84,8 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
 
   const linkContent = (item: (typeof navItems)[0]) => (
     <>
-      {item.label}
+      <item.icon className="h-5 w-5 shrink-0" aria-hidden />
+      <span className="min-w-0">{item.label}</span>
       {needsTodo(item.href) && (
         <span className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400" title="To do today" aria-hidden />
       )}
@@ -175,7 +176,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex min-h-[44px] items-center rounded-lg px-2.5 py-2 text-xs font-medium transition ${
+                className={`flex min-h-[44px] items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition ${
                   isActive ? activeNavClass : inactiveNavClass
                 }`}
               >
@@ -192,7 +193,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <Link
               key={item.href}
               href={item.href}
-                className={`flex min-h-[44px] items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   isActive ? activeNavClass : inactiveNavClass
                 }`}
             >
@@ -211,8 +212,9 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         <form action="/api/auth/signout" method="post" className="mt-2">
           <button
             type="submit"
-            className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
+            className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
           >
+            <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
             Sign out
           </button>
         </form>
@@ -226,8 +228,9 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className={`min-h-[44px] min-w-[44px] rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
+              className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
             >
+              <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
               Sign out
             </button>
           </form>

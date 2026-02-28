@@ -15,6 +15,7 @@ import type { WellnessRow } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
+import { BodyMapViewOnly } from "@/components/BodyMap";
 import { BadgeScore } from "./BadgeScore";
 
 const CARD_RADIUS = "12px";
@@ -173,7 +174,10 @@ export function PlayerWellnessModal({
             {latest.body_parts && Object.keys(latest.body_parts).length > 0 && (
               <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2">
                 <h4 className="text-xs font-medium text-zinc-500">Body map (soreness / pain 1–10)</h4>
-                <ul className="mt-1.5 space-y-1 text-sm text-zinc-300">
+                <div className="mt-2">
+                  <BodyMapViewOnly bodyParts={latest.body_parts} />
+                </div>
+                <ul className="mt-3 space-y-1 text-sm text-zinc-300">
                   {Object.entries(latest.body_parts).map(([partId, v]) => {
                     const s = v.s ?? 0;
                     const p = v.p ?? 0;

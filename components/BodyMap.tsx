@@ -528,3 +528,219 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
     </div>
   );
 }
+
+/** Converts wellness body_parts (s/p) to BodyMap value (soreness/pain) */
+function toBodyPartsState(bodyParts: Record<string, { s: number; p: number }> | null): BodyPartsState {
+  if (!bodyParts) return {};
+  const out: BodyPartsState = {};
+  Object.entries(bodyParts).forEach(([id, v]) => {
+    out[id] = { soreness: v.s ?? 0, pain: v.p ?? 0 };
+  });
+  return out;
+}
+
+/** Read-only body map: shows front + back with highlighted areas, no click/zoom. */
+export function BodyMapViewOnly({
+  bodyParts,
+  className,
+  mode,
+  hideLabels = false,
+}: {
+  bodyParts: Record<string, { s: number; p: number }> | null;
+  className?: string;
+  /** When set, only color by this (soreness or pain); otherwise both with gradient. */
+  mode?: "soreness" | "pain";
+  /** When true, no numbers/labels on the figure, only colors. */
+  hideLabels?: boolean;
+}) {
+  const [parsedFront, setParsedFront] = useState<ParsedSvg | null>(null);
+  const [parsedBack, setParsedBack] = useState<ParsedSvg | null>(null);
+  const value = toBodyPartsState(bodyParts);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(SVG_FRONT)
+      .then((r) => r.text())
+      .then((text) => {
+        if (!cancelled) setParsedFront(parseSvg(text, "front"));
+      })
+      .catch(() => {
+        if (!cancelled) setParsedFront({ viewBox: VIEWBOX, background: null, parts: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(SVG_BACK)
+      .then((r) => r.text())
+      .then((text) => {
+        if (!cancelled) setParsedBack(parseSvg(text, "back"));
+      })
+      .catch(() => {
+        if (!cancelled) setParsedBack({ viewBox: VIEWBOX, background: null, parts: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const noData = !bodyParts || Object.keys(bodyParts).length === 0;
+
+  return (
+    <div className={className}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-center">
+        {/* Front */}
+        <div className="flex flex-col items-center">
+          <span className="mb-1 text-xs font-medium text-zinc-500">Front</span>
+          {!parsedFront ? (
+            <div
+              className="flex min-h-[280px] w-[240px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
+              style={{ backgroundColor: PANEL_BG }}
+            >
+              Loading…
+            </div>
+          ) : (
+            <ReadOnlyFigure
+              parsed={parsedFront}
+              value={value}
+              gradientPrefix="viewonly-front"
+              mode={mode}
+              hideLabels={hideLabels}
+            />
+          )}
+        </div>
+        {/* Back */}
+        <div className="flex flex-col items-center">
+          <span className="mb-1 text-xs font-medium text-zinc-500">Back</span>
+          {!parsedBack ? (
+            <div
+              className="flex min-h-[280px] w-[240px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
+              style={{ backgroundColor: PANEL_BG }}
+            >
+              Loading…
+            </div>
+          ) : (
+            <ReadOnlyFigure
+              parsed={parsedBack}
+              value={value}
+              gradientPrefix="viewonly-back"
+              mode={mode}
+              hideLabels={hideLabels}
+            />
+          )}
+        </div>
+      </div>
+      {noData && (
+        <p className="mt-2 text-center text-xs text-zinc-500">No body parts recorded for this entry.</p>
+      )}
+    </div>
+  );
+}
+
+function ReadOnlyFigure({
+  parsed,
+  value,
+  gradientPrefix,
+  mode,
+  hideLabels = false,
+}: {
+  parsed: ParsedSvg;
+  value: BodyPartsState;
+  gradientPrefix: string;
+  mode?: "soreness" | "pain";
+  hideLabels?: boolean;
+}) {
+  const { viewBox, background, parts } = parsed;
+  return (
+    <div
+      className="overflow-hidden rounded-xl border border-zinc-600"
+      style={{ maxWidth: 280, backgroundColor: PANEL_BG }}
+    >
+      <svg viewBox={viewBox} className="h-auto w-full" style={{ minHeight: 280 }} aria-hidden>
+        {background && (
+          <path
+            d={background.d}
+            fill={BODY_FILL}
+            stroke={BODY_STROKE}
+            strokeWidth={0.6}
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {parts.map((part) => {
+          const s = value[part.id]?.soreness ?? 0;
+          const p = value[part.id]?.pain ?? 0;
+          const useS = mode === "pain" ? 0 : s;
+          const useP = mode === "soreness" ? 0 : p;
+          const fillS = useS > 0 ? getColor("soreness", useS) : "transparent";
+          const fillP = useP > 0 ? getColor("pain", useP) : "transparent";
+          const fill =
+            useS > 0 && useP > 0
+              ? `url(#${gradientPrefix}-grad-${part.id})`
+              : useS > 0
+                ? fillS
+                : useP > 0
+                  ? fillP
+                  : "transparent";
+          const hasValue = (mode == null ? s > 0 || p > 0 : mode === "soreness" ? s > 0 : p > 0);
+
+          return (
+            <g key={part.id}>
+              {useS > 0 && useP > 0 && (
+                <defs>
+                  <linearGradient id={`${gradientPrefix}-grad-${part.id}`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={getColor("soreness", useS)} />
+                    <stop offset="100%" stopColor={getColor("pain", useP)} />
+                  </linearGradient>
+                </defs>
+              )}
+              {part.paths.map((d, i) => (
+                <path
+                  key={`${part.id}-${i}`}
+                  d={d}
+                  fill={fill}
+                  stroke={PART_STROKE}
+                  strokeWidth={PART_STROKE_WIDTH}
+                  style={{ pointerEvents: "none" }}
+                />
+              ))}
+              {!hideLabels && hasValue && (() => {
+                const firstD = part.paths[0];
+                const match = firstD.match(/M\s*([\d.-]+)\s*[, ]\s*([\d.-]+)/);
+                const cx = match ? parseFloat(match[1]) : 297;
+                const cy = match ? parseFloat(match[2]) : 420;
+                const label = getBodyPartLabel(part.id);
+                return (
+                  <g className="pointer-events-none">
+                    <text
+                      x={cx}
+                      y={cy - 8}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-white font-bold drop-shadow-md"
+                      style={{ fontSize: 11 }}
+                    >
+                      {Math.max(s, p)}
+                    </text>
+                    <text
+                      x={cx}
+                      y={cy + 10}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-white drop-shadow-md"
+                      style={{ fontSize: 7 }}
+                    >
+                      {label.length > 20 ? label.slice(0, 18) + "…" : label}
+                    </text>
+                  </g>
+                );
+              })()}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}

@@ -10,8 +10,25 @@ import { KpiCard } from "./KpiCard";
 import { BadgeScore } from "./BadgeScore";
 import { RiskRowHighlight, RiskBadge } from "./RiskRowHighlight";
 import { PlayerWellnessModal } from "./PlayerWellnessModal";
+import { BodyMapViewOnly } from "@/components/BodyMap";
 
 type BodyPartEntry = { label: string; value: number };
+
+/** Aggregate body_parts from all rows: per part id, max s and max p. */
+function aggregateBodyParts(rows: WellnessRow[]): Record<string, { s: number; p: number }> {
+  const out: Record<string, { s: number; p: number }> = {};
+  rows.forEach((r) => {
+    if (!r.body_parts) return;
+    Object.entries(r.body_parts).forEach(([id, v]) => {
+      const s = v.s ?? 0;
+      const p = v.p ?? 0;
+      if (!out[id]) out[id] = { s: 0, p: 0 };
+      out[id].s = Math.max(out[id].s, s);
+      out[id].p = Math.max(out[id].p, p);
+    });
+  });
+  return out;
+}
 
 function splitBodyParts(bodyParts: WellnessRow["body_parts"]): {
   soreness: BodyPartEntry[];
@@ -72,6 +89,7 @@ export function StaffWellnessView({
   const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const [bodyMapMode, setBodyMapMode] = useState<"soreness" | "pain">("soreness");
   const searchInputRef = useRef<HTMLInputElement>(null);
   useSearchShortcut(searchInputRef);
 
@@ -346,6 +364,51 @@ export function StaffWellnessView({
             </div>
           )}
         </div>
+
+        {/* Body map (all players aggregated): between table and Body parts list */}
+        {filteredAndSorted.length > 0 &&
+          filteredAndSorted.some((r) => {
+            const { soreness, pain } = splitBodyParts(r.body_parts);
+            return soreness.length > 0 || pain.length > 0;
+          }) && (
+          <div
+            className="rounded-xl border border-zinc-700 px-4 py-4 sm:px-5"
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-zinc-500">Map:</span>
+              <button
+                type="button"
+                onClick={() => setBodyMapMode("soreness")}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  bodyMapMode === "soreness"
+                    ? "bg-amber-600 text-white"
+                    : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                }`}
+              >
+                Soreness
+              </button>
+              <button
+                type="button"
+                onClick={() => setBodyMapMode("pain")}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  bodyMapMode === "pain"
+                    ? "bg-red-600 text-white"
+                    : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                }`}
+              >
+                Pain
+              </button>
+            </div>
+            <div className="mt-3">
+              <BodyMapViewOnly
+                bodyParts={aggregateBodyParts(filteredAndSorted)}
+                mode={bodyMapMode}
+                hideLabels
+              />
+            </div>
+          </div>
+        )}
 
         {/* Body parts: only show if at least one player has any soreness or pain */}
         {filteredAndSorted.length > 0 &&
