@@ -29,6 +29,8 @@ interface ScaleInputProps {
   onChange: (n: number) => void;
   min?: number;
   max?: number;
+  /** When true, low value = green (good), high = red (e.g. soreness, fatigue, stress) */
+  inverted?: boolean;
   /** Optional scale hint shown under the label (used when no lowLabel/highLabel) */
   labelHint?: string;
   /** Optional explanation under the slider */
@@ -46,6 +48,7 @@ export function ScaleInput({
   onChange,
   min = 1,
   max = 10,
+  inverted = false,
   labelHint,
   legend,
   lowLabel,
@@ -54,7 +57,8 @@ export function ScaleInput({
 }: ScaleInputProps) {
   const name = id ?? label.replace(/\s+/g, "-").toLowerCase();
   const showEndLabels = lowLabel != null || highLabel != null;
-  const thumbColor = thumbColorFor(value, min, max);
+  const colorValue = inverted ? min + max - value : value;
+  const thumbColor = thumbColorFor(colorValue, min, max);
   const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
   return (
     <div>
