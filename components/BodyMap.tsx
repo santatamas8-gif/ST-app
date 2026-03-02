@@ -257,11 +257,11 @@ function BodyFigure({
         })}
       </svg>
       </div>
-      <div className="absolute bottom-2 right-2 flex flex-col gap-1 rounded-lg bg-zinc-800/90 p-1 shadow-lg">
+      <div className="absolute bottom-2 right-2 flex flex-col gap-1 rounded-lg bg-zinc-800/90 p-1.5 shadow-lg">
         <button
           type="button"
           onClick={() => onZoomPanChange(Math.min(3, zoom + 0.25), pan)}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
           aria-label="Zoom in"
         >
           +
@@ -269,7 +269,7 @@ function BodyFigure({
         <button
           type="button"
           onClick={() => onZoomPanChange(Math.max(1, zoom - 0.25), pan)}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-lg font-bold text-zinc-200 hover:bg-zinc-600 active:bg-zinc-500"
           aria-label="Zoom out"
         >
           −
@@ -278,7 +278,7 @@ function BodyFigure({
           <button
             type="button"
             onClick={() => onZoomPanChange(1, { x: 0, y: 0 })}
-            className="flex h-8 items-center justify-center rounded-md text-xs text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
+            className="flex h-8 items-center justify-center rounded-lg text-xs text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
             aria-label="Reset zoom"
           >
             Reset
@@ -389,10 +389,7 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-zinc-400">
-        Tap a body part to add {mode}. Each tap increases the level (1–10).
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         <span className="text-xs font-medium text-zinc-500">Mode:</span>
         <button
           type="button"
@@ -416,12 +413,12 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
         >
           Pain
         </button>
-        <span className="ml-2 text-xs text-zinc-500">|</span>
+        <span className="hidden text-xs text-zinc-500 sm:inline" aria-hidden>|</span>
         <span className="text-xs font-medium text-zinc-500">View:</span>
         <button
           type="button"
           onClick={() => { setCurrentView("front"); setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className={`rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
+          className={`rounded-lg px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
             currentView === "front"
               ? "bg-emerald-500 text-white"
               : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
@@ -432,7 +429,7 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
         <button
           type="button"
           onClick={() => { setCurrentView("back"); setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className={`rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
+          className={`rounded-lg px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
             currentView === "back"
               ? "bg-emerald-500 text-white"
               : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
@@ -539,12 +536,15 @@ function toBodyPartsState(bodyParts: Record<string, { s: number; p: number }> | 
   return out;
 }
 
+const VIEWONLY_SIZE = { default: 280, large: 420 } as const;
+
 /** Read-only body map: shows front + back with highlighted areas, no click/zoom. */
 export function BodyMapViewOnly({
   bodyParts,
   className,
   mode,
   hideLabels = false,
+  size = "default",
 }: {
   bodyParts: Record<string, { s: number; p: number }> | null;
   className?: string;
@@ -552,6 +552,8 @@ export function BodyMapViewOnly({
   mode?: "soreness" | "pain";
   /** When true, no numbers/labels on the figure, only colors. */
   hideLabels?: boolean;
+  /** "large" for staff/admin view, "default" for modal. */
+  size?: "default" | "large";
 }) {
   const [parsedFront, setParsedFront] = useState<ParsedSvg | null>(null);
   const [parsedBack, setParsedBack] = useState<ParsedSvg | null>(null);
@@ -597,8 +599,8 @@ export function BodyMapViewOnly({
           <span className="mb-1 text-xs font-medium text-zinc-500">Front</span>
           {!parsedFront ? (
             <div
-              className="flex min-h-[280px] w-[240px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
-              style={{ backgroundColor: PANEL_BG }}
+              className="flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
+              style={{ backgroundColor: PANEL_BG, minHeight: VIEWONLY_SIZE[size], width: VIEWONLY_SIZE[size] }}
             >
               Loading…
             </div>
@@ -609,6 +611,7 @@ export function BodyMapViewOnly({
               gradientPrefix="viewonly-front"
               mode={mode}
               hideLabels={hideLabels}
+              sizePx={VIEWONLY_SIZE[size]}
             />
           )}
         </div>
@@ -617,8 +620,8 @@ export function BodyMapViewOnly({
           <span className="mb-1 text-xs font-medium text-zinc-500">Back</span>
           {!parsedBack ? (
             <div
-              className="flex min-h-[280px] w-[240px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
-              style={{ backgroundColor: PANEL_BG }}
+              className="flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
+              style={{ backgroundColor: PANEL_BG, minHeight: VIEWONLY_SIZE[size], width: VIEWONLY_SIZE[size] }}
             >
               Loading…
             </div>
@@ -629,6 +632,7 @@ export function BodyMapViewOnly({
               gradientPrefix="viewonly-back"
               mode={mode}
               hideLabels={hideLabels}
+              sizePx={VIEWONLY_SIZE[size]}
             />
           )}
         </div>
@@ -646,20 +650,22 @@ function ReadOnlyFigure({
   gradientPrefix,
   mode,
   hideLabels = false,
+  sizePx = 280,
 }: {
   parsed: ParsedSvg;
   value: BodyPartsState;
   gradientPrefix: string;
   mode?: "soreness" | "pain";
   hideLabels?: boolean;
+  sizePx?: number;
 }) {
   const { viewBox, background, parts } = parsed;
   return (
     <div
       className="overflow-hidden rounded-xl border border-zinc-600"
-      style={{ maxWidth: 280, backgroundColor: PANEL_BG }}
+      style={{ maxWidth: sizePx, width: sizePx, backgroundColor: PANEL_BG }}
     >
-      <svg viewBox={viewBox} className="h-auto w-full" style={{ minHeight: 280 }} aria-hidden>
+      <svg viewBox={viewBox} className="h-auto w-full" style={{ minHeight: sizePx }} aria-hidden>
         {background && (
           <path
             d={background.d}

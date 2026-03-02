@@ -155,15 +155,13 @@ export function PlayerWellnessModal({
               <span className="text-zinc-500">Sleep quality</span>
               <BadgeScore value={latest.sleep_quality} type="goodHigh" />
               <span className="text-zinc-500">Fatigue</span>
-              <BadgeScore value={latest.fatigue} type="badHigh" />
+              <BadgeScore value={latest.fatigue != null ? 10 - latest.fatigue : null} type="goodHigh" />
               <span className="text-zinc-500">Soreness</span>
-              <BadgeScore value={latest.soreness} type="badHigh" />
+              <BadgeScore value={latest.soreness != null ? 10 - latest.soreness : null} type="goodHigh" />
               <span className="text-zinc-500">Stress</span>
-              <BadgeScore value={latest.stress} type="badHigh" />
+              <BadgeScore value={latest.stress != null ? 10 - latest.stress : null} type="goodHigh" />
               <span className="text-zinc-500">Mood</span>
-              <BadgeScore value={latest.mood} type="badLow" />
-              <span className="text-zinc-500">Motivation</span>
-              <BadgeScore value={latest.motivation} type="goodHigh" />
+              <BadgeScore value={latest.mood} type="goodHigh" />
               <span className="text-zinc-500">Illness</span>
               {latest.illness === true ? (
                 <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">Yes</span>

@@ -35,7 +35,7 @@ export function BadgeScore({ value, type, className = "" }: BadgeScoreProps) {
   const colorClass = getColorClass(value, type);
   return (
     <span
-      className={`inline-flex min-w-[2rem] justify-center rounded-md px-2 py-0.5 text-sm font-medium tabular-nums ${colorClass} ${className}`}
+      className={`inline-flex min-w-[2rem] justify-center rounded-md px-2 py-1 text-sm font-semibold tabular-nums ${colorClass} ${className}`}
     >
       {display}
     </span>

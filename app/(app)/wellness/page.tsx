@@ -46,28 +46,23 @@ export default async function WellnessPage() {
   let emailByUserId: Record<string, string> = {};
   let displayNameByUserId: Record<string, string> = {};
   let totalPlayers: number | null = null;
+  let allPlayerIds: string[] = [];
   if (!isPlayer) {
-    if (list.length > 0) {
-      const userIds = [...new Set(list.map((r) => r.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, email, full_name")
-        .in("id", userIds);
-      if (profiles) {
-        for (const p of profiles) {
-          const email = p.email ?? "—";
-          emailByUserId[p.id] = email;
-          const name = (p as { full_name?: string | null }).full_name;
-          displayNameByUserId[p.id] =
-            (name && typeof name === "string" && name.trim()) ? name.trim() : email;
-        }
+    const { data: playerProfiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("role", "player");
+    if (playerProfiles) {
+      totalPlayers = playerProfiles.length;
+      allPlayerIds = playerProfiles.map((p: { id: string }) => p.id);
+      for (const p of playerProfiles) {
+        const email = p.email ?? "—";
+        emailByUserId[p.id] = email;
+        const name = (p as { full_name?: string | null }).full_name;
+        displayNameByUserId[p.id] =
+          (name && typeof name === "string" && name.trim()) ? name.trim() : email;
       }
     }
-    const { count } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("role", "player");
-    totalPlayers = count ?? null;
   }
 
   if (isPlayer) {
@@ -102,7 +97,8 @@ export default async function WellnessPage() {
               Wellness
             </h1>
             <p className="mt-1 text-zinc-400">
-              Submit once per day. Bed/wake time, sleep quality, fatigue, soreness, stress, mood (1–10).
+              Submit once per day. All scales are 1 to 10{" "}
+              <span className="text-zinc-500">(1 = very poor, 10 = excellent)</span>.
             </p>
           </div>
 
@@ -140,6 +136,7 @@ export default async function WellnessPage() {
       emailByUserId={emailByUserId}
       displayNameByUserId={displayNameByUserId}
       totalPlayers={totalPlayers}
+      allPlayerIds={allPlayerIds}
     />
   );
 }

@@ -29,7 +29,6 @@ type MetricKey =
   | "soreness"
   | "stress"
   | "mood"
-  | "motivation"
   | "wellness"
   | "load";
 
@@ -40,12 +39,11 @@ const METRICS: { key: MetricKey; label: string; max?: number }[] = [
   { key: "soreness", label: "Soreness", max: 10 },
   { key: "stress", label: "Stress", max: 10 },
   { key: "mood", label: "Mood", max: 10 },
-  { key: "motivation", label: "Motivation", max: 10 },
   { key: "wellness", label: "Wellness score", max: 10 },
   { key: "load", label: "Load" },
 ];
 
-/** Returns green / yellow / red for bar color based on metric and value (higher is better for mood, quality, motivation, wellness, sleep_duration; lower is better for fatigue, soreness, stress). */
+/** Returns green / yellow / red for bar color based on metric and value (higher is better for mood, quality, wellness, sleep_duration; lower is better for fatigue, soreness, stress). */
 function getBarColor(key: MetricKey, value: number | string): string {
   const n = typeof value === "number" ? value : Number(value);
   if (Number.isNaN(n)) return BAR_GREEN;
@@ -55,7 +53,7 @@ function getBarColor(key: MetricKey, value: number | string): string {
     if (n >= 6) return BAR_YELLOW;
     return BAR_RED;
   }
-  const highGood = ["sleep_quality", "mood", "motivation", "wellness"].includes(key);
+  const highGood = ["sleep_quality", "mood", "wellness"].includes(key);
   if (highGood) {
     if (n >= 7) return BAR_GREEN;
     if (n >= 4) return BAR_YELLOW;
@@ -145,7 +143,6 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
           soreness: w?.soreness ?? null,
           stress: w?.stress ?? null,
           mood: w?.mood ?? null,
-          motivation: w?.motivation ?? null,
           wellness: wellnessScore,
           load: load != null && load > 0 ? load : null,
         };

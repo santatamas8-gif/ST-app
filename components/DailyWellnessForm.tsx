@@ -6,15 +6,37 @@ import { submitDailyWellness } from "@/app/actions/wellness";
 import { sleepDurationHours } from "@/utils/sleep";
 import { ScaleInput } from "@/components/ScaleInput";
 import { BodyMap, type BodyPartsState } from "@/components/BodyMap";
-
-const SCALE_HELPER = "1 = very bad, 10 = excellent";
+import { HeartPulse, Moon, Activity, Brain, MoreHorizontal, Pill, Check } from "lucide-react";
 
 const FIELDS = [
-  { key: "fatigue", label: "Fatigue (1–10)", inverted: true },
-  { key: "soreness", label: "Soreness (1–10)", inverted: true },
-  { key: "stress", label: "Stress (1–10)", inverted: true },
-  { key: "mood", label: "Mood (1–10)", inverted: false },
-  { key: "motivation", label: "Motivation (1–10)", inverted: false },
+  {
+    key: "fatigue",
+    label: "How much energy do you have?",
+    lowLabel: "No energy",
+    highLabel: "Full of energy",
+    invertOnSubmit: true,
+  },
+  {
+    key: "soreness",
+    label: "How recovered do your muscles feel?",
+    lowLabel: "Very sore",
+    highLabel: "Fully recovered",
+    invertOnSubmit: true,
+  },
+  {
+    key: "stress",
+    label: "How stressed are you?",
+    lowLabel: "Very stressed",
+    highLabel: "Not stressed at all",
+    invertOnSubmit: true,
+  },
+  {
+    key: "mood",
+    label: "Mood (1–10)",
+    lowLabel: "Very bad",
+    highLabel: "Excellent",
+    invertOnSubmit: false,
+  },
 ] as const;
 
 interface DailyWellnessFormProps {
@@ -29,7 +51,6 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   const [soreness, setSoreness] = useState(5);
   const [stress, setStress] = useState(5);
   const [mood, setMood] = useState(5);
-  const [motivation, setMotivation] = useState(5);
   const [illness, setIllness] = useState(false);
   const [bodyParts, setBodyParts] = useState<BodyPartsState>({});
   const [loading, setLoading] = useState(false);
@@ -41,13 +62,12 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     return sleepDurationHours(bedTime, wakeTime);
   }, [bedTime, wakeTime]);
 
-  const values = { fatigue, soreness, stress, mood, motivation };
+  const values = { fatigue, soreness, stress, mood };
   const setters = {
     fatigue: setFatigue,
     soreness: setSoreness,
     stress: setStress,
     mood: setMood,
-    motivation: setMotivation,
   };
 
   const allScalesValid =
@@ -60,10 +80,9 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     values.stress >= 1 &&
     values.stress <= 10 &&
     values.mood >= 1 &&
-    values.mood <= 10 &&
-    values.motivation >= 1 &&
-    values.motivation <= 10;
-  const canSubmit = allScalesValid && !loading && !hasSubmittedToday;
+    values.mood <= 10;
+  const allRequiredFilled = bedTime.trim() !== "" && wakeTime.trim() !== "" && allScalesValid;
+  const canSubmit = allRequiredFilled && !loading && !hasSubmittedToday;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,11 +100,10 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
         : undefined;
     const result = await submitDailyWellness({
       sleep_quality: sleepQuality,
-      fatigue,
-      soreness,
-      stress,
+      fatigue: FIELDS.find((f) => f.key === "fatigue")?.invertOnSubmit ? 10 - fatigue : fatigue,
+      soreness: FIELDS.find((f) => f.key === "soreness")?.invertOnSubmit ? 10 - soreness : soreness,
+      stress: FIELDS.find((f) => f.key === "stress")?.invertOnSubmit ? 10 - stress : stress,
       mood,
-      motivation,
       illness,
       bed_time: bedTime || undefined,
       wake_time: wakeTime || undefined,
@@ -145,88 +163,168 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
 
   return (
     <div
-      className="rounded-xl border p-5 shadow-lg"
+      className="rounded-xl border shadow-lg overflow-hidden"
       style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}
     >
-      <h2 className="mb-1 text-lg font-semibold text-white">Daily wellness</h2>
-      <p className="mb-4 text-sm text-zinc-400">{SCALE_HELPER}</p>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
-            Bed time
-          </label>
-          <input
-            id="bed_time"
-            type="time"
-            value={bedTime}
-            onChange={(e) => setBedTime(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="wake_time" className="block text-sm font-medium text-zinc-300">
-            Wake time
-          </label>
-          <input
-            id="wake_time"
-            type="time"
-            value={wakeTime}
-            onChange={(e) => setWakeTime(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white"
-          />
-        </div>
-        {sleepDuration !== null && (
-          <p className="text-sm text-zinc-400">
-            Sleep: <span className="font-medium text-white">{sleepDuration.toFixed(1)} h</span>
-          </p>
-        )}
-        <div>
-          <ScaleInput
-            id="sleep_quality"
-            label="Sleep quality (1–10)"
-            value={sleepQuality}
-            onChange={setSleepQuality}
-            min={1}
-            max={10}
-          />
-        </div>
-        {FIELDS.map(({ key, label, inverted }) => (
-          <div key={key}>
+      <header className="border-b border-zinc-700/80 bg-emerald-950/25 px-5 py-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+          <HeartPulse className="h-5 w-5 text-emerald-400" aria-hidden />
+          Daily wellness
+        </h2>
+      </header>
+      <form onSubmit={handleSubmit} className="space-y-6 p-5">
+        {/* Sleep */}
+        <div className="space-y-4 rounded-xl border border-zinc-700/50 bg-slate-900/25 px-4 pb-4 pt-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <Moon className="h-4 w-4" aria-hidden />
+            Sleep
+          </h3>
+          <div className="space-y-4 pl-0">
+            <div>
+              <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
+                Bed time
+              </label>
+              <input
+                id="bed_time"
+                type="time"
+                value={bedTime}
+                onChange={(e) => setBedTime(e.target.value)}
+                className="mt-1 block min-h-[48px] w-full max-w-[10rem] rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-3 text-base text-white [color-scheme:dark]"
+                aria-label="Bed time"
+              />
+            </div>
+            <div>
+              <label htmlFor="wake_time" className="block text-sm font-medium text-zinc-300">
+                Wake up time
+              </label>
+              <input
+                id="wake_time"
+                type="time"
+                value={wakeTime}
+                onChange={(e) => setWakeTime(e.target.value)}
+                className="mt-1 block min-h-[48px] w-full max-w-[10rem] rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-3 text-base text-white [color-scheme:dark]"
+                aria-label="Wake up time"
+              />
+            </div>
+            {sleepDuration !== null && (
+              <p className="text-sm text-zinc-400">
+                Sleep: <span className="font-medium text-white">{sleepDuration.toFixed(1)} h</span>
+              </p>
+            )}
             <ScaleInput
-              id={key}
-              label={label}
-              value={values[key]}
-              onChange={setters[key]}
+              id="sleep_quality"
+              label="Sleep quality"
+              lowLabel="Very poor"
+              highLabel="Excellent"
+              value={sleepQuality}
+              onChange={setSleepQuality}
               min={1}
               max={10}
-              inverted={inverted}
             />
           </div>
-        ))}
-        <div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-zinc-300">
-            <input
-              type="checkbox"
-              checked={illness}
-              onChange={(e) => setIllness(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
-            />
-            Illness today (e.g. cold, fever, stomach)
-          </label>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-zinc-300">
-            Body map – soreness & pain (optional)
-          </label>
-          <p className="mt-0.5 mb-2 text-xs text-zinc-500">
-            Tap body parts to add soreness or pain level (1–10). Switch view for front/back.
-          </p>
-          <BodyMap value={bodyParts} onChange={setBodyParts} />
+
+        {/* Body */}
+        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-amber-950/20 px-4 pb-4 pt-6">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <Activity className="h-4 w-4" aria-hidden />
+            Body
+          </h3>
+          <div className="space-y-4 pl-0">
+            {FIELDS.filter((f) => f.key === "fatigue" || f.key === "soreness").map(({ key, label, lowLabel, highLabel }) => (
+              <ScaleInput
+                key={key}
+                id={key}
+                label={label}
+                lowLabel={lowLabel}
+                highLabel={highLabel}
+                value={values[key]}
+                onChange={setters[key]}
+                min={1}
+                max={10}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Mind */}
+        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-violet-950/20 px-4 pb-4 pt-6">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <Brain className="h-4 w-4" aria-hidden />
+            Mind
+          </h3>
+          <div className="space-y-4 pl-0">
+            {FIELDS.filter((f) => f.key === "stress" || f.key === "mood").map(({ key, label, lowLabel, highLabel }) => (
+              <ScaleInput
+                key={key}
+                id={key}
+                label={label}
+                lowLabel={lowLabel}
+                highLabel={highLabel}
+                value={values[key]}
+                onChange={setters[key]}
+                min={1}
+                max={10}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-zinc-800/30 px-4 pb-4 pt-6">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <MoreHorizontal className="h-4 w-4" aria-hidden />
+            Other
+          </h3>
+          <div className="rounded-xl border border-zinc-600/50 bg-slate-900/25 p-4">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-300">
+              <Pill className="h-5 w-5 text-amber-500/90" aria-hidden />
+              Illness today (e.g. cold, fever, stomach)
+            </p>
+            <div className="flex gap-2" role="group" aria-label="Illness today">
+              <button
+                type="button"
+                onClick={() => setIllness(false)}
+                className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  !illness
+                    ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                    : "bg-zinc-700/60 text-zinc-400 hover:bg-zinc-600"
+                }`}
+              >
+                {!illness && <Check className="h-4 w-4" aria-hidden />}
+                No
+              </button>
+              <button
+                type="button"
+                onClick={() => setIllness(true)}
+                className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  illness
+                    ? "bg-red-600/90 text-white"
+                    : "bg-zinc-700/60 text-zinc-400 hover:bg-zinc-600"
+                }`}
+              >
+                {illness && <Check className="h-4 w-4" aria-hidden />}
+                Yes
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-zinc-500">Default is No — only tap Yes if you have illness.</p>
+          </div>
+          <div className="mt-4 rounded-xl border-t border-zinc-600/50 bg-amber-950/20 p-4 pt-4">
+            <label className="block text-sm font-semibold text-zinc-300">
+              Body map – soreness & pain (optional)
+            </label>
+            <p className="mt-0.5 mb-2 text-xs text-zinc-500">
+              Tap a body part to set level (1–10). Use FRONT/BACK to switch side.
+            </p>
+            <BodyMap value={bodyParts} onChange={setBodyParts} />
+          </div>
         </div>
         {submitError && (
           <div className="rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2 text-sm text-red-400">
             {submitError}
           </div>
+        )}
+        {!canSubmit && !loading && (bedTime.trim() === "" || wakeTime.trim() === "") && (
+          <p className="text-sm text-amber-500/90">Fill in bed time and wake time to submit.</p>
         )}
         <button
           type="submit"

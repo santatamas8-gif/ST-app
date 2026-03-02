@@ -12,11 +12,11 @@ import { THEMES, type ThemeId } from "@/lib/themes";
 const HEADER_ONLY_HREFS = ["/chat", "/schedule"];
 
 const THEME_SWATCH: Record<ThemeId, string> = {
-  black: "#0b0f14",
-  green: "#0d1f1a",
-  navy: "#0f172a",
-  brown: "#1c1917",
-  purple: "#1e1b2e",
+  dark: "#0f1216",
+  light: "#f4f4f5",
+  red: "#1f1315",
+  blue: "#0f172a",
+  green: "#0f2621",
 };
 
 const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRole[] }[] = [
@@ -57,16 +57,17 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     return () => document.removeEventListener("click", close);
   }, [themePopoverOpen]);
 
+  const isLight = themeId === "light";
   const activeNavClass =
-    themeId === "black"
-      ? "bg-emerald-600/20 text-emerald-400"
-      : "bg-emerald-500/25 text-emerald-300";
+    isLight
+      ? "bg-emerald-600/25 text-emerald-700"
+      : "bg-emerald-600/20 text-emerald-400";
   const inactiveNavClass =
-    themeId === "black"
-      ? "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-      : "text-zinc-300 hover:bg-white/10 hover:text-white";
-  const sidebarMutedClass = themeId === "black" ? "text-zinc-500" : "text-zinc-400";
-  const sidebarLabelClass = themeId === "black" ? "text-zinc-400" : "text-zinc-300";
+    isLight
+      ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+      : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+  const sidebarMutedClass = isLight ? "text-zinc-500" : "text-zinc-500";
+  const sidebarLabelClass = isLight ? "text-zinc-600" : "text-zinc-400";
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(role) || (item.href === "/admin/users" && canAccessUsers)
@@ -108,8 +109,8 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             href="/chat"
             className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
               pathname === "/chat" || pathname.startsWith("/chat/")
-                ? "bg-emerald-600/25 text-emerald-400"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
+                : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
             }`}
             title="Chat"
             aria-label="Chat"
@@ -125,8 +126,8 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             href="/schedule"
             className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
               pathname === "/schedule"
-                ? "bg-emerald-600/25 text-emerald-400"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
+                : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
             }`}
             title="Schedule"
             aria-label="Schedule"
@@ -137,7 +138,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <button
               type="button"
               onClick={() => setThemePopoverOpen((o) => !o)}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition text-zinc-400 hover:bg-zinc-800 hover:text-white`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
               title="Theme"
               aria-label="Theme"
               aria-expanded={themePopoverOpen}
@@ -146,7 +147,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             </button>
             {themePopoverOpen && (
               <div
-                className="absolute left-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl"
+                className={`absolute left-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`}
                 style={{ borderRadius: "10px" }}
               >
                 {THEMES.map((t) => (
@@ -159,7 +160,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
                     }}
                     title={t.name}
                     className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      themeId === t.id ? "border-emerald-400 ring-2 ring-emerald-400/30" : "border-zinc-600 hover:border-zinc-500"
+                      themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"
                     }`}
                     style={{ backgroundColor: THEME_SWATCH[t.id] }}
                     aria-label={t.name}

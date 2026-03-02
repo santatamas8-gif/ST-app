@@ -24,10 +24,56 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  /* Depth: center "lift" + top green tint + dot pattern */
+  /* Depth: center "lift" + top tint + dot pattern (lighter on light theme) */
   background-image:
     radial-gradient(ellipse 80% 70% at 50% 35%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
     radial-gradient(ellipse 120% 80% at 50% -20%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
     radial-gradient(circle, rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px);
   background-size: auto, auto, 20px 20px;
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 35%, rgba(0, 0, 0, 0.02) 0%, transparent 60%),
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(16, 185, 129, 0.04) 0%, transparent 50%),
+    radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+}
+
+/* Scale slider track: red (low) to green (high) – visible line you drag on */
+input.scale-input-track {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.scale-input-track::-webkit-slider-runnable-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #dc2626 0%, #ea580c 50%, #16a34a 100%) !important;
+}
+.scale-input-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  margin-top: -5px;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.scale-input-track::-moz-range-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #dc2626 0%, #ea580c 50%, #16a34a 100%) !important;
+}
+.scale-input-track::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }

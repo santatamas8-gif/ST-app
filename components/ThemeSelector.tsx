@@ -5,20 +5,21 @@ import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
 const SWATCH: Record<ThemeId, string> = {
-  black: "#0b0f14",
-  green: "#0d1f1a",
-  navy: "#0f172a",
-  brown: "#1c1917",
-  purple: "#1e1b2e",
+  dark: "#0f1216",
+  light: "#f4f4f5",
+  red: "#1f1315",
+  blue: "#0f172a",
+  green: "#0f2621",
 };
 
 export function ThemeSelector() {
   const { themeId, setThemeId } = useTheme();
   const [open, setOpen] = useState(false);
+  const isLight = themeId === "light";
   const themeLabelClass =
-    themeId === "black"
-      ? "text-zinc-500 hover:text-zinc-400"
-      : "text-zinc-400 hover:text-zinc-300";
+    isLight
+      ? "text-zinc-600 hover:text-zinc-800"
+      : "text-zinc-500 hover:text-zinc-400";
 
   return (
     <div

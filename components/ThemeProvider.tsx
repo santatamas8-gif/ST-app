@@ -6,6 +6,9 @@ import { getThemeById, THEMES, THEME_STORAGE_KEY, type ThemeId } from "@/lib/the
 function applyTheme(themeId: string | null) {
   const theme = getThemeById(themeId);
   if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-theme", theme.id);
+  document.documentElement.style.setProperty("--background", theme.pageBg);
+  document.documentElement.style.setProperty("--foreground", theme.foreground);
   document.documentElement.style.setProperty("--page-bg", theme.pageBg);
   document.documentElement.style.setProperty("--card-bg", theme.cardBg);
   document.documentElement.style.setProperty("--card-border", theme.cardBorder);
@@ -17,7 +20,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) return { themeId: "black" as ThemeId, setThemeId: () => {} };
+  if (!ctx) return { themeId: "dark" as ThemeId, setThemeId: () => {} };
   return ctx;
 }
 
@@ -26,7 +29,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
-    const id = THEMES.some((t) => t.id === stored) ? stored : "black";
+    const id = THEMES.some((t) => t.id === stored) ? stored : "dark";
     setThemeIdState(id);
     applyTheme(id);
   }, []);
@@ -38,7 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ themeId: themeId ?? "black", setThemeId }}>
+    <ThemeContext.Provider value={{ themeId: themeId ?? "dark", setThemeId }}>
       {children}
     </ThemeContext.Provider>
   );
