@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Activity, Clock3 } from "lucide-react";
 import type { SessionRow } from "@/lib/types";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { TeamLoadBarChart } from "./LoadBarChart";
@@ -30,6 +31,13 @@ function getPrevNDates(n: number): string[] {
     out.push(d.toISOString().slice(0, 10));
   }
   return out;
+}
+
+function rpeBadgeClass(rpe: number | null | undefined): string {
+  if (rpe == null) return "bg-zinc-700/60 text-zinc-300";
+  if (rpe <= 3) return "bg-emerald-500/15 text-emerald-300";
+  if (rpe <= 6) return "bg-amber-500/15 text-amber-300";
+  return "bg-red-500/20 text-red-300";
 }
 
 interface PlayerLoadViewProps {
@@ -70,7 +78,10 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
     >
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">RPE / Load</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+            <Activity className="h-6 w-6 text-emerald-400" aria-hidden />
+            <span>RPE / Load</span>
+          </h1>
           <p className="mt-1 text-zinc-400">
             Your sessions and load. Log duration and RPE; load is calculated automatically.
           </p>
@@ -160,8 +171,9 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
         {/* Recent sessions table */}
         <section className="space-y-2">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
-            Recent sessions
+          <h2 className="flex items-center gap-2 border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
+            <Clock3 className="h-4 w-4 text-emerald-400" aria-hidden />
+            <span>Recent sessions</span>
           </h2>
           <div
             className="overflow-hidden rounded-xl"
@@ -181,14 +193,34 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                     </tr>
                   </thead>
                   <tbody className="text-zinc-300">
-                    {list.slice(0, 28).map((r) => (
-                      <tr key={r.id} className="border-b border-zinc-800">
-                        <td className="px-4 py-3">{r.date}</td>
-                        <td className="px-4 py-3">{r.duration}</td>
-                        <td className="px-4 py-3">{r.rpe ?? "—"}</td>
-                        <td className="px-4 py-3 tabular-nums">{r.load ?? "—"}</td>
-                      </tr>
-                    ))}
+                    {list.slice(0, 28).map((r, index) => {
+                      const isFirst = index === 0;
+                      return (
+                        <tr
+                          key={r.id}
+                          className={`border-b border-zinc-800 ${
+                            isFirst ? "bg-zinc-900/40" : "hover:bg-zinc-900/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3 text-sm text-zinc-300">{r.date}</td>
+                          <td className="px-4 py-3 tabular-nums text-sm text-zinc-200">{r.duration}</td>
+                          <td className="px-4 py-3">
+                            {r.rpe == null ? (
+                              <span className="text-zinc-400">—</span>
+                            ) : (
+                              <span
+                                className={`inline-flex min-w-[2rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${rpeBadgeClass(
+                                  r.rpe
+                                )}`}
+                              >
+                                {r.rpe}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm tabular-nums text-zinc-100">{r.load ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

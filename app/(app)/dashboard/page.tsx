@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Activity, HeartPulse } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
@@ -230,14 +231,6 @@ export default function DashboardPage() {
     individual: "bg-lime-500/40",
   };
 
-  const summaryLine = allDone
-    ? "You're all set for today."
-    : !wellnessSubmitted && !rpeSubmitted
-      ? "Complete your check-in: wellness and RPE."
-      : !wellnessSubmitted
-        ? "Fill in wellness to complete today."
-        : "Log your session (RPE) to complete today.";
-
   const teamSettings = data.teamSettings;
   const userDisplayName = data.userDisplayName ?? "User";
 
@@ -245,7 +238,10 @@ export default function DashboardPage() {
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-2xl font-bold tracking-tight text-white">Welcome, {userDisplayName}!</p>
+          <p className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+            <span>Welcome, {userDisplayName}!</span>
+            <span aria-hidden>👋</span>
+          </p>
           {(teamSettings?.team_name || teamSettings?.team_logo_url) && (
             <div className="flex flex-wrap items-center gap-3">
               {teamSettings?.team_name && (
@@ -261,7 +257,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <p className="text-zinc-400">{summaryLine}</p>
 
         {!allDone && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
@@ -367,11 +362,28 @@ export default function DashboardPage() {
                 borderRadius: CARD_RADIUS,
               }}
             >
-              <p className="text-sm font-medium text-zinc-400">Wellness</p>
-              <p className="mt-2 text-xl font-bold text-white">
-                {wellnessSubmitted ? "Submitted today" : "Not submitted"}
+              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                <HeartPulse className="h-4 w-4 text-emerald-400/80" aria-hidden />
+                <span>Wellness</span>
               </p>
-              {!wellnessSubmitted && (
+              <p className="mt-2 flex items-center gap-2 text-xl font-bold text-white">
+                {wellnessSubmitted ? (
+                  <>
+                    <span className="text-emerald-300" aria-hidden>✔</span>
+                    <span>Submitted today</span>
+                  </>
+                ) : (
+                  "Not submitted"
+                )}
+              </p>
+              {wellnessSubmitted ? (
+                <Link
+                  href="/wellness"
+                  className="mt-3 inline-block text-sm font-medium text-emerald-400/90 hover:text-emerald-300"
+                >
+                  View
+                </Link>
+              ) : (
                 <Link
                   href="/wellness"
                   className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
@@ -388,11 +400,28 @@ export default function DashboardPage() {
                 borderRadius: CARD_RADIUS,
               }}
             >
-              <p className="text-sm font-medium text-zinc-400">RPE</p>
-              <p className="mt-2 text-xl font-bold text-white">
-                {rpeSubmitted ? "Submitted today" : "Not submitted"}
+              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                <Activity className="h-4 w-4 text-emerald-400/80" aria-hidden />
+                <span>RPE</span>
               </p>
-              {!rpeSubmitted && (
+              <p className="mt-2 flex items-center gap-2 text-xl font-bold text-white">
+                {rpeSubmitted ? (
+                  <>
+                    <span className="text-emerald-300" aria-hidden>✔</span>
+                    <span>Submitted today</span>
+                  </>
+                ) : (
+                  "Not submitted"
+                )}
+              </p>
+              {rpeSubmitted ? (
+                <Link
+                  href="/rpe"
+                  className="mt-3 inline-block text-sm font-medium text-emerald-400/90 hover:text-emerald-300"
+                >
+                  View
+                </Link>
+              ) : (
                 <Link
                   href="/rpe"
                   className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
@@ -403,16 +432,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-6">
-            {allDone ? (
-              <div
-                className="flex items-center gap-3 rounded-xl px-5 py-4"
-                style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", borderRadius: CARD_RADIUS }}
-              >
-                <span className="text-2xl">✔</span>
-                <span className="text-lg font-semibold text-emerald-400">All done for today</span>
-              </div>
-            ) : (
+          {!allDone && (
+            <div className="mt-6">
               <Link
                 href={!wellnessSubmitted ? "/wellness" : "/rpe"}
                 className="inline-flex items-center rounded-xl bg-emerald-600 px-6 py-3.5 text-base font-semibold text-white hover:bg-emerald-500"
@@ -420,8 +441,8 @@ export default function DashboardPage() {
               >
                 Complete today&apos;s check-in
               </Link>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         <RedFlagsCard flags={metrics.redFlags ?? []} />

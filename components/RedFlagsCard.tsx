@@ -1,3 +1,5 @@
+import { Flag } from "lucide-react";
+
 interface RedFlagItem {
   type: string;
   label: string;
@@ -12,7 +14,10 @@ export function RedFlagsCard({ flags }: RedFlagsCardProps) {
   if (flags.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg">
-        <p className="text-sm font-medium text-zinc-400">Red flags</p>
+        <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+          <Flag className="h-4 w-4 text-zinc-500" aria-hidden />
+          <span>Red flags</span>
+        </p>
         <p className="mt-2 text-sm text-emerald-400/90">No red flags detected.</p>
       </div>
     );
@@ -24,7 +29,10 @@ export function RedFlagsCard({ flags }: RedFlagsCardProps) {
 
   return (
     <div className="rounded-xl border border-red-500/50 bg-red-500/5 p-4 shadow-lg">
-      <p className="text-sm font-medium text-red-400">Red flags</p>
+      <p className="flex items-center gap-2 text-sm font-medium text-red-400">
+        <Flag className="h-4 w-4 shrink-0" aria-hidden />
+        <span>Red flags</span>
+      </p>
       <ul className="mt-2 space-y-1.5">
         {showFlags.map((f, i) => (
           <li

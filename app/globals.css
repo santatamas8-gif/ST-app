@@ -77,3 +77,41 @@ input.scale-input-track {
   border: 0;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+/* RPE slider: green (easy) → red (hard) */
+input.rpe-input-track {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.rpe-input-track::-webkit-slider-runnable-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #16a34a 0%, #ea580c 50%, #dc2626 100%) !important;
+}
+.rpe-input-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  margin-top: -5px;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.rpe-input-track::-moz-range-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #16a34a 0%, #ea580c 50%, #dc2626 100%) !important;
+}
+.rpe-input-track::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
