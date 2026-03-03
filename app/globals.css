@@ -36,6 +36,15 @@
   fill: rgba(255, 255, 255, 0.88) !important;
 }
 
+/* Today's Schedule strip: hide scrollbar, infinite scroll */
+.schedule-strip-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.schedule-strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

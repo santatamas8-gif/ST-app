@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Users } from "lucide-react";
+import { Activity, Calendar, Flag, HeartPulse, Pause, Play, Users } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
@@ -143,12 +143,13 @@ export function StaffDashboard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetPlayerIdRef = useRef<string | null>(null);
   const [editingTeam, setEditingTeam] = useState(false);
-  const [editLabelRevealed, setEditLabelRevealed] = useState(false);
-  const teamBlockRef = useRef<HTMLButtonElement>(null);
   const [teamNameInput, setTeamNameInput] = useState("");
   const [teamLogoInput, setTeamLogoInput] = useState("");
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamSaveError, setTeamSaveError] = useState<string | null>(null);
+  const scheduleScrollRef = useRef<HTMLDivElement>(null);
+  const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
+  const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -156,13 +157,26 @@ export function StaffDashboard({
         setDropdownOpenId(null);
         setAvatarMenuOpenId(null);
       }
-      if (teamBlockRef.current && !teamBlockRef.current.contains(e.target as Node)) {
-        setEditLabelRevealed(false);
-      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (todayScheduleItems.length === 0 || scheduleAutoPaused) return;
+    const el = scheduleScrollRef.current;
+    if (!el) return;
+    const step = 1;
+    const interval = setInterval(() => {
+      if (!scheduleScrollRef.current || !scheduleFirstPartRef.current) return;
+      const el_ = scheduleScrollRef.current;
+      const threshold = scheduleFirstPartRef.current.offsetWidth;
+      if (threshold <= 0) return;
+      el_.scrollLeft += step;
+      if (el_.scrollLeft >= threshold) el_.scrollLeft -= threshold;
+    }, 50);
+    return () => clearInterval(interval);
+  }, [todayScheduleItems.length, scheduleAutoPaused]);
 
   const totalPlayers = metrics.totalPlayers ?? 0;
   const submitted = metrics.todayWellnessCount ?? 0;
@@ -298,8 +312,8 @@ export function StaffDashboard({
         <div
           className={
             isHighContrast
-              ? "relative overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
-              : "rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+              ? "relative w-full overflow-visible rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
+              : "w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
           }
           style={
             themeId === "neon"
@@ -319,7 +333,7 @@ export function StaffDashboard({
             <span aria-hidden>👋</span>
           </p>
           <div
-            className="flex flex-wrap items-center gap-4"
+            className="group relative ml-auto -mr-2 flex flex-col items-end sm:-mr-3"
             style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
           >
             {editingTeam && isAdmin ? (
@@ -373,57 +387,52 @@ export function StaffDashboard({
                 {teamSaveError && <span className="text-sm text-red-400">{teamSaveError}</span>}
               </>
             ) : (teamSettings?.team_name || teamSettings?.team_logo_url) ? (
-              isAdmin ? (
-                <button
-                  ref={teamBlockRef}
-                  type="button"
-                  onClick={() => {
-                    if (editLabelRevealed) {
+              <>
+                <div className="flex items-center justify-end gap-2 text-white">
+                  {teamSettings?.team_name && (
+                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                  )}
+                  {teamSettings?.team_logo_url && (
+                    <img
+                      src={teamSettings?.team_logo_url}
+                      alt="Team logo"
+                      className="mt-0.5 h-10 w-auto object-contain"
+                    />
+                  )}
+                </div>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
                       setEditingTeam(true);
                       setTeamNameInput(teamSettings?.team_name ?? "");
                       setTeamLogoInput(teamSettings?.team_logo_url ?? "");
-                      setEditLabelRevealed(false);
-                    } else {
-                      setEditLabelRevealed(true);
-                    }
-                  }}
-                  className="group flex flex-wrap items-center gap-3 rounded-lg py-1 pr-1 text-left text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                >
-                  {teamSettings?.team_name && (
-                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
-                  )}
-                  {teamSettings?.team_logo_url && (
-                    <img
-                      src={teamSettings.team_logo_url}
-                      alt="Team logo"
-                      className="h-10 w-auto object-contain"
-                    />
-                  )}
-                  <span className={`text-sm text-amber-400 transition-opacity group-hover:opacity-100 group-focus:opacity-100 ${editLabelRevealed ? "opacity-100" : "opacity-0"}`}>Edit team</span>
-                </button>
-              ) : (
-                <>
-                  {teamSettings?.team_name && (
-                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
-                  )}
-                  {teamSettings?.team_logo_url && (
-                    <img
-                      src={teamSettings.team_logo_url}
-                      alt="Team logo"
-                      className="h-10 w-auto object-contain"
-                    />
-                  )}
-                </>
-              )
+                    }}
+                    className="absolute top-full right-0 z-10 mt-0.5 rounded text-xs text-amber-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-amber-300 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:ring-offset-2 focus:ring-offset-transparent"
+                  >
+                    Edit team
+                  </button>
+                )}
+              </>
             ) : null}
           </div>
         </div>
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+          <h2 className="mb-4 flex flex-wrap items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
-            Today&apos;s Schedule
+            <span>Today&apos;s Schedule</span>
+            {todayScheduleItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setScheduleAutoPaused((p) => !p)}
+                className={`ml-auto flex items-center justify-center rounded-lg p-1.5 transition-colors ${isHighContrast ? "text-white/90 hover:bg-white/10" : "text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"}`}
+                aria-label={scheduleAutoPaused ? "Start auto-scroll" : "Stop auto-scroll"}
+              >
+                {scheduleAutoPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              </button>
+            )}
           </h2>
           <div
             className="overflow-hidden rounded-xl border"
@@ -432,12 +441,13 @@ export function StaffDashboard({
             {todayScheduleItems.length === 0 ? (
               <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
             ) : (
-              <div className="overflow-x-auto p-4">
+              <div ref={scheduleScrollRef} className="schedule-strip-scroll overflow-x-auto p-4">
                 <div
                   className={isHighContrast ? "flex gap-5" : "flex gap-4"}
                   style={{ minWidth: "min-content" }}
                 >
-                  {todayScheduleItems.map((item) => {
+                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 ${isHighContrast ? "gap-5" : "gap-4"}`} style={{ minWidth: "min-content" }}>
+                  {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       breakfast: "Breakfast",
                       lunch: "Lunch",
@@ -474,7 +484,7 @@ export function StaffDashboard({
                     if (themeId === "neon") {
                       return (
                         <div
-                          key={item.id}
+                          key={`${item.id}-${idx}`}
                           className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
                             isMatch ? "w-52" : "w-44"
                           }`}
@@ -512,7 +522,7 @@ export function StaffDashboard({
                     if (themeId === "matt") {
                       return (
                         <div
-                          key={item.id}
+                          key={`${item.id}-${idx}`}
                           className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
                           style={
                             isMatch
@@ -548,7 +558,7 @@ export function StaffDashboard({
                     }
                     return (
                       <div
-                        key={item.id}
+                        key={`${item.id}-${idx}`}
                         className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
                             ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
@@ -571,12 +581,53 @@ export function StaffDashboard({
                             {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}
                             <span>{label}</span>
                           </p>
-                          {notes ? (
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                              <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
-                              {notes}
-                            </p>
+{notes ? (
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+                                <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                                {notes}
+                              </p>
                           ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex shrink-0 w-36 items-center justify-center" aria-hidden>
+                    <div className="h-14 w-px bg-white/25" />
+                  </div>
+                  </div>
+                  {todayScheduleItems.map((item, idx) => {
+                    const SCHEDULE_LABELS: Record<string, string> = {
+                      breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
+                    };
+                    const baseLabel = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
+                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;
+                    const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time}–${item.end_time}` : item.start_time) : "—";
+                    const notes = item.notes?.trim();
+                    const isMatch = item.activity_type === "match";
+                    if (themeId === "neon") return (
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-52" : "w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
+                        <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                          <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                          {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
+                        </div>
+                      </div>
+                    );
+                    if (themeId === "matt") return (
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                        <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                          <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                          {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90" : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"}`}>
+                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                          <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
+                          <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
+                          {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
                         </div>
                       </div>
                     );
@@ -933,8 +984,9 @@ export function StaffDashboard({
                 : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
           }
         >
-          <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
-            At risk players
+          <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+            <Flag className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
+            <span>At risk players</span>
           </h2>
           {atRisk.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -1177,7 +1229,7 @@ export function StaffDashboard({
             }
           >
             <span className="text-emerald-400" aria-hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+              <HeartPulse className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-white">Wellness summary</span>
@@ -1196,7 +1248,7 @@ export function StaffDashboard({
             }
           >
             <span className="text-emerald-400" aria-hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+              <Activity className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-white">RPE / sessions</span>

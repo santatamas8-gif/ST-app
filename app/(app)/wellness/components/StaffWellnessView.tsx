@@ -359,27 +359,23 @@ export function StaffWellnessView({
             </div>
           ) : (
             <>
-              <div className="border-b border-zinc-700 px-4 py-2">
-                <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-3 w-8 rounded bg-emerald-500/30" aria-hidden />
-                    Good
-                  </span>
-                  {" · "}
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-3 w-8 rounded bg-amber-500/30" aria-hidden />
-                    Watch
-                  </span>
-                  {" · "}
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-3 w-8 rounded bg-red-500/30" aria-hidden />
-                    Critical
-                  </span>
-                </p>
+              <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b px-4 py-3 sm:gap-x-6 ${isHighContrast ? "border-white/20 bg-white/5" : "border-zinc-700 bg-zinc-800/70"}`}>
+                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                  <span className="inline-block h-4 w-10 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
+                  Good
+                </span>
+                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                  <span className="inline-block h-4 w-10 rounded bg-amber-500/50 ring-1 ring-amber-400/30" aria-hidden />
+                  Watch
+                </span>
+                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                  <span className="inline-block h-4 w-10 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
+                  Critical
+                </span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className={`sticky top-0 z-10 border-b-2 shadow-md ${isHighContrast ? "border-white/20 bg-white/10 text-white" : "border-zinc-500 bg-zinc-800 text-zinc-200"}`}>
+              <div className={`overflow-x-auto ${isHighContrast ? "rounded-b-xl ring-1 ring-white/10" : ""}`}>
+                <table className={`w-full text-left text-sm ${isHighContrast ? "border border-white/10" : ""}`}>
+                  <thead className={`sticky top-0 z-10 border-b-2 shadow-md ${isHighContrast ? "border-white/25 bg-white/12 text-white" : "border-zinc-500 bg-zinc-800 text-zinc-200"}`}>
                     <tr>
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
                       <th className="px-4 py-2.5 text-base font-bold">Date</th>
@@ -392,7 +388,7 @@ export function StaffWellnessView({
                       <th className="px-4 py-2.5 text-base font-bold">Stress</th>
                       <th className="px-4 py-2.5 text-base font-bold">Mood</th>
                       <th className="px-4 py-2.5 text-base font-bold">Illness</th>
-                      <th className="border-l border-zinc-600 pl-4 pr-4 py-2.5 text-base font-bold">Readiness</th>
+                      <th className={`border-l pl-4 pr-4 py-2.5 text-base font-bold ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>Readiness</th>
                     </tr>
                   </thead>
                   <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
@@ -452,7 +448,7 @@ export function StaffWellnessView({
                               <span className="rounded bg-emerald-500/20 px-2 py-1 text-sm font-semibold text-emerald-400">No</span>
                             )}
                           </td>
-                          <td className="border-l border-zinc-600 px-4 py-2">
+                          <td className={`border-l px-4 py-2 ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
                             <BadgeScore value={wellnessAverageFromRow(r)} type="goodHigh" />
                           </td>
                         </RiskRowHighlight>

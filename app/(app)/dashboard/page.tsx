@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Activity, Calendar, HeartPulse } from "lucide-react";
+import { Activity, Calendar, HeartPulse, Pause, Play } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
@@ -238,14 +238,33 @@ export default function DashboardPage() {
   const teamSettings = data.teamSettings;
   const userDisplayName = data.userDisplayName ?? "User";
 
+  const scheduleScrollRef = useRef<HTMLDivElement>(null);
+  const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
+  const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
+  useEffect(() => {
+    if (todayScheduleItems.length === 0 || scheduleAutoPaused) return;
+    const el = scheduleScrollRef.current;
+    if (!el) return;
+    const step = 1;
+    const interval = setInterval(() => {
+      if (!scheduleScrollRef.current || !scheduleFirstPartRef.current) return;
+      const el_ = scheduleScrollRef.current;
+      const threshold = scheduleFirstPartRef.current.offsetWidth;
+      if (threshold <= 0) return;
+      el_.scrollLeft += step;
+      if (el_.scrollLeft >= threshold) el_.scrollLeft -= threshold;
+    }, 50);
+    return () => clearInterval(interval);
+  }, [todayScheduleItems.length, scheduleAutoPaused]);
+
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-6xl space-y-8">
         <div
           className={
             isHighContrast
-              ? "relative overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
-              : "rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+              ? "relative w-full overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
+              : "w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
           }
           style={
             themeId === "neon"
@@ -266,7 +285,7 @@ export default function DashboardPage() {
           </p>
           {(teamSettings?.team_name || teamSettings?.team_logo_url) && (
             <div
-              className="flex flex-wrap items-center gap-3 text-white"
+              className="ml-auto -mr-1 flex flex-wrap items-center justify-end gap-3 text-white sm:-mr-2"
               style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
             >
               {teamSettings?.team_name && (
@@ -276,7 +295,7 @@ export default function DashboardPage() {
                 <img
                   src={teamSettings.team_logo_url}
                   alt="Team logo"
-                  className="h-10 w-auto object-contain"
+                  className="mt-0.5 h-10 w-auto object-contain"
                 />
               )}
             </div>
@@ -307,9 +326,19 @@ export default function DashboardPage() {
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className={`mb-4 flex items-center gap-2 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
+          <h2 className={`mb-4 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
             <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
-            Today&apos;s Schedule
+            <span>Today&apos;s Schedule</span>
+            {todayScheduleItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setScheduleAutoPaused((p) => !p)}
+                className={`ml-auto flex items-center justify-center rounded-lg p-1.5 transition-colors ${isHighContrast ? "text-white/90 hover:bg-white/10" : "text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"}`}
+                aria-label={scheduleAutoPaused ? "Start auto-scroll" : "Stop auto-scroll"}
+              >
+                {scheduleAutoPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              </button>
+            )}
           </h2>
           <div
             className={`overflow-hidden rounded-xl border ${isHighContrast ? "border-transparent " + (themeId === "neon" ? "neon-card-text" : "matt-card-text") : ""}`}
@@ -324,12 +353,13 @@ export default function DashboardPage() {
             {todayScheduleItems.length === 0 ? (
               <p className={`px-5 py-6 ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No schedule items today.</p>
             ) : (
-              <div className="overflow-x-auto p-4">
+              <div ref={scheduleScrollRef} className="schedule-strip-scroll overflow-x-auto p-4">
                 <div
                   className={isHighContrast ? "flex gap-5" : "flex gap-3"}
                   style={{ minWidth: "min-content" }}
                 >
-                  {todayScheduleItems.map((item) => {
+                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 ${isHighContrast ? "gap-5" : "gap-3"}`} style={{ minWidth: "min-content" }}>
+                  {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
                       ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
@@ -347,7 +377,7 @@ export default function DashboardPage() {
                     if (themeId === "neon") {
                       return (
                         <div
-                          key={item.id}
+                          key={`${item.id}-${idx}`}
                           className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
                             isMatch ? "w-52" : "w-44"
                           }`}
@@ -385,7 +415,7 @@ export default function DashboardPage() {
                     if (themeId === "matt") {
                       return (
                         <div
-                          key={item.id}
+                          key={`${item.id}-${idx}`}
                           className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
                           style={
                             isMatch
@@ -421,7 +451,7 @@ export default function DashboardPage() {
                     }
                     return (
                       <div
-                        key={item.id}
+                        key={`${item.id}-${idx}`}
                         className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
                             ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
@@ -450,6 +480,68 @@ export default function DashboardPage() {
                               {notes}
                             </p>
                           ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex shrink-0 w-36 items-center justify-center" aria-hidden>
+                    <div className="h-14 w-px bg-white/25" />
+                  </div>
+                  </div>
+                  {todayScheduleItems.map((item, idx) => {
+                    const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
+                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
+                      ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
+                      : item.activity_type === "match" && item.opponent?.trim()
+                        ? `${SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type} vs. ${item.opponent.trim()}`
+                        : baseLabel;
+                    const timeStr =
+                      item.start_time != null
+                        ? item.end_time != null
+                          ? `${item.start_time}–${item.end_time}`
+                          : item.start_time
+                        : "—";
+                    const notes = item.notes?.trim();
+                    const isMatch = item.activity_type === "match";
+                    if (themeId === "neon") {
+                      return (
+                        <div
+                          key={`${item.id}-dup-${idx}`}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-52" : "w-44"}`}
+                          style={{
+                            backgroundImage: isMatch
+                              ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
+                              : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                            boxShadow: isMatch
+                              ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
+                              : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                          }}
+                        >
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                            {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (themeId === "matt") {
+                      return (
+                        <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                            {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90" : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"}`}>
+                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                          <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
+                          <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
+                          {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
                         </div>
                       </div>
                     );
