@@ -14,6 +14,7 @@ import {
 import type { ScheduleActivityType } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
+import { Trash2 } from "lucide-react";
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return (
@@ -64,7 +65,37 @@ const ACTIVITY_TYPES: ScheduleActivityType[] = [
   "individual",
 ];
 
+/** First row of Add buttons (meals & core activities). */
+const ADD_ROW_1: ScheduleActivityType[] = [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "training",
+  "gym",
+  "recovery",
+  "pre_activation",
+  "video_analysis",
+  "meeting",
+];
+/** Second row (travel, health, match, etc.). */
+const ADD_ROW_2: ScheduleActivityType[] = [
+  "traveling",
+  "physio",
+  "medical",
+  "media",
+  "rest_off",
+  "match",
+  "team_building",
+  "individual",
+];
+
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Left border: only match is highlighted (amber), rest neutral. */
+function scheduleRowLeftBorder(activityType: string): string {
+  if (activityType === "match") return "border-l-4 border-l-amber-500/80";
+  return "border-l-4 border-l-zinc-600";
+}
 
 type ScheduleItem = {
   id: string;
@@ -148,8 +179,14 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   const [editingTeamA, setEditingTeamA] = useState("");
   const [editingTeamB, setEditingTeamB] = useState("");
   const [timeSaveError, setTimeSaveError] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => getMonthRange(year, month), [year, month]);
+
+  useEffect(() => {
+    setCopyError(null);
+  }, [selectedDate]);
 
   useEffect(() => {
     setLoading(true);
@@ -220,11 +257,15 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
       }
     }
     setAddLoading(true);
-    await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null, notes ?? null, undefined, activity_type === "match" ? team_a ?? null : undefined, activity_type === "match" ? team_b ?? null : undefined);
+    const err = await addScheduleItem(selectedDate, activity_type, startTime ?? null, endTime ?? null, notes ?? null, undefined, activity_type === "match" ? team_a ?? null : undefined, activity_type === "match" ? team_b ?? null : undefined);
+    if (err?.error) {
+      setTimeSaveError(err.error);
+      setAddLoading(false);
+      return;
+    }
     const { data } = await getScheduleForMonth(from, to);
     setScheduleItems(data ?? []);
     setAddLoading(false);
-    setAddingType(null);
     setAddStart("");
     setAddEnd("");
     setAddNotes("");
@@ -300,6 +341,44 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     if (!canEdit) return;
     await removeScheduleItem(id);
     setScheduleItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function getYesterday(date: string): string {
+    const d = new Date(date + "T12:00:00");
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function handleCopyFromYesterday() {
+    if (!selectedDate || !canEdit) return;
+    setCopyError(null);
+    const yesterday = getYesterday(selectedDate);
+    const sourceItems = itemsByDate.get(yesterday) ?? [];
+    if (sourceItems.length === 0) {
+      setCopyError("No items to copy from yesterday.");
+      return;
+    }
+    setCopyLoading(true);
+    for (const item of sourceItems) {
+      const err = await addScheduleItem(
+        selectedDate,
+        item.activity_type as ScheduleActivityType,
+        item.start_time,
+        item.end_time,
+        item.notes ?? null,
+        item.opponent ?? null,
+        item.team_a ?? null,
+        item.team_b ?? null
+      );
+      if (err?.error) {
+        setCopyError(err.error);
+        setCopyLoading(false);
+        return;
+      }
+    }
+    const { data } = await getScheduleForMonth(from, to);
+    setScheduleItems(data ?? []);
+    setCopyLoading(false);
   }
 
   const monthLabel = new Date(year, month).toLocaleDateString("en-US", {
@@ -420,7 +499,29 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
           {timeSaveError && (
             <p className="mb-2 text-sm text-red-400">{timeSaveError}</p>
           )}
-          <ul className="space-y-2.5">
+          {selectedItems.length === 0 && (
+            <div className="mb-4 rounded-lg border border-zinc-700/60 bg-zinc-800/50 px-4 py-4">
+              <p className="text-sm text-zinc-400">No program for this day.</p>
+              {canEdit && (() => {
+                const yesterday = getYesterday(selectedDate!);
+                const yesterdayItems = itemsByDate.get(yesterday) ?? [];
+                return (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyFromYesterday}
+                      disabled={copyLoading || yesterdayItems.length === 0}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {copyLoading ? "Copying…" : yesterdayItems.length > 0 ? `Copy from yesterday (${yesterdayItems.length} items)` : "Copy from yesterday (no items)"}
+                    </button>
+                    {copyError && <p className="text-sm text-red-400">{copyError}</p>}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+          <ul className="space-y-4">
             {selectedItems.map((item) => {
               const start = item.start_time != null ? String(item.start_time).slice(0, 5) : null;
               const end = item.end_time != null ? String(item.end_time).slice(0, 5) : null;
@@ -431,10 +532,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                     : start
                   : null;
               const isEditing = editingTimeId === item.id;
+              const leftBorder = scheduleRowLeftBorder(item.activity_type);
               return (
                 <li
                   key={item.id}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
+                  className={`grid grid-cols-[1fr_minmax(8rem,2fr)_auto] gap-3 items-center rounded-lg border border-zinc-700/60 px-3 py-2.5 shadow-sm ${leftBorder} ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 font-medium text-white text-sm">
@@ -486,7 +588,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                         {item.notes.trim()}
                       </p>
                     ) : null}
-                    <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                    <p className={`text-xs tabular-nums ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                       {timeStr != null ? timeStr : isAdmin && !isEditing ? (
                         <button
                           type="button"
@@ -503,137 +605,169 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                         "—"
                       )}
                     </p>
-                  </div>
-                  {isEditing && isAdmin && (
-                    <div className="flex flex-wrap items-center gap-2" lang="en-GB">
-                      <input
-                        type="time"
-                        step="60"
-                        value={editStart}
-                        onChange={(e) => setEditStart(e.target.value)}
-                        className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
-                        aria-label="Start time (24h)"
-                        title="24h format, e.g. 09:00 or 14:30"
-                      />
-                      <input
-                        type="time"
-                        step="60"
-                        value={editEnd}
-                        onChange={(e) => setEditEnd(e.target.value)}
-                        className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
-                        aria-label="End time (24h)"
-                        title="24h format, e.g. 09:00 or 14:30"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSetTime(item.id, editStart || null, editEnd || null)}
-                        className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingTimeId(null); setEditStart(""); setEditEnd(""); }}
-                        className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                  {isAdmin && editingNotesId === item.id ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-900 px-2 py-1">
-                        <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                    {isEditing && isAdmin && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2" lang="en-GB">
                         <input
-                          type="text"
-                          value={editingNotesValue}
-                          onChange={(e) => setEditingNotesValue(e.target.value)}
-                          placeholder="Location (e.g. Room #4, Arena bistro)"
-                          maxLength={100}
-                          className="w-36 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+                          type="time"
+                          step="60"
+                          value={editStart}
+                          onChange={(e) => setEditStart(e.target.value)}
+                          className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
+                          aria-label="Start time (24h)"
+                          title="24h format, e.g. 09:00 or 14:30"
                         />
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveNotes(item.id, editingNotesValue)}
-                        className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingNotesId(null); setEditingNotesValue(""); }}
-                        className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {isAdmin && !isEditing && (
+                        <input
+                          type="time"
+                          step="60"
+                          value={editEnd}
+                          onChange={(e) => setEditEnd(e.target.value)}
+                          className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
+                          aria-label="End time (24h)"
+                          title="24h format, e.g. 09:00 or 14:30"
+                        />
                         <button
                           type="button"
-                          onClick={() => { setEditingNotesId(item.id); setEditingNotesValue(item.notes ?? ""); }}
-                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400"
+                          onClick={() => handleSetTime(item.id, editStart || null, editEnd || null)}
+                          className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
                         >
-                          <LocationPinIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                          Location
+                          Save
                         </button>
-                      )}
-                      {canEdit && !isEditing && (
                         <button
                           type="button"
-                          onClick={() => handleRemove(item.id)}
-                          className="text-red-400 hover:text-red-300"
+                          onClick={() => { setEditingTimeId(null); setEditStart(""); setEditEnd(""); }}
+                          className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
                         >
-                          Remove
+                          Cancel
                         </button>
-                      )}
-                    </>
-                  )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-center min-w-0">
+                    {isAdmin && editingNotesId === item.id ? (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <span className="flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-900 px-2 py-1">
+                          <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                          <input
+                            type="text"
+                            value={editingNotesValue}
+                            onChange={(e) => setEditingNotesValue(e.target.value)}
+                            placeholder="Location (e.g. Room #4, Arena bistro)"
+                            maxLength={100}
+                            className="w-32 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+                          />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveNotes(item.id, editingNotesValue)}
+                          className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingNotesId(null); setEditingNotesValue(""); }}
+                          className="rounded bg-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : isAdmin && !isEditing ? (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingNotesId(item.id); setEditingNotesValue(item.notes ?? ""); }}
+                        className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-400"
+                      >
+                        <LocationPinIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        Location
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="flex justify-end shrink-0">
+                    {canEdit && !isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(item.id)}
+                        className="rounded-lg bg-red-500/20 p-1.5 text-red-400 hover:bg-red-500/30"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <span className="sr-only">Remove</span>
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
           {canEdit && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 rounded-lg border border-zinc-700/80 bg-zinc-800/60 px-4 py-3">
               {addingType == null ? (
-                <>
-                  <span className="text-sm text-zinc-400">Add:</span>
-                  {ACTIVITY_TYPES.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
-                      disabled={addLoading}
-                      className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700 disabled:opacity-50"
-                    >
-                      {ACTIVITY_LABELS[type]}
-                      <ScheduleIcon type={type} className="shrink-0" />
-                    </button>
-                  ))}
-                </>
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-medium text-zinc-300">Add:</span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meals & training</span>
+                    <div className="flex flex-wrap gap-2">
+                      {ADD_ROW_1.map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
+                          disabled={addLoading}
+                          className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
+                        >
+                          {ACTIVITY_LABELS[type]}
+                          <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5 border-t border-zinc-700/80 pt-3">
+                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Other</span>
+                    <div className="flex flex-wrap gap-2">
+                      {ADD_ROW_2.map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
+                          disabled={addLoading}
+                          className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
+                        >
+                          {ACTIVITY_LABELS[type]}
+                          <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ) : isAdmin && addingType != null ? (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-800/80 px-3 py-2" lang="en-GB">
-                  <span className="text-sm text-zinc-300">{ACTIVITY_LABELS[addingType]}</span>
-                  <input
-                    type="time"
-                    step="60"
-                    value={addStart}
-                    onChange={(e) => setAddStart(e.target.value)}
-                    className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
-                    aria-label="Start time (24h)"
-                    title="24h format, e.g. 09:00 or 14:30"
-                  />
-                  <input
-                    type="time"
-                    step="60"
-                    value={addEnd}
-                    onChange={(e) => setAddEnd(e.target.value)}
-                    className="rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white"
-                    aria-label="End time (24h)"
-                    title="24h format, e.g. 09:00 or 14:30"
-                  />
+                <div className="flex flex-wrap items-center gap-3 rounded-lg bg-zinc-800/80 px-3 py-3" lang="en-GB">
+                  <span className="text-sm font-medium text-zinc-300">{ACTIVITY_LABELS[addingType]}</span>
+                  <div className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-900/80 px-2 py-1.5">
+                    <label className="flex flex-col gap-0.5">
+                      <span className="text-xs text-zinc-500">Start</span>
+                      <input
+                        type="time"
+                        step="60"
+                        value={addStart}
+                        onChange={(e) => setAddStart(e.target.value)}
+                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none"
+                        aria-label="Start time (24h)"
+                        title="24h, e.g. 09:00"
+                      />
+                    </label>
+                    <span className="text-zinc-600">–</span>
+                    <label className="flex flex-col gap-0.5">
+                      <span className="text-xs text-zinc-500">End</span>
+                      <input
+                        type="time"
+                        step="60"
+                        value={addEnd}
+                        onChange={(e) => setAddEnd(e.target.value)}
+                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none"
+                        aria-label="End time (24h)"
+                        title="24h, e.g. 14:30"
+                      />
+                    </label>
+                  </div>
                   {addingType === "match" && (
                     <>
                       <input
@@ -655,29 +789,35 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       />
                     </>
                   )}
-                  <input
-                    type="text"
-                    value={addNotes}
-                    onChange={(e) => setAddNotes(e.target.value)}
-                    placeholder="Notes (max 100)"
-                    maxLength={100}
-                    className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
-                    disabled={addLoading}
-                    className="rounded bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
-                    className="rounded bg-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-600"
-                  >
-                    Cancel
-                  </button>
+                  <label className="flex flex-col gap-0.5">
+                    <span className="text-xs text-zinc-500">Notes</span>
+                    <input
+                      type="text"
+                      value={addNotes}
+                      onChange={(e) => setAddNotes(e.target.value)}
+                      placeholder="Optional"
+                      maxLength={100}
+                      className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                      aria-label="Notes (max 100)"
+                    />
+                  </label>
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
+                      disabled={addLoading}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
+                      className="rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>

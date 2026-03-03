@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { ScheduleCalendar } from "@/components/ScheduleCalendar";
 
@@ -21,7 +22,10 @@ export function SchedulePageContent({
   return (
     <div className={isPlayer ? "mx-auto max-w-4xl space-y-6" : ""}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Schedule</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+          <Calendar className="h-7 w-7 shrink-0 text-emerald-400" aria-hidden />
+          <span>Schedule</span>
+        </h1>
         <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>{description}</p>
       </div>
       <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} />
