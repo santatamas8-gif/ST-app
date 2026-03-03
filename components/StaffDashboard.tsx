@@ -1143,7 +1143,11 @@ export function StaffDashboard({
                     </Pie>
                     <Tooltip
                       content={(props) => (
-                        <DonutTooltipContent {...props} totalPlayers={totalPlayers} />
+                        <DonutTooltipContent
+                          active={props.active}
+                          payload={props.payload as Array<{ name?: string; value?: number }> | undefined}
+                          totalPlayers={totalPlayers}
+                        />
                       )}
                       contentStyle={{ padding: 0, border: "none", background: "none" }}
                     />
