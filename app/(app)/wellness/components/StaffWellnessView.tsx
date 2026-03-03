@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Activity, AlertTriangle } from "lucide-react";
+import { Activity, AlertTriangle, UserRound } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { WellnessRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
-import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { KpiCard } from "./KpiCard";
@@ -62,7 +61,7 @@ function numberBadgeOpacity(value: number): number {
 
 const CARD_RADIUS = "12px";
 
-type SortOption = "newest" | "lowestWellness" | "highestFatigue";
+type SortOption = "newest" | "lowestWellness" | "highestFatigue" | "readinessAsc" | "readinessDesc";
 
 function isAtRisk(r: WellnessRow): boolean {
   if (r.sleep_quality != null && r.sleep_quality <= 3) return true;
@@ -103,7 +102,6 @@ export function StaffWellnessView({
 }: StaffWellnessViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [searchQuery, setSearchQuery] = useState("");
-  const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [modalUserId, setModalUserId] = useState<string | null>(null);
   const [bodyMapMode, setBodyMapMode] = useState<"soreness" | "pain">("soreness");
@@ -123,7 +121,6 @@ export function StaffWellnessView({
         return name.includes(query) || email.includes(query);
       });
     }
-    if (onlyAtRisk) rows = rows.filter(isAtRisk);
     if (sortBy === "newest") {
       rows = [...rows].sort((a, b) => (b.date > a.date ? 1 : -1));
     } else if (sortBy === "lowestWellness") {
@@ -132,11 +129,23 @@ export function StaffWellnessView({
         const wb = wellnessAverageFromRow(b) ?? 0;
         return wa - wb;
       });
+    } else if (sortBy === "readinessAsc") {
+      rows = [...rows].sort((a, b) => {
+        const ra = wellnessAverageFromRow(a) ?? 0;
+        const rb = wellnessAverageFromRow(b) ?? 0;
+        return ra - rb;
+      });
+    } else if (sortBy === "readinessDesc") {
+      rows = [...rows].sort((a, b) => {
+        const ra = wellnessAverageFromRow(a) ?? 0;
+        const rb = wellnessAverageFromRow(b) ?? 0;
+        return rb - ra;
+      });
     } else {
       rows = [...rows].sort((a, b) => (b.fatigue ?? 0) - (a.fatigue ?? 0));
     }
     return rows;
-  }, [list, selectedDate, searchQuery, onlyAtRisk, sortBy, emailByUserId, displayNameByUserId]);
+  }, [list, selectedDate, searchQuery, sortBy, emailByUserId, displayNameByUserId]);
 
   const summaryForDate = useMemo(() => {
     const rowsForDate = list.filter((r) => r.date === selectedDate);
@@ -183,7 +192,7 @@ export function StaffWellnessView({
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-8">
         {/* HEADER */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Wellness</h1>
@@ -192,72 +201,25 @@ export function StaffWellnessView({
           </p>
         </div>
 
-        {/* FILTER BAR – one row, wraps on small screens */}
-        <div
-          className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-          style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
-        >
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <label className={`flex items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              Date
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setSelectedDate(todayISO())}
-              className="min-h-[44px] shrink-0 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700/80"
-            >
-              Today
-            </button>
-            <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-              <input
-                type="checkbox"
-                checked={onlyAtRisk}
-                onChange={(e) => setOnlyAtRisk(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-red-500 focus:ring-red-500"
-              />
-              Only at-risk
-            </label>
-            <div className="relative min-w-0 flex-1 sm:max-w-[200px]">
-              <input
-                ref={searchInputRef}
-                type="search"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-16 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                aria-label="Search by name or email"
-                title="Search by name or email (Ctrl+K)"
-              />
-              <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-                Ctrl+K
-              </span>
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="min-h-[44px] shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            >
-              <option value="newest">Newest</option>
-              <option value="lowestWellness">Lowest wellness</option>
-              <option value="highestFatigue">Highest fatigue</option>
-            </select>
-          </div>
-        </div>
-
         {/* SUMMARY STRIP – icons, clickable at-risk, trend, “of X players” */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KpiCard
             label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-emerald-400">✓</span> Submitted</span>}
             value={
-              summaryForDate.total != null
-                ? `${summaryForDate.submitted} / ${summaryForDate.total}`
-                : `${summaryForDate.submitted} submissions`
+              summaryForDate.total != null ? (
+                <>
+                  <span>{summaryForDate.submitted} / {summaryForDate.total}</span>
+                  <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
+                    <span
+                      className="block h-full rounded-full bg-emerald-500"
+                      style={{ width: `${summaryForDate.total > 0 ? (100 * summaryForDate.submitted) / summaryForDate.total : 0}%` }}
+                      aria-hidden
+                    />
+                  </span>
+                </>
+              ) : (
+                `${summaryForDate.submitted} submissions`
+              )
             }
             sublabel={summaryForDate.total != null ? `of ${summaryForDate.total} players` : undefined}
           />
@@ -281,6 +243,7 @@ export function StaffWellnessView({
             }
           />
           <KpiCard
+            className="ring-2 ring-red-500/50 bg-red-500/10"
             label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-red-400">!</span> At-risk</span>}
             value={
               summaryForDate.atRiskCount > 0 ? (
@@ -310,6 +273,9 @@ export function StaffWellnessView({
             {popoverCard === "at-risk" && (
               <>
                 <p className="text-sm font-semibold text-red-400">At risk</p>
+                <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+                  Risk factors: low sleep quality, high fatigue, high soreness, high stress, low mood, illness.
+                </p>
                 {atRiskList.length === 0 ? (
                   <p className={`mt-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No one</p>
                 ) : (
@@ -347,7 +313,7 @@ export function StaffWellnessView({
 
         {/* TABLE */}
         <div
-          className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          className={`mt-2 overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filteredAndSorted.length === 0 ? (
@@ -359,18 +325,68 @@ export function StaffWellnessView({
             </div>
           ) : (
             <>
-              <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b px-4 py-3 sm:gap-x-6 ${isHighContrast ? "border-white/20 bg-white/5" : "border-zinc-700 bg-zinc-800/70"}`}>
-                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                  <span className="inline-block h-4 w-10 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
-                  Good
-                </span>
-                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                  <span className="inline-block h-4 w-10 rounded bg-amber-500/50 ring-1 ring-amber-400/30" aria-hidden />
-                  Watch
-                </span>
-                <span className={`inline-flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                  <span className="inline-block h-4 w-10 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
-                  Critical
+              <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 sm:gap-x-4 ${isHighContrast ? "border-white/20 bg-white/5" : "border-zinc-700 bg-zinc-800/70"}`}>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+                    Date
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(todayISO())}
+                    className={`min-h-[36px] shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700/80"}`}
+                  >
+                    Today
+                  </button>
+                  <div className="relative min-w-0 flex-1 basis-32 sm:max-w-[180px]">
+                    <input
+                      ref={searchInputRef}
+                      type="search"
+                      placeholder="Search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`min-h-[36px] w-full rounded-md border px-2 py-1.5 pr-12 text-sm placeholder-zinc-500 focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
+                      aria-label="Search by name or email"
+                      title="Search by name or email (Ctrl+K)"
+                    />
+                    <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                      Ctrl+K
+                    </span>
+                  </div>
+                  <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+                    Sort by
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className={`min-h-[36px] shrink-0 rounded-md border px-2.5 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
+                    aria-label="Sort table by"
+                  >
+                    <option value="newest" style={{ backgroundColor: "#fff", color: "#18181b" }}>Newest</option>
+                    <option value="lowestWellness" style={{ backgroundColor: "#fff", color: "#18181b" }}>Lowest wellness</option>
+                    <option value="highestFatigue" style={{ backgroundColor: "#fff", color: "#18181b" }}>Highest fatigue</option>
+                    <option value="readinessAsc" style={{ backgroundColor: "#fff", color: "#18181b" }}>Readiness (low→high)</option>
+                    <option value="readinessDesc" style={{ backgroundColor: "#fff", color: "#18181b" }}>Readiness (high→low)</option>
+                  </select>
+                </div>
+                <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium sm:gap-x-3">
+                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-6 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
+                    Good
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-6 rounded bg-yellow-500/60 ring-1 ring-yellow-400/40" aria-hidden />
+                    Watch
+                  </span>
+                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-6 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
+                    Critical
+                  </span>
                 </span>
               </div>
               <div className={`overflow-x-auto ${isHighContrast ? "rounded-b-xl ring-1 ring-white/10" : ""}`}>
@@ -378,17 +394,15 @@ export function StaffWellnessView({
                   <thead className={`sticky top-0 z-10 border-b-2 shadow-md ${isHighContrast ? "border-white/25 bg-white/12 text-white" : "border-zinc-500 bg-zinc-800 text-zinc-200"}`}>
                     <tr>
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Date</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Bed</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Wake</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Sleep (h)</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Sleep quality</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Fatigue</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Soreness</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Stress</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Mood</th>
                       <th className="px-4 py-2.5 text-base font-bold">Illness</th>
-                      <th className={`border-l pl-4 pr-4 py-2.5 text-base font-bold ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>Readiness</th>
+                      <th className="px-4 py-2.5 text-base font-bold">Bed – Wake</th>
+                      <th className="px-4 py-2.5 text-base font-bold">Sleep (h)</th>
+                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Sleep quality</th>
+                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Fatigue</th>
+                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Soreness</th>
+                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Stress</th>
+                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Mood</th>
+                      <th className={`min-w-[5rem] border-l px-2 py-2.5 text-center text-base font-bold ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>Readiness</th>
                     </tr>
                   </thead>
                   <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
@@ -407,17 +421,26 @@ export function StaffWellnessView({
                             </button>
                             {atRisk && <RiskBadge />}
                           </td>
-                          <td className="px-4 py-2">{r.date}<span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{getDateContextLabel(r.date)}</span></td>
-                          <td className="px-4 py-2">{timeToHHmm(r.bed_time) ?? "—"}</td>
-                          <td className="px-4 py-2">{timeToHHmm(r.wake_time) ?? "—"}</td>
+                          <td className="px-4 py-2">
+                            {r.illness === true ? (
+                              <span className="rounded bg-red-600/30 px-2 py-1 text-sm font-semibold text-red-300">Yes</span>
+                            ) : (
+                              <span className="rounded bg-emerald-500/20 px-2 py-1 text-sm font-semibold text-emerald-400">No</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 tabular-nums">
+                            {timeToHHmm(r.bed_time) != null && timeToHHmm(r.wake_time) != null
+                              ? `${timeToHHmm(r.bed_time)} – ${timeToHHmm(r.wake_time)}`
+                              : timeToHHmm(r.bed_time) ?? timeToHHmm(r.wake_time) ?? "—"}
+                          </td>
                           <td className="px-4 py-2">
                             {r.sleep_duration != null ? (
                               <span
-                                className="inline-flex rounded-md px-2 py-1 tabular-nums font-semibold"
+                                className="inline-flex min-w-[3rem] justify-center rounded-md px-3 py-1 tabular-nums font-semibold"
                                 style={
                                   r.sleep_duration >= 8
                                     ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
-                                    : { backgroundColor: "rgba(239, 68, 68, 0.25)", color: "#f87171" }
+                                    : { backgroundColor: "rgba(220, 38, 38, 0.3)", color: "#fecaca" }
                                 }
                               >
                                 {r.sleep_duration}h
@@ -426,29 +449,22 @@ export function StaffWellnessView({
                               "—"
                             )}
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.sleep_quality} type="goodHigh" />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.fatigue != null ? 10 - r.fatigue : null} type="goodHigh" />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.soreness != null ? 10 - r.soreness : null} type="goodHigh" />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.stress != null ? 10 - r.stress : null} type="goodHigh" />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.mood} type="goodHigh" />
                           </td>
-                          <td className="px-4 py-2">
-                            {r.illness === true ? (
-                              <span className="rounded bg-red-500/20 px-2 py-1 text-sm font-semibold text-red-400">Yes</span>
-                            ) : (
-                              <span className="rounded bg-emerald-500/20 px-2 py-1 text-sm font-semibold text-emerald-400">No</span>
-                            )}
-                          </td>
-                          <td className={`border-l px-4 py-2 ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
+                          <td className={`border-l px-2 py-2 text-center ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
                             <BadgeScore value={wellnessAverageFromRow(r)} type="goodHigh" />
                           </td>
                         </RiskRowHighlight>
@@ -514,18 +530,26 @@ export function StaffWellnessView({
             return soreness.length > 0 || pain.length > 0;
           }) && (
           <div
-            className={`rounded-xl border px-4 py-4 sm:px-5 ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-700"}`}
+            className={`overflow-hidden rounded-xl border ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
             style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
-            <h3 className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>Body parts</h3>
+            {/* Body parts – külön sáv */}
+            <div
+              className={`flex w-full items-center gap-2 px-4 py-2.5 sm:px-5 ${isHighContrast ? "bg-white/10" : "bg-zinc-700/80"}`}
+            >
+              <UserRound className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span className={`text-base font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Body parts</span>
+            </div>
 
-            {/* Section 1: Soreness – every player who has soreness */}
-            <div className="mt-4">
-              <span className="inline-flex items-center gap-2 text-base font-semibold text-amber-400">
-                <Activity className="h-5 w-5" aria-hidden />
-                Soreness
-              </span>
-              <ul className="mt-2 space-y-3">
+            {/* Tartalom: Soreness + Pain */}
+            <div className={`px-4 py-4 sm:px-5 ${isHighContrast ? "neon-card-text" : ""}`}>
+            {/* Soreness – enyhe sárga háttér, sáv + lista */}
+            <div className={`-mx-4 rounded-lg bg-amber-500/10 px-4 pt-0 pb-3 sm:-mx-5 sm:px-5 ${isHighContrast ? "bg-amber-500/15" : ""}`}>
+              <div className="flex items-center gap-2 py-2">
+                <Activity className="h-5 w-5 shrink-0 text-amber-700" aria-hidden />
+                <span className="text-base font-semibold text-amber-700">Soreness</span>
+              </div>
+              <ul className="mt-3 space-y-3">
                 {filteredAndSorted
                   .filter((r) => splitBodyParts(r.body_parts).soreness.length > 0)
                   .map((r) => {
@@ -533,7 +557,7 @@ export function StaffWellnessView({
                     const { soreness } = splitBodyParts(r.body_parts);
                     return (
                       <li key={r.id}>
-                        <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/50 px-3 py-2.5">
+                        <div className="rounded-lg bg-white/5 px-3 py-2.5">
                           <button
                             type="button"
                             onClick={() => setModalUserId(r.user_id)}
@@ -571,18 +595,18 @@ export function StaffWellnessView({
                     );
                   })}
                 {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).soreness.length === 0) && (
-                  <li className="text-sm text-zinc-500">—</li>
+                  <li className={`text-sm ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>No soreness reported.</li>
                 )}
               </ul>
             </div>
 
-            {/* Section 2: Pain – every player who has pain */}
-            <div className="mt-4">
-              <span className="inline-flex items-center gap-2 text-base font-semibold text-red-400">
-                <AlertTriangle className="h-5 w-5" aria-hidden />
-                Pain
-              </span>
-              <ul className="mt-2 space-y-3">
+            {/* Pain – enyhe piros háttér, sáv + lista */}
+            <div className={`mt-6 -mx-4 rounded-lg bg-red-500/10 px-4 pt-0 pb-3 sm:-mx-5 sm:px-5 ${isHighContrast ? "bg-red-500/15" : ""}`}>
+              <div className="flex items-center gap-2 py-2">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-red-700" aria-hidden />
+                <span className="text-base font-semibold text-red-700">Pain</span>
+              </div>
+              <ul className="mt-3 space-y-3">
                 {filteredAndSorted
                   .filter((r) => splitBodyParts(r.body_parts).pain.length > 0)
                   .map((r) => {
@@ -590,7 +614,7 @@ export function StaffWellnessView({
                     const { pain } = splitBodyParts(r.body_parts);
                     return (
                       <li key={r.id}>
-                        <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/50 px-3 py-2.5">
+                        <div className="rounded-lg bg-white/5 px-3 py-2.5">
                           <button
                             type="button"
                             onClick={() => setModalUserId(r.user_id)}
@@ -628,9 +652,10 @@ export function StaffWellnessView({
                     );
                   })}
                 {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).pain.length === 0) && (
-                  <li className="text-sm text-zinc-500">—</li>
+                  <li className={`text-sm ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>No pain reported.</li>
                 )}
               </ul>
+            </div>
             </div>
           </div>
         )}

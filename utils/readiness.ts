@@ -14,9 +14,9 @@ export function readinessScore(params: {
   const { sleepQuality, soreness, fatigue, stress, mood, sleepHours } = params;
   const values: number[] = [];
   if (sleepQuality != null) values.push(sleepQuality);
-  if (soreness != null) values.push(11 - soreness); // invert: lower soreness = better
-  if (fatigue != null) values.push(11 - fatigue);
-  if (stress != null) values.push(11 - stress);
+  if (soreness != null) values.push(10 - soreness); // invert: lower soreness = better, same 0–10 scale
+  if (fatigue != null) values.push(10 - fatigue);
+  if (stress != null) values.push(10 - stress);
   if (mood != null) values.push(mood);
   // Optional: factor in sleep hours (e.g. 7h = 10, <6 = penalize)
   if (sleepHours != null && sleepHours > 0) {

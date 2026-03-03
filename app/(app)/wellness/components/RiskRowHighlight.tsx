@@ -12,7 +12,7 @@ interface RiskRowHighlightProps {
 
 export function RiskRowHighlight({ isAtRisk, children, className = "", rowIndex = 0 }: RiskRowHighlightProps) {
   const rowStyle = isAtRisk
-    ? { backgroundColor: "rgba(239, 68, 68, 0.12)" }
+    ? { backgroundColor: "rgba(220, 38, 38, 0.22)" }
     : undefined;
   const zebraClass = !isAtRisk && rowIndex % 2 === 1 ? "bg-zinc-800/40" : "";
   return (
@@ -27,7 +27,7 @@ export function RiskRowHighlight({ isAtRisk, children, className = "", rowIndex 
 
 export function RiskBadge() {
   return (
-    <span className="ml-2 inline-flex items-center rounded-full bg-red-500/25 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-400">
+    <span className="ml-2 inline-flex items-center rounded-full bg-red-600/50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-200">
       Risk
     </span>
   );
