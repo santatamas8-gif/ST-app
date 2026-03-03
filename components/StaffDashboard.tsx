@@ -32,7 +32,7 @@ function DonutTooltipContent({
   totalPlayers,
 }: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
+  payload?: Array<{ name?: string; value: number }>;
   totalPlayers: number;
 }) {
   if (!active || !payload?.length) return null;
@@ -49,7 +49,7 @@ function DonutTooltipContent({
         fontSize: 13,
       }}
     >
-      {item.name} : {pct}%
+      {item.name ?? ""} : {pct}%
     </div>
   );
 }
@@ -1141,7 +1141,7 @@ export function StaffDashboard({
                       ))}
                     </Pie>
                     <Tooltip
-                      content={(props: { active?: boolean; payload?: Array<{ name: string; value: number }> }) => (
+                      content={(props: { active?: boolean; payload?: Array<{ name?: string; value: number }> }) => (
                         <DonutTooltipContent {...props} totalPlayers={totalPlayers} />
                       )}
                       contentStyle={{ padding: 0, border: "none", background: "none" }}
