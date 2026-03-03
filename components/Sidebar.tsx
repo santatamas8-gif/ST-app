@@ -17,6 +17,8 @@ const THEME_SWATCH: Record<ThemeId, string> = {
   red: "#1f1315",
   blue: "#0f172a",
   green: "#0f2621",
+  neon: "#022c22",
+  matt: "#0a0a0c",
 };
 
 const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRole[] }[] = [
@@ -58,16 +60,55 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   }, [themePopoverOpen]);
 
   const isLight = themeId === "light";
+  const isNeon = themeId === "neon";
+  const isMatt = themeId === "matt";
   const activeNavClass =
-    isLight
-      ? "bg-emerald-600/25 text-emerald-700"
-      : "bg-emerald-600/20 text-emerald-400";
+    isNeon
+      ? "bg-emerald-500/15 text-emerald-400 border-l-2 border-emerald-400 pl-2.5 shadow-[0_0_8px_rgba(0,0,0,0.2),0_0_3px_rgba(16,185,129,0.015)]"
+      : isMatt
+        ? "bg-white/15 text-white border-l-2 border-white/70 pl-2.5 shadow-[0_0_20px_rgba(0,0,0,0.4)]"
+        : isLight
+          ? "bg-emerald-600/25 text-emerald-700"
+          : "bg-emerald-600/20 text-emerald-400";
   const inactiveNavClass =
-    isLight
-      ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
-      : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
-  const sidebarMutedClass = isLight ? "text-zinc-500" : "text-zinc-500";
-  const sidebarLabelClass = isLight ? "text-zinc-600" : "text-zinc-400";
+    isNeon
+      ? "text-white/80 hover:bg-emerald-500/10 hover:text-emerald-200"
+      : isMatt
+        ? "text-white/85 hover:bg-white/8 hover:text-white"
+        : isLight
+          ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+          : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+  const sidebarMutedClass = isNeon || isMatt ? "text-white/60" : isLight ? "text-zinc-500" : "text-zinc-500";
+  const sidebarLabelClass = isNeon || isMatt ? "text-white/80" : isLight ? "text-zinc-600" : "text-zinc-400";
+  const sidebarBorderClass = isNeon ? "border-emerald-500/10" : isMatt ? "border-white/28" : "border-zinc-800";
+  const sidebarBgStyle =
+    isNeon
+      ? {
+          backgroundColor: "#080c0a",
+          boxShadow:
+            "4px 0 24px rgba(0,0,0,0.4), 4px 0 28px rgba(6,95,70,0.02), inset -1px 0 0 rgba(16,185,129,0.02)",
+        }
+      : isMatt
+        ? {
+            backgroundColor: "#141418",
+            boxShadow:
+              "4px 0 32px rgba(0,0,0,0.45), 4px 0 48px rgba(255,255,255,0.1), inset -1px 0 0 rgba(255,255,255,0.22)",
+          }
+        : undefined;
+  const headerIconClass = (active: boolean) =>
+    isNeon
+      ? active
+        ? "bg-emerald-500/20 text-emerald-400 shadow-[0_0_5px_rgba(16,185,129,0.025)]"
+        : "text-white/80 hover:bg-emerald-500/10 hover:text-emerald-300"
+      : isMatt
+        ? active
+          ? "bg-white/20 text-white shadow-[0_0_12px_rgba(0,0,0,0.3)]"
+          : "text-white/85 hover:bg-white/8 hover:text-white"
+        : active
+          ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
+          : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+  const signOutHoverClass =
+    isNeon ? "hover:bg-emerald-500/10 hover:text-white" : isMatt ? "hover:bg-white/8 hover:text-white" : "hover:bg-zinc-800 hover:text-white";
 
   const visibleItems = navItems.filter(
     (item) => !item.roles || item.roles.includes(role) || (item.href === "/admin/users" && canAccessUsers)
@@ -99,18 +140,19 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   );
 
   return (
-    <aside className="flex w-full flex-col border-b border-zinc-800 md:h-full md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: "var(--card-bg)" }}>
-      <div className="flex h-14 items-center justify-between gap-2 border-b border-zinc-800 px-4 md:h-16 md:px-5">
-        <Link href="/dashboard" className="shrink-0 text-lg font-bold tracking-tight text-white transition-opacity duration-200 hover:opacity-90 md:text-xl">
+    <aside
+      className={`flex w-full flex-col border-b md:h-full md:w-64 md:border-b-0 md:border-r ${sidebarBorderClass}`}
+      style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
+    >
+      <div className={`flex h-14 items-center justify-between gap-2 border-b px-4 md:h-16 md:px-5 ${sidebarBorderClass}`}>
+        <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
           ST AMS
         </Link>
         <div className="flex items-center gap-1.5 md:gap-2 md:ml-auto">
           <Link
             href="/chat"
             className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
-              pathname === "/chat" || pathname.startsWith("/chat/")
-                ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
-                : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))
             }`}
             title="Chat"
             aria-label="Chat"
@@ -124,11 +166,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           </Link>
           <Link
             href="/schedule"
-            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-              pathname === "/schedule"
-                ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
-                : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-            }`}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`}
             title="Schedule"
             aria-label="Schedule"
           >
@@ -138,7 +176,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <button
               type="button"
               onClick={() => setThemePopoverOpen((o) => !o)}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
               title="Theme"
               aria-label="Theme"
               aria-expanded={themePopoverOpen}
@@ -203,7 +241,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           );
         })}
       </nav>
-      <div className="hidden border-t border-zinc-800 p-3 md:block">
+      <div className={`hidden border-t p-3 md:block ${sidebarBorderClass}`}>
         <p className={`truncate px-3 py-2 text-xs ${sidebarMutedClass}`} title={userEmail}>
           {userEmail}
         </p>
@@ -213,14 +251,14 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         <form action="/api/auth/signout" method="post" className="mt-2">
           <button
             type="submit"
-            className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
+            className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${sidebarMutedClass} ${signOutHoverClass}`}
           >
             <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
             Sign out
           </button>
         </form>
       </div>
-      <div className="flex flex-col gap-2 border-t border-zinc-800 px-4 py-2 md:hidden">
+      <div className={`flex flex-col gap-2 border-t px-4 py-2 md:hidden ${sidebarBorderClass}`}>
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <p className={`truncate text-xs ${sidebarMutedClass}`} title={userEmail}>{userEmail}</p>
@@ -229,7 +267,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} hover:bg-zinc-800 hover:text-white`}
+              className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} ${signOutHoverClass}`}
             >
               <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
               Sign out

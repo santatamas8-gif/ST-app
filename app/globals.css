@@ -13,6 +13,29 @@
   --card-glow: 0 0 0 1px rgba(16, 185, 129, 0.08);
 }
 
+/* Schedule card text: subtle shadow for legibility on gradient */
+.schedule-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* Neon theme cards: text shadow for legibility on green gradient */
+.neon-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Matt theme cards: text shadow so text is readable everywhere (like neon, but no color) */
+.matt-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Dashboard charts: legend and axis text visible on neon/matt dark cards */
+.chart-high-contrast .recharts-legend-item-text {
+  fill: rgba(255, 255, 255, 0.92) !important;
+}
+.chart-high-contrast .recharts-cartesian-axis-tick-value {
+  fill: rgba(255, 255, 255, 0.88) !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

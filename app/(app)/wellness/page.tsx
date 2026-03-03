@@ -1,10 +1,9 @@
 import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
-import { DailyWellnessForm } from "@/components/DailyWellnessForm";
 import type { WellnessRow } from "@/lib/types";
 import { StaffWellnessView } from "./components/StaffWellnessView";
-import { PlayerWellnessTrend } from "../players/[userId]/PlayerWellnessTrend";
+import { WellnessPlayerContent } from "./components/WellnessPlayerContent";
 
 export default async function WellnessPage() {
   const user = await getAppUser();
@@ -90,43 +89,12 @@ export default async function WellnessPage() {
     });
 
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
-        <div className="mx-auto max-w-2xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              Wellness
-            </h1>
-            <p className="mt-1 text-zinc-400">
-              Submit once per day. All scales are 1 to 10{" "}
-              <span className="text-zinc-500">(1 = very poor, 10 = excellent)</span>.
-            </p>
-          </div>
-
-          {hasSubmittedToday && (
-            <div
-              className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 px-4 py-3"
-              style={{ borderRadius: 12 }}
-            >
-              <p className="flex items-center gap-2 font-medium text-emerald-400">
-                <span>✔</span> You&apos;ve already submitted today
-              </p>
-            </div>
-          )}
-
-          <DailyWellnessForm hasSubmittedToday={hasSubmittedToday} />
-
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-white">Your 7-day & 28-day averages</h2>
-            {list.length === 0 ? (
-              <p className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-6 text-zinc-400" style={{ borderRadius: 12 }}>
-                No wellness entries yet. Submit your first entry above to see your trends here.
-              </p>
-            ) : (
-              <PlayerWellnessTrend wellness={list} dates={dates} loadByDate={loadByDate} />
-            )}
-          </div>
-        </div>
-      </div>
+      <WellnessPlayerContent
+        hasSubmittedToday={hasSubmittedToday}
+        list={list}
+        dates={dates}
+        loadByDate={loadByDate}
+      />
     );
   }
 

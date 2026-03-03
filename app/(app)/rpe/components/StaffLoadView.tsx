@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import { getDateContextLabel } from "@/lib/dateContext";
@@ -108,6 +110,8 @@ function formatLoadBreakdown(
 export type PeriodDays = 7 | 14 | 28;
 
 export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }: StaffLoadViewProps) {
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [periodDays, setPeriodDays] = useState<PeriodDays>(7);
   const [searchQuery, setSearchQuery] = useState("");
@@ -293,18 +297,18 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">RPE / Load</h1>
-          <p className="mt-1 text-zinc-400">
+          <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
             Load monitoring – daily and weekly load, acute/chronic, risk.
           </p>
         </div>
 
         {/* Date + Search */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-xl p-4"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className={`flex flex-wrap items-center justify-between gap-4 rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
         >
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
               Date
               <input
                 type="date"
@@ -336,7 +340,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                 / or Ctrl+K
               </span>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+            <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
               <input
                 type="checkbox"
                 checked={onlyAtRisk}
@@ -350,7 +354,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
 
         {/* Overview – KPI */}
         <section className="space-y-3">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">Overview</h2>
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Overview</h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
             <LoadKpiCard
               label="Today's team load"
@@ -376,15 +380,15 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
 
         {/* Charts – daily first, then weekly */}
         <section className="space-y-3">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">Charts</h2>
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Charts</h2>
           <div className="flex flex-col gap-4">
             <div
-              className="rounded-xl p-4"
-              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+              className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
-                <span className="text-center text-base font-bold uppercase tracking-wide text-zinc-200">Today&apos;s load (by player)</span>
+                <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Today&apos;s load (by player)</span>
                 <div className="flex justify-end gap-1">
                   <button
                     type="button"
@@ -415,13 +419,13 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
               <PlayerLoadBarChart data={sortedPlayerChartData} />
             </div>
             <div
-              className="rounded-xl p-4"
-              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+              className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
-                <span className="text-center text-base font-bold uppercase tracking-wide text-zinc-200">Team load (7 / 14 / 28 days)</span>
-                <div className="flex w-fit justify-end flex-nowrap items-center gap-0.5 rounded-lg border border-zinc-700 bg-zinc-800/50 p-1">
+                <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Team load (7 / 14 / 28 days)</span>
+                <div className={`flex w-fit justify-end flex-nowrap items-center gap-0.5 rounded-lg p-1 ${isHighContrast ? "border border-white/20 bg-white/5" : "border border-zinc-700 bg-zinc-800/50"}`}>
                   {([7, 14, 28] as const).map((n) => (
                     <button
                       key={n}
@@ -445,12 +449,12 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
 
         {/* Compare two weeks – compact controls, paired charts */}
         <section
-          className="space-y-4 rounded-xl border border-zinc-700/80 p-4"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className={`space-y-4 rounded-xl border p-4 ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-700/80"}`}
+          style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
         >
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">Compare two weeks</h2>
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Compare two weeks</h2>
           <div className="flex flex-wrap items-center gap-3 gap-y-2">
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="w-16 shrink-0">Week 1</span>
               <input
                 type="date"
@@ -459,7 +463,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                 className="h-9 w-36 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="w-16 shrink-0">Week 2</span>
               <input
                 type="date"
@@ -468,7 +472,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                 className="h-9 w-36 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="shrink-0">Player</span>
               <select
                 value={comparePlayerId ?? ""}
@@ -503,7 +507,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center rounded-lg border border-dashed border-zinc-700 p-8 text-sm text-zinc-500">
+              <div className={`flex items-center justify-center rounded-lg border border-dashed p-8 text-sm ${isHighContrast ? "border-white/20 text-white/70" : "border-zinc-700 text-zinc-500"}`}>
                 Select a player to compare.
               </div>
             )}
@@ -512,22 +516,22 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
 
         {/* Daily table */}
         <section className="space-y-3">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
             Sessions by player – {selectedDate}
           </h2>
           <div
-            className="overflow-hidden rounded-xl"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
           >
           {sortedTableRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-zinc-400">No sessions for the selected date.</p>
+              <p className={isHighContrast ? "text-white/80" : "text-zinc-400"}>No sessions for the selected date.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-zinc-900/95">
-                  <tr className="border-b border-zinc-700 text-zinc-400">
+                <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/5" : "bg-zinc-900/95"}`}>
+                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
                     <th className="px-4 py-3 font-medium">Player</th>
                     <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">
@@ -550,7 +554,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                     <th className="px-4 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
-                <tbody className="text-zinc-300">
+                <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
                   {sortedTableRows.map(({ userId, load, spike }) => {
                     const risk = spikeToRiskLevel(spike);
                     const daySessions = list.filter(
@@ -561,7 +565,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                     return (
                       <tr
                         key={userId}
-                        className={`border-b border-zinc-800 hover:bg-zinc-800/50 ${
+                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800 hover:bg-zinc-800/50"} ${
                           risk === "danger" ? "bg-red-500/5" : risk === "warning" ? "bg-amber-500/5" : ""
                         }`}
                       >
@@ -574,9 +578,9 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                             {displayName}
                           </button>
                         </td>
-                        <td className="px-4 py-3">{selectedDate}<span className="text-zinc-500">{getDateContextLabel(selectedDate)}</span></td>
-                        <td className="px-4 py-3 tabular-nums text-zinc-300">
-                          <span className="text-zinc-500">{loadBreakdown}</span>
+                        <td className="px-4 py-3">{selectedDate}<span className={isHighContrast ? "text-white/60" : "text-zinc-500"}>{getDateContextLabel(selectedDate)}</span></td>
+                        <td className="px-4 py-3 tabular-nums">
+                          <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
                         </td>
                         <td className="px-4 py-3 tabular-nums">
                           {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}

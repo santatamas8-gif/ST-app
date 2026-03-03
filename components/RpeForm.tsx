@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Activity } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import { submitSession } from "@/app/actions/sessions";
 import { sessionLoad } from "@/utils/load";
 
@@ -40,6 +42,8 @@ interface RpeFormProps {
 
 export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
   const router = useRouter();
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   const [date, setDate] = useState(today);
   const [duration, setDuration] = useState("");
   const [rpe, setRpe] = useState(5);
@@ -79,21 +83,24 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
   if (success) {
     return (
       <div
-        className="rounded-xl border border-emerald-800/50 p-6"
-        style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", borderRadius: CARD_RADIUS }}
+        className={`rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-emerald-500/40" : themeId === "matt" ? "matt-card-text border-white/20" : "border-emerald-800/50"}`}
+        style={{
+          borderRadius: CARD_RADIUS,
+          ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "rgba(16, 185, 129, 0.12)" }),
+        }}
       >
         <p className="flex items-center gap-2 text-lg font-semibold text-emerald-400">
           <span>✔</span> Session saved
         </p>
-        <p className="mt-1 text-sm text-zinc-400">Recent sessions below have been updated.</p>
+        <p className={`mt-1 text-sm ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>Recent sessions below have been updated.</p>
       </div>
     );
   }
 
   return (
     <div
-      className="rounded-xl border border-zinc-800 p-4 shadow-lg sm:p-6"
-      style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+      className={`rounded-xl border p-4 shadow-lg sm:p-6 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : "border-zinc-800"}`}
+      style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: CARD_BG }) }}
     >
       {hasSubmittedToday && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-2">
@@ -107,7 +114,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
       </h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="rpe-date" className="block text-sm font-medium text-zinc-300">
+          <label htmlFor="rpe-date" className={`block text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
             Date
           </label>
           <input
@@ -120,7 +127,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
           />
         </div>
         <div>
-          <label htmlFor="rpe-duration" className="block text-sm font-medium text-zinc-300">
+          <label htmlFor="rpe-duration" className={`block text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
             Session duration (minutes)
           </label>
           <input
@@ -145,22 +152,22 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
             <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
               {load}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-400">duration × RPE</p>
+            <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>duration × RPE</p>
           </div>
         )}
 
-        <div className="rounded-xl bg-zinc-800/60 px-4 py-5 sm:px-5" style={{ borderRadius: 10 }}>
+        <div className={`rounded-xl px-4 py-5 sm:px-5 ${isHighContrast ? "bg-white/5" : "bg-zinc-800/60"}`} style={{ borderRadius: 10 }}>
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-400" aria-hidden />
-            <label htmlFor="rpe-slider" className="text-sm font-medium text-zinc-300">
+            <label htmlFor="rpe-slider" className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
               RPE (1–10)
             </label>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
             How difficult was your session?
           </p>
           <div className="mt-3 flex items-center gap-3">
-            <span className="w-[4.5rem] shrink-0 text-xs text-zinc-500">Very easy</span>
+            <span className={`w-[4.5rem] shrink-0 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Very easy</span>
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="relative h-6 w-full">
                 <span
@@ -186,7 +193,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
                 style={{ ["--thumb-color" as string]: rpeThumb }}
               />
             </div>
-            <span className="w-[4.5rem] shrink-0 text-right text-xs text-zinc-500">Max effort</span>
+            <span className={`w-[4.5rem] shrink-0 text-right text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Max effort</span>
           </div>
         </div>
 

@@ -10,6 +10,8 @@ const SWATCH: Record<ThemeId, string> = {
   red: "#1f1315",
   blue: "#0f172a",
   green: "#0f2621",
+  neon: "#022c22",
+  matt: "#0a0a0c",
 };
 
 export function ThemeSelector() {

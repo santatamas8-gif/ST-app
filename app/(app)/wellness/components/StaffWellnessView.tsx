@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { WellnessRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import { getDateContextLabel } from "@/lib/dateContext";
@@ -107,6 +109,8 @@ export function StaffWellnessView({
   const [bodyMapMode, setBodyMapMode] = useState<"soreness" | "pain">("soreness");
   const [popoverCard, setPopoverCard] = useState<"at-risk" | "missing" | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   useSearchShortcut(searchInputRef);
 
   const filteredAndSorted = useMemo(() => {
@@ -190,11 +194,11 @@ export function StaffWellnessView({
 
         {/* FILTER BAR – one row, wraps on small screens */}
         <div
-          className="rounded-xl p-4"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <label className="flex items-center gap-2 text-sm text-zinc-400">
+            <label className={`flex items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               Date
               <input
                 type="date"
@@ -210,7 +214,7 @@ export function StaffWellnessView({
             >
               Today
             </button>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+            <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
               <input
                 type="checkbox"
                 checked={onlyAtRisk}
@@ -230,7 +234,7 @@ export function StaffWellnessView({
                 aria-label="Search by name or email"
                 title="Search by name or email (Ctrl+K)"
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+              <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
                 Ctrl+K
               </span>
             </div>
@@ -300,16 +304,16 @@ export function StaffWellnessView({
 
         {popoverCard && (
           <div
-            className="rounded-xl border border-zinc-600 bg-zinc-800/90 px-4 py-3 shadow-lg"
-            style={{ borderRadius: CARD_RADIUS }}
+            className={`rounded-xl border px-4 py-3 shadow-lg ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-600 bg-zinc-800/90"}`}
+            style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { borderRadius: CARD_RADIUS }}
           >
             {popoverCard === "at-risk" && (
               <>
                 <p className="text-sm font-semibold text-red-400">At risk</p>
                 {atRiskList.length === 0 ? (
-                  <p className="mt-1 text-sm text-zinc-400">No one</p>
+                  <p className={`mt-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No one</p>
                 ) : (
-                  <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-zinc-300">
+                  <ul className={`mt-1.5 list-inside list-disc space-y-0.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
                     {atRiskList.map(({ id, name }) => (
                       <li key={id}>{name}</li>
                     ))}
@@ -321,9 +325,9 @@ export function StaffWellnessView({
               <>
                 <p className="text-sm font-semibold text-amber-400">Not submitted</p>
                 {missingList.length === 0 ? (
-                  <p className="mt-1 text-sm text-zinc-400">No one</p>
+                  <p className={`mt-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No one</p>
                 ) : (
-                  <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-zinc-300">
+                  <ul className={`mt-1.5 list-inside list-disc space-y-0.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
                     {missingList.map(({ id, name }) => (
                       <li key={id}>{name}</li>
                     ))}
@@ -334,7 +338,7 @@ export function StaffWellnessView({
             <button
               type="button"
               onClick={() => setPopoverCard(null)}
-              className="mt-2 text-xs text-zinc-500 hover:text-zinc-300"
+              className={`mt-2 text-xs ${isHighContrast ? "text-white/80 hover:text-white" : "text-zinc-500 hover:text-zinc-300"}`}
             >
               Close
             </button>
@@ -343,20 +347,20 @@ export function StaffWellnessView({
 
         {/* TABLE */}
         <div
-          className="overflow-hidden rounded-xl"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filteredAndSorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-zinc-400">No wellness entries for selected date.</p>
+              <p className={isHighContrast ? "text-white/90" : "text-zinc-400"}>No wellness entries for selected date.</p>
               {list.length === 0 && (
-                <p className="mt-1 text-sm text-zinc-500">Try another date or ensure data is loaded.</p>
+                <p className={`mt-1 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Try another date or ensure data is loaded.</p>
               )}
             </div>
           ) : (
             <>
               <div className="border-b border-zinc-700 px-4 py-2">
-                <p className="text-xs text-zinc-500">
+                <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-block h-3 w-8 rounded bg-emerald-500/30" aria-hidden />
                     Good
@@ -375,8 +379,8 @@ export function StaffWellnessView({
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 border-b-2 border-zinc-500 bg-zinc-800 shadow-md">
-                    <tr className="text-zinc-200">
+                  <thead className={`sticky top-0 z-10 border-b-2 shadow-md ${isHighContrast ? "border-white/20 bg-white/10 text-white" : "border-zinc-500 bg-zinc-800 text-zinc-200"}`}>
+                    <tr>
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
                       <th className="px-4 py-2.5 text-base font-bold">Date</th>
                       <th className="px-4 py-2.5 text-base font-bold">Bed</th>
@@ -391,7 +395,7 @@ export function StaffWellnessView({
                       <th className="border-l border-zinc-600 pl-4 pr-4 py-2.5 text-base font-bold">Readiness</th>
                     </tr>
                   </thead>
-                  <tbody className="text-zinc-300">
+                  <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
                     {filteredAndSorted.map((r, index) => {
                       const atRisk = isAtRisk(r);
                       const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
@@ -407,7 +411,7 @@ export function StaffWellnessView({
                             </button>
                             {atRisk && <RiskBadge />}
                           </td>
-                          <td className="px-4 py-2">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></td>
+                          <td className="px-4 py-2">{r.date}<span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{getDateContextLabel(r.date)}</span></td>
                           <td className="px-4 py-2">{timeToHHmm(r.bed_time) ?? "—"}</td>
                           <td className="px-4 py-2">{timeToHHmm(r.wake_time) ?? "—"}</td>
                           <td className="px-4 py-2">
@@ -468,11 +472,11 @@ export function StaffWellnessView({
             return soreness.length > 0 || pain.length > 0;
           }) && (
           <div
-            className="rounded-xl border border-zinc-700 px-4 py-4 sm:px-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className={`rounded-xl border px-4 py-4 sm:px-5 ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-700"}`}
+            style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-zinc-500">Map:</span>
+              <span className={`text-xs font-medium ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>Map:</span>
               <button
                 type="button"
                 onClick={() => setBodyMapMode("soreness")}
@@ -514,10 +518,10 @@ export function StaffWellnessView({
             return soreness.length > 0 || pain.length > 0;
           }) && (
           <div
-            className="rounded-xl border border-zinc-700 px-4 py-4 sm:px-5"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className={`rounded-xl border px-4 py-4 sm:px-5 ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-700"}`}
+            style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
-            <h3 className="text-sm font-medium text-zinc-400">Body parts</h3>
+            <h3 className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>Body parts</h3>
 
             {/* Section 1: Soreness – every player who has soreness */}
             <div className="mt-4">

@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { Calendar, Users } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { updateTeamSettings } from "@/app/actions/teamSettings";
 import {
@@ -22,6 +25,34 @@ import {
 } from "recharts";
 
 const CARD_RADIUS = "12px";
+
+function DonutTooltipContent({
+  active,
+  payload,
+  totalPlayers,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number }>;
+  totalPlayers: number;
+}) {
+  if (!active || !payload?.length) return null;
+  const item = payload[0];
+  const pct = totalPlayers ? Math.round((item.value / totalPlayers) * 100) : 0;
+  return (
+    <div
+      style={{
+        backgroundColor: "#181d24",
+        border: "1px solid #52525b",
+        borderRadius: 8,
+        padding: "8px 12px",
+        color: "#fafafa",
+        fontSize: 13,
+      }}
+    >
+      {item.name} : {pct}%
+    </div>
+  );
+}
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return (
@@ -77,11 +108,11 @@ function formatShortDate(dateStr: string) {
 }
 
 const STATUS_OPTIONS = [
-  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/60 shadow-[0_0_24px_rgba(16,185,129,0.2)]", tintClass: "bg-emerald-500/15", borderLClass: "border-l-emerald-500" },
-  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/60 shadow-[0_0_24px_rgba(245,158,11,0.2)]", tintClass: "bg-amber-500/15", borderLClass: "border-l-amber-500" },
-  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/60 shadow-[0_0_24px_rgba(249,115,22,0.2)]", tintClass: "bg-orange-500/15", borderLClass: "border-l-orange-500" },
-  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/60 shadow-[0_0_24px_rgba(239,68,68,0.2)]", tintClass: "bg-red-500/15", borderLClass: "border-l-red-500" },
-  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/60 shadow-[0_0_24px_rgba(14,165,233,0.2)]", tintClass: "bg-sky-500/15", borderLClass: "border-l-sky-500" },
+  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/60 shadow-[0_0_18px_rgba(16,185,129,0.12)]", tintClass: "bg-emerald-500/15", borderLClass: "border-l-emerald-500" },
+  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/60 shadow-[0_0_18px_rgba(245,158,11,0.12)]", tintClass: "bg-amber-500/15", borderLClass: "border-l-amber-500" },
+  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/60 shadow-[0_0_18px_rgba(249,115,22,0.12)]", tintClass: "bg-orange-500/15", borderLClass: "border-l-orange-500" },
+  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/60 shadow-[0_0_18px_rgba(239,68,68,0.12)]", tintClass: "bg-red-500/15", borderLClass: "border-l-red-500" },
+  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/60 shadow-[0_0_18px_rgba(14,165,233,0.12)]", tintClass: "bg-sky-500/15", borderLClass: "border-l-sky-500" },
 ] as const;
 
 export function StaffDashboard({
@@ -96,6 +127,7 @@ export function StaffDashboard({
   teamSettings,
 }: StaffDashboardProps) {
   const router = useRouter();
+  const { themeId } = useTheme();
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
@@ -152,6 +184,9 @@ export function StaffDashboard({
           ? "text-amber-400"
           : "text-red-400";
 
+  const isMatt = themeId === "matt";
+  const isHighContrast = themeId === "neon" || themeId === "matt";
+
   const chartDataWellness =
     chart7.length > 0
       ? chart7.map((p) => ({
@@ -168,8 +203,12 @@ export function StaffDashboard({
       : [];
   const donutData = [
     { name: "Submitted", value: submitted, color: "#10b981" },
-    { name: "Missing", value: Math.max(0, totalPlayers - submitted), color: "#3f3f46" },
+    { name: "Missing", value: Math.max(0, totalPlayers - submitted), color: (themeId === "neon" || themeId === "matt") ? "#6b7280" : "#3f3f46" },
   ].filter((d) => d.value > 0);
+
+  const chartGridStroke = isHighContrast ? "#4b5563" : "#27272a";
+  const chartAxisStroke = isHighContrast ? "#9ca3af" : "#71717a";
+  const chartTickStyle = isHighContrast ? { fill: "#e5e7eb", fontSize: 10 } : { fontSize: 10 };
 
   async function setPlayerStatus(userId: string, status: string, notes?: string | null) {
     setStatusError(null);
@@ -255,11 +294,33 @@ export function StaffDashboard({
       style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-2xl font-bold tracking-tight text-white">
-            Welcome, {userDisplayName ?? "User"}!
+        <div
+          className={
+            isHighContrast
+              ? "relative overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
+              : "rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+          }
+          style={
+            themeId === "neon"
+              ? {
+                  backgroundImage:
+                    "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                  boxShadow:
+                    "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                }
+              : themeId === "matt"
+                ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16 }
+                : undefined
+          }
+        >
+          <p className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+            <span>Welcome, {userDisplayName ?? "User"}!</span>
+            <span aria-hidden>👋</span>
           </p>
-          <div className="flex flex-wrap items-center gap-4">
+          <div
+            className="flex flex-wrap items-center gap-4"
+            style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
+          >
             {editingTeam && isAdmin ? (
               <>
                 <input
@@ -325,7 +386,7 @@ export function StaffDashboard({
                       setEditLabelRevealed(true);
                     }
                   }}
-                  className="group flex flex-wrap items-center gap-3 rounded-lg py-1 pr-1 text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="group flex flex-wrap items-center gap-3 rounded-lg py-1 pr-1 text-left text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 >
                   {teamSettings?.team_name && (
                     <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
@@ -359,7 +420,10 @@ export function StaffDashboard({
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">Today&apos;s Schedule</h2>
+          <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+            <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+            Today&apos;s Schedule
+          </h2>
           <div
             className="overflow-hidden rounded-xl border"
             style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }}
@@ -368,7 +432,10 @@ export function StaffDashboard({
               <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
             ) : (
               <div className="overflow-x-auto p-4">
-                <div className="flex gap-4" style={{ minWidth: "min-content" }}>
+                <div
+                  className={isHighContrast ? "flex gap-5" : "flex gap-4"}
+                  style={{ minWidth: "min-content" }}
+                >
                   {todayScheduleItems.map((item) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       breakfast: "Breakfast",
@@ -403,6 +470,81 @@ export function StaffDashboard({
                         : "—";
                     const notes = item.notes?.trim();
                     const isMatch = item.activity_type === "match";
+                    if (themeId === "neon") {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
+                            isMatch ? "w-52" : "w-44"
+                          }`}
+                          style={{
+                            backgroundImage: isMatch
+                              ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
+                              : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                            boxShadow: isMatch
+                              ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
+                              : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                          }}
+                        >
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p
+                              className={`tabular-nums font-semibold text-white ${
+                                isMatch ? "text-base" : "text-sm"
+                              }`}
+                            >
+                              {timeStr}
+                            </p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">
+                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              <span>{label}</span>
+                            </p>
+                            {notes ? (
+                              <p className="flex items-center gap-1.5 text-xs text-white/90">
+                                <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                                {notes}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (themeId === "matt") {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
+                          style={
+                            isMatch
+                              ? {
+                                  backgroundImage:
+                                    "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)",
+                                  boxShadow:
+                                    "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+                                  borderRadius: 12,
+                                }
+                              : { ...MATT_CARD_STYLE, borderRadius: 12 }
+                          }
+                        >
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p
+                              className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
+                            >
+                              {timeStr}
+                            </p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">
+                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              <span>{label}</span>
+                            </p>
+                            {notes ? (
+                              <p className="flex items-center gap-1.5 text-xs text-white/90">
+                                <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                                {notes}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={item.id}
@@ -415,9 +557,7 @@ export function StaffDashboard({
                         <div className="min-w-0 flex-1 px-3 py-2.5">
                           <p
                             className={`tabular-nums font-semibold ${
-                              isMatch
-                                ? "text-base text-amber-400"
-                                : "text-sm text-emerald-400"
+                              isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
                             }`}
                           >
                             {timeStr}
@@ -449,7 +589,10 @@ export function StaffDashboard({
         {/* PLAYERS – ID cards */}
         {playersWithStatus.length > 0 && (
           <div ref={statusDropdownRef}>
-            <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">Players</h2>
+            <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+              <Users className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+              Players
+            </h2>
             {statusError && (
               <p className="mb-2 text-sm text-red-400">{statusError}</p>
             )}
@@ -463,27 +606,36 @@ export function StaffDashboard({
                 const isSaving = savingPlayerId === p.id;
                 const isOpen = dropdownOpenId === p.id;
                 const isAvatarMenuOpen = avatarMenuOpenId === p.id;
+                const statusCardStyle = isHighContrast ? getStatusCardStyle(themeId, effectiveStatus) : null;
                 return (
                   <div
                     key={p.id}
                     className={`relative flex overflow-visible rounded-xl border-l-4 border transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
-                    style={{
-                      backgroundColor: "var(--card-bg)",
-                      borderRadius: CARD_RADIUS,
-                      borderColor: "var(--card-border)",
-                      boxShadow: "var(--card-shadow)",
-                    }}
+                    style={
+                      statusCardStyle
+                        ? { ...statusCardStyle, borderRadius: CARD_RADIUS }
+                        : {
+                            backgroundColor: "var(--card-bg)",
+                            borderRadius: CARD_RADIUS,
+                            borderColor: "var(--card-border)",
+                            boxShadow: "var(--card-shadow)",
+                          }
+                    }
                   >
-                    <div className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
-                      <div className={`pointer-events-none absolute inset-0 rounded-xl ${tintClass}`} />
-                      <div
-                        className="pointer-events-none absolute inset-0 rounded-xl opacity-60"
-                        style={{
-                          background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 50%)",
-                        }}
-                      />
-                    </div>
-                    <div className="relative z-10 flex min-w-0 flex-1 items-start gap-3 overflow-visible p-4">
+                    {!isHighContrast && (
+                      <div className="absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
+                        <div className={`pointer-events-none absolute inset-0 rounded-xl ${tintClass}`} />
+                        <div
+                          className="pointer-events-none absolute inset-0 rounded-xl opacity-60"
+                          style={{
+                            background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 50%)",
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div
+                      className={`relative z-10 flex min-w-0 flex-1 items-start gap-3 overflow-visible p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+                    >
                       <div className="relative shrink-0">
                         {isAdmin ? (
                           <>
@@ -520,7 +672,9 @@ export function StaffDashboard({
                                   className="h-full w-full object-cover"
                                 />
                               ) : (
-                                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-zinc-400">
+                                <div
+                                  className={`flex h-full w-full items-center justify-center text-lg font-semibold ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}
+                                >
                                   {monogram}
                                 </div>
                               )}
@@ -553,21 +707,23 @@ export function StaffDashboard({
                               </div>
                             )}
                           </>
-                        ) : (
-                          <div className="relative h-12 w-12 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
-                            {avatarUrl ? (
-                              <img
-                                src={avatarUrl}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-zinc-400">
-                                {monogram}
+                              <div className="relative h-12 w-12 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
+                                {avatarUrl ? (
+                                  <img
+                                    src={avatarUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`flex h-full w-full items-center justify-center text-lg font-semibold ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}
+                                  >
+                                    {monogram}
+                                  </div>
+                                )}
                               </div>
                             )}
-                          </div>
-                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-white">{displayName}</p>
@@ -586,7 +742,7 @@ export function StaffDashboard({
                                   setDropdownOpenId(isOpen ? null : p.id);
                                 }}
                                 disabled={isSaving}
-                                className="rounded border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+                                className={`rounded border px-2 py-0.5 text-xs disabled:opacity-50 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
                               >
                                 {isSaving ? "Saving…" : "Change status ▾"}
                               </button>
@@ -651,7 +807,10 @@ export function StaffDashboard({
                           )}
                         </div>
                         {(p.status_notes && p.status_notes.trim()) ? (
-                          <p className="mt-1.5 line-clamp-2 text-xs text-zinc-500" title={p.status_notes}>
+                          <p
+                            className={`mt-1.5 line-clamp-2 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}
+                            title={p.status_notes}
+                          >
                             {p.status_notes}
                           </p>
                         ) : null}
@@ -667,17 +826,23 @@ export function StaffDashboard({
         {/* SECTION 1 – TOP KPI ROW */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
               </span>
               Players Submitted Today
             </p>
             <p className="mt-2 text-2xl font-bold tabular-nums text-white">
-              {submitted} <span className="text-zinc-500">/ {totalPlayers}</span>
+              {submitted} <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>/ {totalPlayers}</span>
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
               <div
@@ -690,25 +855,37 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
               </span>
               Average Wellness Score Today
             </p>
-            <p className={`mt-2 text-3xl font-bold tabular-nums ${wellnessColor}`}>
+            <p className={`mt-2 text-3xl font-bold tabular-nums ${isHighContrast ? "text-white" : ""} ${wellnessColor}`}>
               {avgWellness != null ? avgWellness.toFixed(1) : "—"}
             </p>
           </div>
 
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
               </span>
@@ -718,10 +895,16 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
               <span className="text-red-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               </span>
@@ -740,8 +923,14 @@ export function StaffDashboard({
 
         {/* SECTION 2 – AT RISK PLAYERS PANEL */}
         <div
-          className="rounded-xl p-5 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)]"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+          className={`rounded-xl p-5 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={
+            themeId === "neon"
+              ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+              : themeId === "matt"
+                ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+          }
         >
           <h2 className="mb-4 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             At risk players
@@ -754,13 +943,15 @@ export function StaffDashboard({
                 const critical = w < 5 || f > 7;
                 const badge = critical ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400";
                 const leftBorder = critical ? "border-l-red-500" : "border-l-amber-500";
+                const riskStatusStyle = isHighContrast ? getStatusCardStyle(themeId, critical ? "injured" : "limited") : null;
                 return (
                   <li
                     key={p.user_id}
-                    className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border-l-4 bg-zinc-900/60 px-4 py-3 ${leftBorder}`}
+                    className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border-l-4 px-4 py-3 ${isHighContrast ? (themeId === "neon" ? "neon-card-text" : "matt-card-text") : "bg-zinc-900/60"} ${leftBorder}`}
+                    style={riskStatusStyle ? { ...riskStatusStyle, borderRadius: 8 } : undefined}
                   >
                     <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">At risk player</p>
+                      <p className={`text-xs font-medium uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>At risk player</p>
                       <Link
                         href={`/players/${p.user_id}`}
                         className="font-semibold text-white hover:text-emerald-400 hover:underline"
@@ -769,14 +960,14 @@ export function StaffDashboard({
                       </Link>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
-                        <span className="text-zinc-500">Wellness:</span> {p.wellness != null ? p.wellness.toFixed(1) : "—"}
+                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
+                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Wellness:</span> {p.wellness != null ? p.wellness.toFixed(1) : "—"}
                       </span>
-                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
-                        <span className="text-zinc-500">Fatigue:</span> {p.fatigue ?? "—"}
+                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
+                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Fatigue:</span> {p.fatigue ?? "—"}
                       </span>
-                      <span className="rounded bg-zinc-800/80 px-2 py-1 tabular-nums text-zinc-300">
-                        <span className="text-zinc-500">Load:</span> {p.load ?? 0}
+                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
+                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Load:</span> {p.load ?? 0}
                       </span>
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${badge}`}
@@ -789,7 +980,7 @@ export function StaffDashboard({
               })}
             </ul>
           ) : (
-            <p className="mt-4 rounded-lg bg-emerald-500/10 px-4 py-3 text-emerald-400">
+            <p className={`mt-4 rounded-lg px-4 py-3 ${isHighContrast ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-500/10 text-emerald-400"}`}>
               All players within safe range
             </p>
           )}
@@ -798,14 +989,20 @@ export function StaffDashboard({
         {/* SECTION 3 – MINI CHARTS ROW */}
         <div className="grid gap-4 lg:grid-cols-3">
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
+            <h3 className={`border-b pb-2 text-base font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/50"}`}>
               Last 7 days – Average wellness
             </h3>
-            <p className="mt-1 text-xs text-zinc-500">Team average</p>
-            <div className="mt-3 h-40 min-h-[160px]">
+            <p className={`mt-1 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>Team average</p>
+            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {chartDataWellness.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartDataWellness} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -815,15 +1012,18 @@ export function StaffDashboard({
                         <stop offset="100%" stopColor="#10b981" stopOpacity={1} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                    <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
-                    <YAxis stroke="#71717a" tick={{ fontSize: 10 }} domain={[0, 10]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                    <XAxis dataKey="date" stroke={chartAxisStroke} tick={chartTickStyle} />
+                    <YAxis stroke={chartAxisStroke} tick={chartTickStyle} domain={[0, 10]} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
+                        color: "#fafafa",
                       }}
+                      itemStyle={{ color: "#fafafa" }}
+                      labelStyle={{ color: "#fafafa" }}
                       formatter={(v: number) => [v.toFixed(1), "Wellness"]}
                     />
                     <Line
@@ -839,7 +1039,7 @@ export function StaffDashboard({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                <div className={`flex h-full items-center justify-center text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
                   No data
                 </div>
               )}
@@ -847,14 +1047,20 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
+            <h3 className={`border-b pb-2 text-base font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/50"}`}>
               Last 7 days – Team load
             </h3>
-            <p className="mt-1 text-xs text-zinc-500">Team total</p>
-            <div className="mt-3 h-40 min-h-[160px]">
+            <p className={`mt-1 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>Team total</p>
+            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {chartDataLoad.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartDataLoad} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -864,15 +1070,18 @@ export function StaffDashboard({
                         <stop offset="100%" stopColor="#3b82f6" stopOpacity={1} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                    <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
-                    <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                    <XAxis dataKey="date" stroke={chartAxisStroke} tick={chartTickStyle} />
+                    <YAxis stroke={chartAxisStroke} tick={chartTickStyle} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "var(--card-bg)",
                         border: "1px solid #27272a",
                         borderRadius: "8px",
+                        color: "#fafafa",
                       }}
+                      itemStyle={{ color: "#fafafa" }}
+                      labelStyle={{ color: "#fafafa" }}
                       formatter={(v: number) => [v, "Load"]}
                     />
                     <Bar
@@ -886,7 +1095,7 @@ export function StaffDashboard({
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                <div className={`flex h-full items-center justify-center text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
                   No data
                 </div>
               )}
@@ -894,17 +1103,23 @@ export function StaffDashboard({
           </div>
 
           <div
-            className="rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
-            <h3 className="border-b border-zinc-700/50 pb-2 text-base font-semibold text-white">
+            <h3 className={`border-b pb-2 text-base font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/50"}`}>
               Submission compliance %
             </h3>
-            <p className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+            <p className={`mt-1 flex items-center gap-2 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>
               <span className="text-lg font-bold tabular-nums text-emerald-400">{submissionPct}%</span>
               submitted today
             </p>
-            <div className="mt-3 h-40 min-h-[160px]">
+            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {donutData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -926,21 +1141,16 @@ export function StaffDashboard({
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--card-bg)",
-                        border: "1px solid #27272a",
-                        borderRadius: "8px",
-                      }}
-                      formatter={(v: number, name: string) => [
-                        totalPlayers ? `${Math.round((v / totalPlayers) * 100)}%` : "0%",
-                        name,
-                      ]}
+                      content={(props: { active?: boolean; payload?: Array<{ name: string; value: number }> }) => (
+                        <DonutTooltipContent {...props} totalPlayers={totalPlayers} />
+                      )}
+                      contentStyle={{ padding: 0, border: "none", background: "none" }}
                     />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                <div className={`flex h-full items-center justify-center text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
                   No players
                 </div>
               )}
@@ -952,28 +1162,40 @@ export function StaffDashboard({
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href="/wellness"
-            className="flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
             </span>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-white">Wellness summary</span>
-              <p className="mt-1 text-sm text-zinc-400">View and manage all wellness entries</p>
+              <p className={`mt-1 text-sm ${isHighContrast ? "text-white/95" : "text-zinc-400"}`}>View and manage all wellness entries</p>
             </div>
           </Link>
           <Link
             href="/rpe"
-            className="flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)]"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }}
+            className={`flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
+                  : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
+            }
           >
             <span className="text-emerald-400" aria-hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
             </span>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-white">RPE / sessions</span>
-              <p className="mt-1 text-sm text-zinc-400">View and manage RPE sessions</p>
+              <p className={`mt-1 text-sm ${isHighContrast ? "text-white/95" : "text-zinc-400"}`}>View and manage RPE sessions</p>
             </div>
           </Link>
         </div>

@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Activity, HeartPulse } from "lucide-react";
+import { Activity, Calendar, HeartPulse } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
 import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
@@ -60,6 +62,8 @@ function LocationPinIcon({ className, ...props }: { className?: string } & React
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -237,13 +241,34 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-6xl space-y-8">
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div
+          className={
+            isHighContrast
+              ? "relative overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
+              : "rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+          }
+          style={
+            themeId === "neon"
+              ? {
+                  backgroundImage:
+                    "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                  boxShadow:
+                    "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                }
+              : themeId === "matt"
+                ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16 }
+                : undefined
+          }
+        >
           <p className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
             <span>Welcome, {userDisplayName}!</span>
             <span aria-hidden>👋</span>
           </p>
           {(teamSettings?.team_name || teamSettings?.team_logo_url) && (
-            <div className="flex flex-wrap items-center gap-3">
+            <div
+              className="flex flex-wrap items-center gap-3 text-white"
+              style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
+            >
               {teamSettings?.team_name && (
                 <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
               )}
@@ -282,16 +307,28 @@ export default function DashboardPage() {
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s Schedule</h2>
+          <h2 className={`mb-4 flex items-center gap-2 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
+            <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+            Today&apos;s Schedule
+          </h2>
           <div
-            className="overflow-hidden rounded-xl border"
-            style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }}
+            className={`overflow-hidden rounded-xl border ${isHighContrast ? "border-transparent " + (themeId === "neon" ? "neon-card-text" : "matt-card-text") : ""}`}
+            style={
+              themeId === "neon"
+                ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                : themeId === "matt"
+                  ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: CARD_RADIUS }
+                  : { backgroundColor: CARD_BG, borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }
+            }
           >
             {todayScheduleItems.length === 0 ? (
-              <p className="px-5 py-6 text-zinc-400">No schedule items today.</p>
+              <p className={`px-5 py-6 ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No schedule items today.</p>
             ) : (
               <div className="overflow-x-auto p-4">
-                <div className="flex gap-3" style={{ minWidth: "min-content" }}>
+                <div
+                  className={isHighContrast ? "flex gap-5" : "flex gap-3"}
+                  style={{ minWidth: "min-content" }}
+                >
                   {todayScheduleItems.map((item) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
@@ -307,6 +344,81 @@ export default function DashboardPage() {
                       : "—";
                     const notes = item.notes?.trim();
                     const isMatch = item.activity_type === "match";
+                    if (themeId === "neon") {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
+                            isMatch ? "w-52" : "w-44"
+                          }`}
+                          style={{
+                            backgroundImage: isMatch
+                              ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
+                              : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                            boxShadow: isMatch
+                              ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
+                              : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                          }}
+                        >
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p
+                              className={`tabular-nums font-semibold text-white ${
+                                isMatch ? "text-base" : "text-sm"
+                              }`}
+                            >
+                              {timeStr}
+                            </p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">
+                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              <span>{label}</span>
+                            </p>
+                            {notes ? (
+                              <p className="flex items-center gap-1.5 text-xs text-white/90">
+                                <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                                {notes}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (themeId === "matt") {
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
+                          style={
+                            isMatch
+                              ? {
+                                  backgroundImage:
+                                    "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)",
+                                  boxShadow:
+                                    "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+                                  borderRadius: 12,
+                                }
+                              : { ...MATT_CARD_STYLE, borderRadius: 12 }
+                          }
+                        >
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                            <p
+                              className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
+                            >
+                              {timeStr}
+                            </p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">
+                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              <span>{label}</span>
+                            </p>
+                            {notes ? (
+                              <p className="flex items-center gap-1.5 text-xs text-white/90">
+                                <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                                {notes}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={item.id}
@@ -319,9 +431,7 @@ export default function DashboardPage() {
                         <div className="min-w-0 flex-1 px-3 py-2.5">
                           <p
                             className={`tabular-nums font-semibold ${
-                              isMatch
-                                ? "text-base text-amber-400"
-                                : "text-sm text-emerald-400"
+                              isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
                             }`}
                           >
                             {timeStr}
@@ -352,17 +462,29 @@ export default function DashboardPage() {
 
         {/* Today's status – Wellness & RPE only */}
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Today&apos;s status</h2>
+          <h2 className={`mb-4 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : ""}`}>Today&apos;s status</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
-                borderColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
-                borderRadius: CARD_RADIUS,
-              }}
+              className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              style={
+                themeId === "neon"
+                  ? wellnessSubmitted
+                    ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                    : {
+                        backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+                        borderRadius: CARD_RADIUS,
+                      }
+                  : themeId === "matt"
+                    ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: CARD_RADIUS }
+                    : {
+                        backgroundColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                        borderColor: wellnessSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
+                        borderRadius: CARD_RADIUS,
+                      }
+              }
             >
-              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
                 <HeartPulse className="h-4 w-4 text-emerald-400/80" aria-hidden />
                 <span>Wellness</span>
               </p>
@@ -393,14 +515,26 @@ export default function DashboardPage() {
               )}
             </div>
             <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: rpeSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
-                borderColor: rpeSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
-                borderRadius: CARD_RADIUS,
-              }}
+              className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              style={
+                themeId === "neon"
+                  ? rpeSubmitted
+                    ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+                    : {
+                        backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+                        borderRadius: CARD_RADIUS,
+                      }
+                  : themeId === "matt"
+                    ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: CARD_RADIUS }
+                    : {
+                        backgroundColor: rpeSubmitted ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                        borderColor: rpeSubmitted ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)",
+                        borderRadius: CARD_RADIUS,
+                      }
+              }
             >
-              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
                 <Activity className="h-4 w-4 text-emerald-400/80" aria-hidden />
                 <span>RPE</span>
               </p>
@@ -449,16 +583,31 @@ export default function DashboardPage() {
 
         {/* Trends: 7-day Load then 28-day (one metric at a time) */}
         <section
-          className="rounded-xl p-6"
-          style={{ backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }}
+          className={`rounded-xl p-6 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={
+            themeId === "neon"
+              ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+              : themeId === "matt"
+                ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: CARD_RADIUS }
+                : { backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }
+          }
         >
-          <h2 className="mb-4 font-semibold text-white">Trends</h2>
+          <h2 className={`mb-4 border-b pb-2 font-semibold text-white ${isHighContrast ? "border-white/25" : ""}`}>Trends</h2>
           <TrendCharts chart7={chart7} chart28={chart28} />
         </section>
 
         {/* Metrics: primary first, then collapsible detailed */}
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Metrics</h2>
+        <section
+          className={themeId === "neon" ? "rounded-xl p-6 neon-card-text" : themeId === "matt" ? "rounded-xl p-6 matt-card-text" : ""}
+          style={
+            themeId === "neon"
+              ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
+              : themeId === "matt"
+                ? { ...MATT_CARD_STYLE, border: "1px solid rgba(255,255,255,0.2)", borderRadius: CARD_RADIUS }
+                : undefined
+          }
+        >
+          <h2 className={`mb-4 text-lg font-semibold text-white ${isHighContrast ? "border-b border-white/25 pb-2" : ""}`}>Metrics</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
             <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />

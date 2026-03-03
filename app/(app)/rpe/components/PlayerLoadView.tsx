@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Activity, Clock3 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { TeamLoadBarChart } from "./LoadBarChart";
@@ -48,6 +50,8 @@ interface PlayerLoadViewProps {
 export type PlayerPeriodDays = 7 | 14 | 28;
 
 export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps) {
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [periodDays, setPeriodDays] = useState<PlayerPeriodDays>(7);
 
@@ -82,7 +86,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
             <Activity className="h-6 w-6 text-emerald-400" aria-hidden />
             <span>RPE / Load</span>
           </h1>
-          <p className="mt-1 text-zinc-400">
+          <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
             Your sessions and load. Log duration and RPE; load is calculated automatically.
           </p>
         </div>
@@ -91,10 +95,10 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
         {/* Date */}
         <div
-          className="flex flex-wrap items-center gap-4 rounded-xl p-4"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className={`flex flex-wrap items-center gap-4 rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
         >
-          <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <label className={`flex items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
             Date
             <input
               type="date"
@@ -114,7 +118,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
         {/* Overview – your load */}
         <section className="space-y-3">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
             Overview
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
@@ -129,17 +133,17 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
         {/* Charts – your load 7/14/28 days */}
         <section className="space-y-3">
-          <h2 className="border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
+          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
             Charts
           </h2>
           <div className="flex flex-col gap-4">
             <div
-              className="rounded-xl p-4"
-              style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+              className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
             >
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
-                <span className="text-center text-base font-bold uppercase tracking-wide text-zinc-200">
+                <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
                   My load (7 / 14 / 28 days)
                 </span>
                 <div className="flex w-fit justify-end flex-nowrap items-center gap-0.5 rounded-lg border border-zinc-700 bg-zinc-800/50 p-1">
@@ -171,42 +175,42 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
         {/* Recent sessions table */}
         <section className="space-y-2">
-          <h2 className="flex items-center gap-2 border-b border-zinc-700 pb-2 text-sm font-bold uppercase tracking-wider text-zinc-200">
+          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
             <Clock3 className="h-4 w-4 text-emerald-400" aria-hidden />
             <span>Recent sessions</span>
           </h2>
           <div
-            className="overflow-hidden rounded-xl"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
           >
             {list.length === 0 ? (
-              <p className="py-8 text-center text-zinc-400">No sessions yet.</p>
+              <p className={`py-8 text-center ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-zinc-900/95">
-                    <tr className="border-b border-zinc-700 text-zinc-400">
+                  <thead className={isHighContrast ? "bg-white/5" : "bg-zinc-900/95"}>
+                    <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
                       <th className="px-4 py-3 font-medium">Date</th>
                       <th className="px-4 py-3 font-medium">Duration (min)</th>
                       <th className="px-4 py-3 font-medium">RPE</th>
                       <th className="px-4 py-3 font-medium">Load</th>
                     </tr>
                   </thead>
-                  <tbody className="text-zinc-300">
+                  <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
                     {list.slice(0, 28).map((r, index) => {
                       const isFirst = index === 0;
                       return (
                         <tr
                           key={r.id}
-                          className={`border-b border-zinc-800 ${
-                            isFirst ? "bg-zinc-900/40" : "hover:bg-zinc-900/30"
+                          className={`border-b ${isHighContrast ? "border-white/10" : "border-zinc-800"} ${
+                            isFirst ? (isHighContrast ? "bg-white/5" : "bg-zinc-900/40") : isHighContrast ? "hover:bg-white/5" : "hover:bg-zinc-900/30"
                           }`}
                         >
-                          <td className="px-4 py-3 text-sm text-zinc-300">{r.date}</td>
-                          <td className="px-4 py-3 tabular-nums text-sm text-zinc-200">{r.duration}</td>
+                          <td className="px-4 py-3 text-sm">{r.date}</td>
+                          <td className="px-4 py-3 tabular-nums text-sm">{r.duration}</td>
                           <td className="px-4 py-3">
                             {r.rpe == null ? (
-                              <span className="text-zinc-400">—</span>
+                              <span className={isHighContrast ? "text-white/60" : "text-zinc-400"}>—</span>
                             ) : (
                               <span
                                 className={`inline-flex min-w-[2rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${rpeBadgeClass(
@@ -217,7 +221,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm tabular-nums text-zinc-100">{r.load ?? "—"}</td>
+                          <td className="px-4 py-3 text-sm tabular-nums">{r.load ?? "—"}</td>
                         </tr>
                       );
                     })}

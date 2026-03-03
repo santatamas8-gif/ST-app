@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import {
   getScheduleForMonth,
   addScheduleItem,
@@ -121,6 +123,8 @@ function buildCalendarGrid(year: number, month: number): (string | null)[][] {
 }
 
 export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolean; isAdmin?: boolean }) {
+  const { themeId } = useTheme();
+  const isHighContrast = themeId === "neon" || themeId === "matt";
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -306,8 +310,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   return (
     <div className="space-y-6">
       {!canEdit && (
-        <div className="rounded-xl border px-4 py-3" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
-          <p className="text-sm font-medium text-zinc-400">Next session</p>
+        <div
+          className={`rounded-xl border px-4 py-3 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+          style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
+        >
+          <p className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>Next session</p>
           <p className="mt-1 text-base font-semibold text-white">
             {nextSessionSummary ?? "No upcoming sessions"}
           </p>
@@ -318,7 +325,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700"
+          className={`rounded-lg border px-4 py-2.5 text-sm font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
         >
           ← Prev
         </button>
@@ -326,18 +333,21 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         <button
           type="button"
           onClick={handleNextMonth}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-700"
+          className={`rounded-lg border px-4 py-2.5 text-sm font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
         >
           Next →
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
+      <div
+        className={`overflow-x-auto rounded-xl border ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+        style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
+      >
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-zinc-700">
+            <tr className={isHighContrast ? "border-b border-white/20" : "border-b border-zinc-700"}>
               {WEEKDAYS.map((d) => (
-                <th key={d} className="px-2 py-3 text-center font-medium text-zinc-400">
+                <th key={d} className={`px-2 py-3 text-center font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
                   {d}
                 </th>
               ))}
@@ -357,11 +367,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       ? "bg-amber-500/15 ring-2 ring-amber-400"
                       : isNextSession
                         ? "bg-emerald-500/15 ring-2 ring-emerald-400"
-                        : "hover:bg-zinc-800";
+                        : isHighContrast ? "hover:bg-white/10" : "hover:bg-zinc-800";
                   return (
                     <td
                       key={ci}
-                      className="border-b border-zinc-800 p-2"
+                      className={`border-b p-2 ${isHighContrast ? "border-white/10" : "border-zinc-800"}`}
                     >
                       {date ? (
                         <button
@@ -369,7 +379,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                           onClick={() => setSelectedDate(date)}
                           className={`flex h-16 w-full flex-col items-center justify-center rounded-lg text-center transition ${dayClass}`}
                         >
-                          <span className={`text-sm font-medium ${isToday ? "text-amber-300" : "text-zinc-300"}`}>
+                          <span className={`text-sm font-medium ${isToday ? "text-amber-300" : isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
                             {date.slice(8)}
                             {isToday && <span className="ml-1 text-xs text-amber-400">Today</span>}
                           </span>
@@ -397,10 +407,13 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
           <p className="mt-1 text-sm text-zinc-400">{loadError}</p>
         </div>
       )}
-      {loading && <p className="text-sm text-zinc-500">Loading…</p>}
+      {loading && <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Loading…</p>}
 
       {selectedDate && (
-        <div className="rounded-xl border p-5" style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}>
+        <div
+          className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+          style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
+        >
           <h2 className="mb-4 text-lg font-semibold text-white">
             Program for {selectedDate}{getDateContextLabel(selectedDate)}
           </h2>
@@ -421,7 +434,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
               return (
                 <li
                   key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-zinc-200"
+                  className={`flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 font-medium text-white text-sm">
@@ -468,12 +481,12 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       )
                     )}
                     {item.notes?.trim() ? (
-                      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
-                        <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                      <p className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                        <LocationPinIcon className={`h-3.5 w-3.5 shrink-0 ${isHighContrast ? "text-white/60" : "text-zinc-500"}`} />
                         {item.notes.trim()}
                       </p>
                     ) : null}
-                    <p className="text-xs text-zinc-400">
+                    <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                       {timeStr != null ? timeStr : isAdmin && !isEditing ? (
                         <button
                           type="button"
