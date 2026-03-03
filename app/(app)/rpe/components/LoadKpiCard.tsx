@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useTheme } from "@/components/ThemeProvider";
-import { NEON_CARD_STYLE } from "@/lib/themes";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 
 const CARD_RADIUS = "12px";
 
