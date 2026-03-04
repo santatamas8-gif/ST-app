@@ -11,7 +11,12 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getAppUser();
+  let user;
+  try {
+    user = await getAppUser();
+  } catch {
+    redirect("/login");
+  }
   if (!user) redirect("/login");
 
   let todoToday: { wellnessDone: boolean; rpeDone: boolean } | null = null;

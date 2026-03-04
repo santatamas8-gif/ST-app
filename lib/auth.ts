@@ -29,25 +29,29 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 }
 
 export async function getAppUser() {
-  const user = await getAuthUser();
-  if (!user) return null;
-  let role = await getUserRole(user.id);
-  if (role === null) {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from(ROLES_TABLE)
-      .upsert(
-        { id: user.id, role: "player", email: user.email ?? "" },
-        { onConflict: "id" }
-      );
-    if (!error) role = "player";
-    if (role === null) role = "player";
+  try {
+    const user = await getAuthUser();
+    if (!user) return null;
+    let role = await getUserRole(user.id);
+    if (role === null) {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from(ROLES_TABLE)
+        .upsert(
+          { id: user.id, role: "player", email: user.email ?? "" },
+          { onConflict: "id" }
+        );
+      if (!error) role = "player";
+      if (role === null) role = "player";
+    }
+    return {
+      id: user.id,
+      email: user.email ?? "",
+      role,
+    };
+  } catch {
+    return null;
   }
-  return {
-    id: user.id,
-    email: user.email ?? "",
-    role,
-  };
 }
 
 export function isAdmin(role: UserRole): boolean {

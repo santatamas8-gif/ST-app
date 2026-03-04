@@ -28,6 +28,11 @@ export default function AppError({
           <p className="mt-2 text-sm text-zinc-400">
             We couldn&apos;t load this page. Please try again.
           </p>
+          {error.message && (
+            <p className="mt-2 max-h-20 overflow-auto break-all text-xs text-zinc-500" title="Error details">
+              {error.message}
+            </p>
+          )}
           <button
             type="button"
             onClick={reset}
