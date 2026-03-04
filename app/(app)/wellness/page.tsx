@@ -2,6 +2,7 @@ import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import type { WellnessRow } from "@/lib/types";
+import { MobileWellnessList } from "@/components/mobile/MobileWellnessList";
 import { StaffWellnessView } from "./components/StaffWellnessView";
 import { WellnessPlayerContent } from "./components/WellnessPlayerContent";
 
@@ -99,12 +100,25 @@ export default async function WellnessPage() {
   }
 
   return (
-    <StaffWellnessView
-      list={list}
-      emailByUserId={emailByUserId}
-      displayNameByUserId={displayNameByUserId}
-      totalPlayers={totalPlayers}
-      allPlayerIds={allPlayerIds}
-    />
+    <>
+      <div className="md:hidden">
+        <MobileWellnessList
+          list={list}
+          emailByUserId={emailByUserId}
+          displayNameByUserId={displayNameByUserId}
+          totalPlayers={totalPlayers}
+          allPlayerIds={allPlayerIds}
+        />
+      </div>
+      <div className="hidden md:block">
+        <StaffWellnessView
+          list={list}
+          emailByUserId={emailByUserId}
+          displayNameByUserId={displayNameByUserId}
+          totalPlayers={totalPlayers}
+          allPlayerIds={allPlayerIds}
+        />
+      </div>
+    </>
   );
 }
