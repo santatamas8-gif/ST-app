@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Activity, Calendar, Flag, HeartPulse, Pause, Play, Users } from "lucide-react";
+import { Activity, Calendar, Flag, HeartPulse, Pause, Play, Users, X } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
@@ -152,18 +153,85 @@ export function StaffDashboard({
   const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
+  const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
+  const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
+  const playersSheetDropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownOpenIdRef = useRef<string | null>(null);
+  dropdownOpenIdRef.current = dropdownOpenId;
   const isMobile = useIsMobile();
+
+  const [visualViewportBox, setVisualViewportBox] = useState<{ height: number; offsetTop: number }>(() =>
+    typeof window !== "undefined" && window.visualViewport
+      ? { height: window.visualViewport.height, offsetTop: window.visualViewport.offsetTop }
+      : { height: 400, offsetTop: 0 }
+  );
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => setVisualViewportBox({ height: vv.height, offsetTop: vv.offsetTop });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  const playersStatusSummaryItems = useMemo(() => {
+    const counts: Record<string, number> = {};
+    STATUS_OPTIONS.forEach((o) => { counts[o.value] = 0; });
+    playersWithStatus.forEach((p) => {
+      const s = statusOverrides[p.id] ?? p.status;
+      if (counts[s] !== undefined) counts[s]++;
+      else counts[s] = 1;
+    });
+    return STATUS_OPTIONS.filter((o) => (counts[o.value] ?? 0) > 0).map((o) => ({ label: o.label, count: counts[o.value] ?? 0, badgeClass: o.badgeClass }));
+  }, [playersWithStatus, statusOverrides]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inRef = statusDropdownRef.current?.contains(target);
+      const inSheetDropdown = playersSheetDropdownRef.current?.contains(target);
+      if (inSheetDropdown) return;
+      if (inRef && dropdownOpenIdRef.current) {
+        setDropdownOpenId(null);
+        setDropdownSheetButtonRect(null);
+        return;
+      }
+      if (!inRef) {
         setDropdownOpenId(null);
         setAvatarMenuOpenId(null);
+        setDropdownSheetButtonRect(null);
+        setPlayersSheetOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!playersSheetOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [playersSheetOpen]);
+
+  useEffect(() => {
+    if (!dropdownOpenId) return;
+    const preventTouch = (e: TouchEvent) => {
+      if (playersSheetDropdownRef.current && e.target instanceof Node && playersSheetDropdownRef.current.contains(e.target)) return;
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", preventTouch, { passive: false });
+    return () => document.removeEventListener("touchmove", preventTouch);
+  }, [dropdownOpenId]);
 
   useEffect(() => {
     if (todayScheduleItems.length === 0 || scheduleAutoPaused) return;
@@ -264,6 +332,7 @@ export function StaffDashboard({
 
   async function onStatusSave(p: PlayerWithStatus) {
     setDropdownOpenId(null);
+    setDropdownSheetButtonRect(null);
     setStatusOverrides((prev) => ({ ...prev, [p.id]: pendingStatusValue }));
     setPendingStatusPlayerId(null);
     setPendingStatusValue("");
@@ -654,7 +723,7 @@ export function StaffDashboard({
           themeId={themeId ?? "dark"}
         />
 
-        {/* PLAYERS – ID cards */}
+        {/* PLAYERS – ID cards (desktop) / summary + sheet (mobile) */}
         {playersWithStatus.length > 0 && (
           <div ref={statusDropdownRef}>
             <h2 className="mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
@@ -664,7 +733,39 @@ export function StaffDashboard({
             {statusError && (
               <p className="mb-2 text-sm text-red-400">{statusError}</p>
             )}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            {/* Mobile only: summary (themed) + open sheet */}
+            <div className="md:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-1.5 text-sm">
+                {playersStatusSummaryItems.map((item) => (
+                  <span key={item.label} className={`rounded px-2 py-0.5 text-xs font-medium ${item.badgeClass}`}>
+                    {item.count} {item.label}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlayersSheetOpen(true)}
+                className={`w-full rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                  themeId === "neon"
+                    ? "border border-emerald-500/30 bg-emerald-500/10 text-white hover:bg-emerald-500/15"
+                    : themeId === "matt"
+                      ? "border border-white/20 bg-white/5 text-white hover:bg-white/10"
+                      : themeId === "green"
+                        ? "border border-emerald-500/40 bg-emerald-500/10 text-white hover:bg-emerald-500/20"
+                        : themeId === "red"
+                          ? "border border-red-500/30 bg-red-500/10 text-white hover:bg-red-500/15"
+                          : themeId === "blue"
+                            ? "border border-blue-500/30 bg-blue-500/10 text-white hover:bg-blue-500/15"
+                            : themeId === "light"
+                              ? "border border-zinc-400 bg-zinc-200/90 text-zinc-900 hover:bg-zinc-300"
+                              : "border border-zinc-600 bg-zinc-800/80 text-white hover:bg-zinc-700"
+                }`}
+              >
+                All players
+              </button>
+            </div>
+            {/* Desktop: full grid (unchanged) */}
+            <div className="hidden grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4 md:grid">
               {playersWithStatus.map((p) => {
                 const effectiveStatus = statusOverrides[p.id] ?? p.status;
                 const { pillClass, badgeClass, label, ringClass, tintClass, borderLClass } = getStatusStyle(effectiveStatus);
@@ -888,11 +989,306 @@ export function StaffDashboard({
                 );
               })}
             </div>
+
+            {/* Mobile only: Players bottom sheet */}
+            {playersSheetOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 overflow-hidden md:hidden"
+                  style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.98) 50%, black 100%)", touchAction: "none" }}
+                  aria-hidden
+                  onTouchMove={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setPlayersSheetOpen(false);
+                    setDropdownOpenId(null);
+                    setDropdownSheetButtonRect(null);
+                  }}
+                />
+                <div
+                  className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-t border-zinc-700/80 shadow-2xl md:hidden"
+                  style={{
+                    height: "calc(85vh + env(safe-area-inset-bottom, 0px))",
+                    minHeight: "85vh",
+                    paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                    ...(themeId === "neon"
+                      ? { background: "linear-gradient(135deg, #041311, #020617)", borderColor: "rgba(255,255,255,0.08)" }
+                      : themeId === "matt"
+                        ? { ...MATT_CARD_STYLE, borderColor: "rgba(255,255,255,0.2)" }
+                        : { backgroundColor: "var(--card-bg)" }),
+                  }}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="players-sheet-title"
+                >
+                  <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+                    <h2 id="players-sheet-title" className="flex items-center gap-2 text-lg font-semibold text-white">
+                      <Users className="h-5 w-5 shrink-0 text-white/90" aria-hidden />
+                      All players
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlayersSheetOpen(false);
+                        setDropdownOpenId(null);
+                        setDropdownSheetButtonRect(null);
+                      }}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                      aria-label="Close"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div
+                    className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8"
+                    style={{
+                      paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+                      minHeight: 0,
+                      ...(themeId === "neon"
+                        ? { background: "linear-gradient(135deg, #041311, #020617)" }
+                        : themeId === "matt"
+                          ? MATT_CARD_STYLE
+                          : { backgroundColor: "var(--card-bg)" }),
+                    }}
+                  >
+                    <ul className="flex flex-col gap-2">
+                      {playersWithStatus.map((p) => {
+                        const effectiveStatus = statusOverrides[p.id] ?? p.status;
+                        const { badgeClass, label, borderLClass } = getStatusStyle(effectiveStatus);
+                        const displayName = (p.full_name && p.full_name.trim()) || p.email;
+                        const avatarUrl = avatarOverrides[p.id] ?? p.avatar_url ?? null;
+                        const monogram = (displayName[0] ?? "?").toUpperCase();
+                        const isSaving = savingPlayerId === p.id;
+                        const isOpen = dropdownOpenId === p.id;
+                        const statusCardStyle = isHighContrast ? getStatusCardStyle(themeId, effectiveStatus) : null;
+                        return (
+                          <li
+                            key={p.id}
+                            className={`flex items-center gap-3 rounded-xl border-l-4 py-2.5 pr-2 pl-3 ${isOpen ? "z-10" : ""} ${!statusCardStyle ? borderLClass : ""}`}
+                            style={
+                              statusCardStyle
+                                ? { ...statusCardStyle, borderRadius: 10 }
+                                : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }
+                            }
+                          >
+                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <div className={`flex h-full w-full items-center justify-center text-sm font-semibold ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                                  {monogram}
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-white">{displayName}</p>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeClass}`}>{label}</span>
+                                {isAdmin && (
+                                  <div className="relative inline-block">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        setAvatarMenuOpenId(null);
+                                        setStatusError(null);
+                                        setPendingStatusPlayerId(null);
+                                        const opening = !isOpen;
+                                        setDropdownOpenId(opening ? p.id : null);
+                                        if (opening) {
+                                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                          setDropdownSheetButtonRect({ top: rect.top, left: rect.left, bottom: rect.bottom });
+                                        } else {
+                                          setDropdownSheetButtonRect(null);
+                                        }
+                                      }}
+                                      disabled={isSaving}
+                                      className={`rounded border px-2 py-0.5 text-xs disabled:opacity-50 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
+                                    >
+                                      {isSaving ? "Saving…" : "Status ▾"}
+                                    </button>
+                                    {/* In-sheet dropdown is rendered via portal below so it is not clipped */}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+                {/* Portal: status dropdown so it is not clipped by sheet scroll (mobile) */}
+                {playersSheetOpen &&
+                  dropdownOpenId &&
+                  dropdownSheetButtonRect &&
+                  (() => {
+                    const p = playersWithStatus.find((x) => x.id === dropdownOpenId);
+                    if (!p) return null;
+                    const effectiveStatus = statusOverrides[p.id] ?? p.status;
+                    const isNotesStep = pendingStatusPlayerId === p.id;
+                    const vv = visualViewportBox;
+                    const winW = typeof window !== "undefined" ? window.innerWidth : 400;
+                    const spaceBelow = vv.offsetTop + vv.height - (dropdownSheetButtonRect.bottom + 4) - 16;
+                    const optionsMaxH = Math.max(120, Math.min(320, spaceBelow));
+                    const optionsTop = Math.max(vv.offsetTop + 8, dropdownSheetButtonRect.bottom + 4);
+                    return createPortal(
+                      <div
+                        ref={playersSheetDropdownRef}
+                        className={`fixed z-[100] rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl ${isNotesStep ? "w-[min(92vw,340px)] p-3 pb-4" : "w-64 overflow-y-auto rounded-lg p-2"}`}
+                        style={{
+                          top: isNotesStep ? Math.max(12, vv.offsetTop + 8) : optionsTop,
+                          left: isNotesStep
+                            ? "50%"
+                            : Math.max(8, Math.min(dropdownSheetButtonRect.left, winW - 272)),
+                          transform: isNotesStep ? "translateX(-50%)" : undefined,
+                          maxHeight: isNotesStep ? Math.min(320, vv.height - 40) : optionsMaxH,
+                          overflow: isNotesStep ? "visible" : undefined,
+                        }}
+                      >
+                        {isNotesStep ? (
+                          <div className="flex min-h-0 flex-col">
+                            <p className="mb-1.5 shrink-0 text-xs text-zinc-400">
+                              Status: <span className="font-semibold text-white">{STATUS_OPTIONS.find((o) => o.value === pendingStatusValue)?.label ?? pendingStatusValue}</span>
+                            </p>
+                            <label className="mb-1 shrink-0 text-xs font-medium text-zinc-400">Notes (optional)</label>
+                            <textarea
+                              value={pendingNotes}
+                              onChange={(e) => setPendingNotes(e.target.value)}
+                              placeholder="e.g. ankle, 2 weeks"
+                              rows={2}
+                              className="mb-3 shrink-0 w-full resize-none rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                            />
+                            <div className="flex shrink-0 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingStatusPlayerId(null);
+                                  setPendingStatusValue("");
+                                  setPendingNotes("");
+                                }}
+                                className="flex-1 rounded-lg border border-zinc-600 px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+                              >
+                                Back
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onStatusSave(p)}
+                                className="flex-1 rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {STATUS_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => onStatusSelect(p, opt.value)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                              >
+                                {opt.label}
+                                {effectiveStatus === opt.value && (
+                                  <span className="text-emerald-400" aria-hidden>✓</span>
+                                )}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>,
+                      document.body
+                    );
+                  })()}
+              </>
+            )}
           </div>
         )}
 
         {/* SECTION 1 – TOP KPI ROW */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Mobile: 2×2 circles with circular progress strip (ring) on edge; High risk = red ring */}
+        {(() => {
+          const R = 17;
+          const C = 2 * Math.PI * R;
+          const ringStroke = 3;
+          const trackColor = themeId === "neon" ? "rgba(255,255,255,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.08)" : "#3f3f46";
+          const greenColor = themeId === "neon" ? "#10b981" : themeId === "matt" ? "rgba(255,255,255,0.35)" : "#22c55e";
+          const redColor = themeId === "neon" ? "#ef4444" : themeId === "matt" ? "rgba(239,68,68,0.8)" : "#ef4444";
+          const pctSubmitted = totalPlayers ? (submitted / totalPlayers) * 100 : 0;
+          const pctWellness = avgWellness != null ? Math.min(100, (avgWellness / 10) * 100) : 0;
+          const pctLoad = 0;
+          return (
+            <div
+              className={`mt-6 border-t pt-6 md:mt-0 md:border-t-0 md:pt-0 ${isHighContrast ? "border-white/15" : "border-zinc-700/80"}`}
+            >
+              <p className={`mb-4 text-center text-xs font-medium uppercase tracking-wide md:hidden ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                Today
+              </p>
+              <div className="grid grid-cols-2 gap-6 md:hidden">
+              {[
+                {
+                  pct: pctSubmitted,
+                  stroke: greenColor,
+                  label: "Submitted",
+                  value: `${submitted}/${totalPlayers}`,
+                  innerBg: themeId === "neon" ? "rgba(16,185,129,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.06)" : undefined,
+                },
+                {
+                  pct: pctWellness,
+                  stroke: greenColor,
+                  label: "Wellness",
+                  value: avgWellness != null ? avgWellness.toFixed(1) : "—",
+                  innerBg: themeId === "neon" ? "rgba(16,185,129,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.06)" : undefined,
+                },
+                {
+                  pct: pctLoad,
+                  stroke: greenColor,
+                  label: "Load",
+                  value: String(totalLoad),
+                  innerBg: themeId === "neon" ? "rgba(16,185,129,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.06)" : undefined,
+                },
+                {
+                  pct: highRiskCount > 0 ? 100 : 0,
+                  stroke: redColor,
+                  label: "High risk",
+                  value: String(highRiskCount),
+                  innerBg: highRiskCount > 0 ? (themeId === "neon" ? "rgba(239,68,68,0.12)" : themeId === "matt" ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.1)") : themeId === "neon" ? "rgba(16,185,129,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.06)" : undefined,
+                },
+              ].map((item, idx) => (
+                <div key={idx} className="flex flex-col items-center">
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
+                    <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40">
+                      <circle cx="20" cy="20" r={R} fill="none" stroke={trackColor} strokeWidth={ringStroke} />
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r={R}
+                        fill="none"
+                        stroke={item.stroke}
+                        strokeWidth={ringStroke}
+                        strokeLinecap="round"
+                        strokeDasharray={`${(item.pct / 100) * C} ${C}`}
+                        strokeDashoffset={0}
+                      />
+                    </svg>
+                    <div
+                      className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full text-base font-bold tabular-nums text-white ${!item.innerBg ? "bg-zinc-800/95" : ""}`}
+                      style={item.innerBg ? { backgroundColor: item.innerBg } : undefined}
+                    >
+                      {item.value}
+                    </div>
+                  </div>
+                  <p className={`mt-2 text-center text-xs font-medium ${isHighContrast ? "text-white/85" : "text-zinc-400"}`}>
+                    {item.label}
+                  </p>
+                </div>
+              ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Desktop: full KPI cards */}
+        <div className="hidden grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:grid">
           <div
             className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
@@ -989,9 +1385,9 @@ export function StaffDashboard({
           </div>
         </div>
 
-        {/* SECTION 2 – AT RISK PLAYERS PANEL */}
+        {/* SECTION 2 – AT RISK PLAYERS PANEL (desktop only; on mobile the High risk circle is enough) */}
         <div
-          className={`w-full rounded-xl p-4 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          className={`hidden w-full rounded-xl p-4 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] md:block md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={
             themeId === "neon"
               ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }

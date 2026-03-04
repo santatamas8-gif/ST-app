@@ -68,15 +68,28 @@ type ScheduleBottomSheetProps = {
 export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleBottomSheetProps) {
   const isHighContrast = themeId === "neon" || themeId === "matt";
 
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
     <>
-      {/* Backdrop – only visible on mobile; darker at bottom so players (green) don't show through */}
+      {/* Backdrop – only visible on mobile; no scroll/touch through */}
       <div
-        className="fixed inset-0 z-40 md:hidden"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.98) 50%, black 100%)" }}
+        className="fixed inset-0 z-40 overflow-hidden md:hidden"
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.98) 50%, black 100%)", touchAction: "none" }}
         aria-hidden
+        onTouchMove={(e) => e.preventDefault()}
         onClick={onClose}
       />
       {/* Sheet panel – fixed height from bottom so nothing shows under the list */}
