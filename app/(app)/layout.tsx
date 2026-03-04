@@ -14,11 +14,20 @@ export default async function AppLayout({
   const user = await getAppUser();
   if (!user) redirect("/login");
 
-  const todoToday =
-    user.role === "player"
-      ? await getPlayerCheckInStatus(user.id)
-      : null;
-  const unreadChatCount = await getUnreadTotal();
+  let todoToday: { wellnessDone: boolean; rpeDone: boolean } | null = null;
+  let unreadChatCount = 0;
+  try {
+    if (user.role === "player") {
+      todoToday = await getPlayerCheckInStatus(user.id);
+    }
+  } catch {
+    // Player check-in status optional for layout; sidebar shows no dots
+  }
+  try {
+    unreadChatCount = await getUnreadTotal();
+  } catch {
+    // Unread count optional; sidebar shows 0
+  }
   const canAccessUsers = isAdmin(user.role) || (user.role === "staff" && isImmutableAdminEmail(user.email));
 
   return (
