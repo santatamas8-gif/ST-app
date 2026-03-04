@@ -1,2 +1,2 @@
-# Csak a web app kell a Vercel buildnek; a mobil (Expo) külön projekt
-mobile
+# Csak a web app kell a Vercel buildnek; a mobil (Expo) külön projekt – csak gyökér /mobile
+/mobile
