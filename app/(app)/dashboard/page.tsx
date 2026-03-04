@@ -112,6 +112,26 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const scheduleScrollRef = useRef<HTMLDivElement>(null);
+  const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
+  const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
+  const todayScheduleItemsForEffect = data?.todayScheduleItems ?? [];
+  useEffect(() => {
+    if (todayScheduleItemsForEffect.length === 0 || scheduleAutoPaused) return;
+    const el = scheduleScrollRef.current;
+    if (!el) return;
+    const step = 1;
+    const interval = setInterval(() => {
+      if (!scheduleScrollRef.current || !scheduleFirstPartRef.current) return;
+      const el_ = scheduleScrollRef.current;
+      const threshold = scheduleFirstPartRef.current.offsetWidth;
+      if (threshold <= 0) return;
+      el_.scrollLeft += step;
+      if (el_.scrollLeft >= threshold) el_.scrollLeft -= threshold;
+    }, 50);
+    return () => clearInterval(interval);
+  }, [todayScheduleItemsForEffect.length, scheduleAutoPaused]);
+
   if (loading) {
     return (
       <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
@@ -237,25 +257,6 @@ export default function DashboardPage() {
 
   const teamSettings = data.teamSettings;
   const userDisplayName = data.userDisplayName ?? "User";
-
-  const scheduleScrollRef = useRef<HTMLDivElement>(null);
-  const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
-  const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
-  useEffect(() => {
-    if (todayScheduleItems.length === 0 || scheduleAutoPaused) return;
-    const el = scheduleScrollRef.current;
-    if (!el) return;
-    const step = 1;
-    const interval = setInterval(() => {
-      if (!scheduleScrollRef.current || !scheduleFirstPartRef.current) return;
-      const el_ = scheduleScrollRef.current;
-      const threshold = scheduleFirstPartRef.current.offsetWidth;
-      if (threshold <= 0) return;
-      el_.scrollLeft += step;
-      if (el_.scrollLeft >= threshold) el_.scrollLeft -= threshold;
-    }, 50);
-    return () => clearInterval(interval);
-  }, [todayScheduleItems.length, scheduleAutoPaused]);
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
