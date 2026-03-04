@@ -19,7 +19,7 @@ export default async function PlayersListPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Players</h1>
+        <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Players</h1>
         <p className="mt-1 text-zinc-400">
           All players in the app. Click a name to set availability (Available / Injured / Unavailable) per day.
         </p>

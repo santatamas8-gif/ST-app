@@ -28,7 +28,7 @@ export function WellnessPlayerContent({
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Wellness</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>
           <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
             Submit once per day. All scales are 1 to 10{" "}
             <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>

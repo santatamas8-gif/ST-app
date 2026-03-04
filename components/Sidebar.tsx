@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -46,7 +46,19 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   const pathname = usePathname();
   const { themeId, setThemeId } = useTheme();
   const [themePopoverOpen, setThemePopoverOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const themePopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (!themePopoverOpen) return;
@@ -117,6 +129,10 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     (item) => !HEADER_ONLY_HREFS.includes(item.href)
   );
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   const needsTodo = (href: string) => {
     if (!todoToday) return false;
     if (href === "/wellness") return !todoToday.wellnessDone;
@@ -139,16 +155,85 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     </>
   );
 
+  const mobileDrawer = (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/60 md:hidden"
+        aria-hidden
+        onClick={() => setMobileMenuOpen(false)}
+      />
+      <div
+        className="fixed inset-y-0 left-0 z-50 flex w-full max-w-[280px] flex-col md:hidden"
+        style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
+        role="dialog"
+        aria-label="Navigation menu"
+      >
+        <div className={`flex h-14 items-center justify-between border-b px-4 ${sidebarBorderClass}`}>
+          <span className={`text-lg font-bold tracking-tight ${isNeon ? "text-emerald-400/90" : isLight ? "text-zinc-900" : "text-white"}`}>Menu</span>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <nav className="flex-1 space-y-0.5 overflow-auto p-3">
+          {sidebarNavItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex min-h-[48px] items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
+                  isActive ? activeNavClass : inactiveNavClass
+                }`}
+              >
+                {linkContent(item)}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className={`border-t p-3 ${sidebarBorderClass}`}>
+          <p className={`truncate px-3 py-2 text-xs ${sidebarMutedClass}`} title={userEmail}>{userEmail}</p>
+          <p className={`px-3 text-xs font-medium capitalize ${sidebarLabelClass}`}>{role}</p>
+          <form action="/api/auth/signout" method="post" className="mt-2">
+            <button
+              type="submit"
+              className={`flex min-h-[48px] w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${sidebarMutedClass} ${signOutHoverClass}`}
+            >
+              <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+
   return (
+    <>
     <aside
       className={`flex w-full flex-col border-b md:h-full md:w-64 md:border-b-0 md:border-r ${sidebarBorderClass}`}
       style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
     >
-      <div className={`flex h-14 items-center justify-between gap-2 border-b px-4 md:h-16 md:px-5 ${sidebarBorderClass}`}>
-        <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
-          ST AMS
-        </Link>
-        <div className="flex items-center gap-1.5 md:gap-2 md:ml-auto">
+      <div className={`flex h-14 min-h-[44px] items-center justify-between gap-2 border-b px-3 py-2 md:h-16 md:px-5 ${sidebarBorderClass}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-initial">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition md:hidden ${headerIconClass(false)}`}
+            aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+            ST AMS
+          </Link>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
           <Link
             href="/chat"
             className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
@@ -185,7 +270,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             </button>
             {themePopoverOpen && (
               <div
-                className={`absolute left-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`}
+                className={`absolute right-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`}
                 style={{ borderRadius: "10px" }}
               >
                 {THEMES.map((t) => (
@@ -208,22 +293,6 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             )}
           </div>
         </div>
-        <nav className="flex gap-1 md:hidden shrink-0">
-          {sidebarNavItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex min-h-[44px] items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition ${
-                  isActive ? activeNavClass : inactiveNavClass
-                }`}
-              >
-                {linkContent(item)}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
       <nav className="hidden flex-1 space-y-0.5 p-3 md:block">
         {sidebarNavItems.map((item) => {
@@ -258,7 +327,8 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           </button>
         </form>
       </div>
-      <div className={`flex flex-col gap-2 border-t px-4 py-2 md:hidden ${sidebarBorderClass}`}>
+      {/* Email + Sign out on mobile: only in drawer (hamburger menu), not below header */}
+      <div className={`hidden border-t px-4 py-2 md:hidden ${sidebarBorderClass}`} aria-hidden>
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <p className={`truncate text-xs ${sidebarMutedClass}`} title={userEmail}>{userEmail}</p>
@@ -276,5 +346,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         </div>
       </div>
     </aside>
+    {mobileMenuOpen && mobileDrawer}
+    </>
   );
 }

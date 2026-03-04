@@ -107,10 +107,10 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
     >
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
             Users
           </h1>
-          <p className="mt-1 text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-400 sm:text-base">
             Create staff and player accounts. Edit names and roles. All UI in English.
           </p>
         </div>
@@ -177,9 +177,9 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
           </div>
         )}
 
-        {/* Toolbar */}
+        {/* Toolbar: stacked on mobile, row on md+; touch-friendly */}
         <div
-          className="flex flex-wrap items-center gap-4 rounded-xl p-4"
+          className="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
           style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           <input
@@ -187,12 +187,12 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             placeholder="Search by name or email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-56"
+            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2.5 text-base text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-h-0 sm:w-56 sm:py-2 sm:text-sm"
           />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2.5 text-base text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
           >
             <option value="all">All roles</option>
             <option value="admin">Admin</option>
@@ -202,15 +202,96 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            className="min-h-[44px] w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-base font-medium text-white hover:bg-emerald-500 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
           >
             Create user
           </button>
         </div>
 
-        {/* Table */}
+        {/* Mobile: card list */}
         <div
-          className="overflow-hidden rounded-xl"
+          className="space-y-3 overflow-hidden md:hidden"
+          style={{ borderRadius: CARD_RADIUS }}
+        >
+          {filtered.length === 0 ? (
+            <div
+              className="flex flex-col items-center justify-center rounded-xl py-12 text-center"
+              style={{ backgroundColor: "var(--card-bg)" }}
+            >
+              <p className="text-sm text-zinc-400">
+                {list.length === 0 ? "No users yet." : "No users match the filters."}
+              </p>
+            </div>
+          ) : (
+            filtered.map((u) => (
+              <div
+                key={u.id}
+                className="rounded-xl border border-zinc-700/80 p-4"
+                style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+              >
+                <p className="font-medium text-white">{u.full_name || "—"}</p>
+                <p className="mt-0.5 truncate text-sm text-zinc-400">{u.email}</p>
+                <p className="mt-1 text-xs capitalize text-zinc-500">{u.role}</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  {u.created_at
+                    ? new Date(u.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+                    : "—"}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {editingNameId === u.id ? (
+                    <NameEditRow
+                      currentName={u.full_name ?? ""}
+                      onSave={(name) => handleNameChange(u.id, name)}
+                      onCancel={() => setEditingNameId(null)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingNameId(u.id)}
+                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-emerald-400 hover:bg-zinc-700"
+                    >
+                      Edit name
+                    </button>
+                  )}
+                  {editingId === u.id ? (
+                    <RoleEditRow
+                      currentRole={u.role as UserRole}
+                      onSave={(newRole) => handleRoleChange(u.id, newRole)}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : !(u.isPrimaryAdmin && u.role === "admin") ? (
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(u.id)}
+                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-emerald-400 hover:bg-zinc-700"
+                    >
+                      Edit role
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(u)}
+                    disabled={currentUserId === u.id || !!u.isPrimaryAdmin}
+                    className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-red-400 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={
+                      u.isPrimaryAdmin
+                        ? "Primary admin cannot be removed"
+                        : currentUserId === u.id
+                          ? "You cannot delete your own account"
+                          : "Delete user"
+                    }
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table: desktop only */}
+        <div
+          className="hidden overflow-hidden rounded-xl md:block"
           style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filtered.length === 0 ? (

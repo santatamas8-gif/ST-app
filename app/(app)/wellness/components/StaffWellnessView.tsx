@@ -195,7 +195,7 @@ export function StaffWellnessView({
       <div className="mx-auto max-w-7xl space-y-8">
         {/* HEADER */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Wellness</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>
           <p className="mt-1 text-sm text-zinc-500">
             Daily submissions. Table and body map by selected date.
           </p>

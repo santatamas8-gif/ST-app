@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Activity, Calendar, Flag, HeartPulse, Pause, Play, Users } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
+import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { updateTeamSettings } from "@/app/actions/teamSettings";
 import {
@@ -150,6 +151,8 @@ export function StaffDashboard({
   const scheduleScrollRef = useRef<HTMLDivElement>(null);
   const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
+  const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -305,15 +308,15 @@ export function StaffDashboard({
 
   return (
     <div
-      className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
+      className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-4 md:space-y-8">
         <div
           className={
             isHighContrast
-              ? "relative w-full overflow-visible rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
-              : "w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+              ? "relative w-full overflow-hidden rounded-2xl border border-transparent px-4 py-3 flex flex-nowrap items-center justify-between gap-2 sm:px-6 sm:py-4 md:overflow-visible md:flex-wrap md:gap-4"
+              : "w-full overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-nowrap items-center justify-between gap-2 md:overflow-visible md:flex-wrap md:gap-4"
           }
           style={
             themeId === "neon"
@@ -328,12 +331,12 @@ export function StaffDashboard({
                 : undefined
           }
         >
-          <p className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
-            <span>Welcome, {userDisplayName ?? "User"}!</span>
-            <span aria-hidden>👋</span>
+          <p className="flex min-w-0 flex-1 items-center gap-2 truncate text-base font-bold tracking-tight text-white md:flex-initial md:text-2xl">
+            <span className="truncate">Welcome, {userDisplayName ?? "User"}!</span>
+            <span aria-hidden className="shrink-0">👋</span>
           </p>
           <div
-            className="group relative ml-auto -mr-2 flex flex-col items-end sm:-mr-3"
+            className="group relative ml-auto flex shrink-0 flex-col items-end md:-mr-2 lg:-mr-3"
             style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
           >
             {editingTeam && isAdmin ? (
@@ -390,13 +393,13 @@ export function StaffDashboard({
               <>
                 <div className="flex items-center justify-end gap-2 text-white">
                   {teamSettings?.team_name && (
-                    <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                    <span className="hidden text-lg font-bold text-white md:inline">{teamSettings.team_name}</span>
                   )}
                   {teamSettings?.team_logo_url && (
                     <img
                       src={teamSettings?.team_logo_url}
                       alt="Team logo"
-                      className="mt-0.5 h-10 w-auto object-contain"
+                      className="mt-0.5 h-8 w-auto object-contain md:h-10"
                     />
                   )}
                 </div>
@@ -441,12 +444,18 @@ export function StaffDashboard({
             {todayScheduleItems.length === 0 ? (
               <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
             ) : (
-              <div ref={scheduleScrollRef} className="schedule-strip-scroll overflow-x-auto p-4">
+              <div
+                ref={scheduleScrollRef}
+                className="schedule-strip-scroll cursor-pointer p-4 overflow-x-auto md:cursor-default"
+                role={isMobile ? "button" : undefined}
+                tabIndex={isMobile ? 0 : undefined}
+                onClick={() => isMobile && setScheduleSheetOpen(true)}
+                onKeyDown={(e) => isMobile && (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
+              >
                 <div
-                  className={isHighContrast ? "flex gap-5" : "flex gap-4"}
-                  style={{ minWidth: "min-content" }}
+                  className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}
                 >
-                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 ${isHighContrast ? "gap-5" : "gap-4"}`} style={{ minWidth: "min-content" }}>
+                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       breakfast: "Breakfast",
@@ -485,9 +494,7 @@ export function StaffDashboard({
                       return (
                         <div
                           key={`${item.id}-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
-                            isMatch ? "w-52" : "w-44"
-                          }`}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
                           style={{
                             backgroundImage: isMatch
                               ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
@@ -497,7 +504,7 @@ export function StaffDashboard({
                               : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
                           }}
                         >
-                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
                               className={`tabular-nums font-semibold text-white ${
                                 isMatch ? "text-base" : "text-sm"
@@ -523,7 +530,7 @@ export function StaffDashboard({
                       return (
                         <div
                           key={`${item.id}-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
+                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
                           style={
                             isMatch
                               ? {
@@ -536,7 +543,7 @@ export function StaffDashboard({
                               : { ...MATT_CARD_STYLE, borderRadius: 12 }
                           }
                         >
-                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
                               className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
                             >
@@ -561,11 +568,11 @@ export function StaffDashboard({
                         key={`${item.id}-${idx}`}
                         className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
-                            ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
-                            : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"
+                            ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48"
+                            : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"
                         }`}
                       >
-                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                        <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p
                             className={`tabular-nums font-semibold ${
                               isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
@@ -595,6 +602,7 @@ export function StaffDashboard({
                     <div className="h-14 w-px bg-white/25" />
                   </div>
                   </div>
+                  <div className="flex shrink-0 gap-4">
                   {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
@@ -605,8 +613,8 @@ export function StaffDashboard({
                     const notes = item.notes?.trim();
                     const isMatch = item.activity_type === "match";
                     if (themeId === "neon") return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-52" : "w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
-                        <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
+                        <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                           <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                           {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
@@ -614,8 +622,8 @@ export function StaffDashboard({
                       </div>
                     );
                     if (themeId === "matt") return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
-                        <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                        <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                           <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                           {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
@@ -623,8 +631,8 @@ export function StaffDashboard({
                       </div>
                     );
                     return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90" : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"}`}>
-                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
+                        <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
                           {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
@@ -632,23 +640,31 @@ export function StaffDashboard({
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </section>
 
+        <ScheduleBottomSheet
+          open={scheduleSheetOpen}
+          onClose={() => setScheduleSheetOpen(false)}
+          items={todayScheduleItems}
+          themeId={themeId ?? "dark"}
+        />
+
         {/* PLAYERS – ID cards */}
         {playersWithStatus.length > 0 && (
           <div ref={statusDropdownRef}>
-            <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+            <h2 className="mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
               <Users className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
               Players
             </h2>
             {statusError && (
               <p className="mb-2 text-sm text-red-400">{statusError}</p>
             )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
               {playersWithStatus.map((p) => {
                 const effectiveStatus = statusOverrides[p.id] ?? p.status;
                 const { pillClass, badgeClass, label, ringClass, tintClass, borderLClass } = getStatusStyle(effectiveStatus);
@@ -662,7 +678,7 @@ export function StaffDashboard({
                 return (
                   <div
                     key={p.id}
-                    className={`relative flex overflow-visible rounded-xl border-l-4 border transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
+                    className={`relative flex min-w-0 overflow-hidden rounded-xl border-l-4 border transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] sm:overflow-visible ${borderLClass} ${ringClass} ${isOpen || isAvatarMenuOpen ? "z-30" : ""}`}
                     style={
                       statusCardStyle
                         ? { ...statusCardStyle, borderRadius: CARD_RADIUS }
@@ -686,7 +702,7 @@ export function StaffDashboard({
                       </div>
                     )}
                     <div
-                      className={`relative z-10 flex min-w-0 flex-1 items-start gap-3 overflow-visible p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+                      className={`relative z-10 flex min-w-0 flex-1 items-center gap-2 overflow-visible p-3 sm:items-start sm:gap-3 sm:p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
                     >
                       <div className="relative shrink-0">
                         {isAdmin ? (
@@ -714,7 +730,7 @@ export function StaffDashboard({
                                 setAvatarMenuOpenId(isAvatarMenuOpen ? null : p.id);
                               }}
                               disabled={deletingAvatarId === p.id}
-                              className={`relative block h-12 w-12 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 transition-shadow hover:ring-emerald-500/50 ${deletingAvatarId === p.id ? "opacity-70" : ""}`}
+                              className={`relative block h-10 w-10 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 transition-shadow hover:ring-emerald-500/50 md:h-12 md:w-12 ${deletingAvatarId === p.id ? "opacity-70" : ""}`}
                               title="Photo options"
                             >
                               {avatarUrl ? (
@@ -760,7 +776,7 @@ export function StaffDashboard({
                             )}
                           </>
                             ) : (
-                              <div className="relative h-12 w-12 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
+                              <div className="relative h-10 w-10 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 md:h-12 md:w-12">
                                 {avatarUrl ? (
                                   <img
                                     src={avatarUrl}
@@ -777,9 +793,9 @@ export function StaffDashboard({
                               </div>
                             )}
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 overflow-hidden">
                         <p className="truncate font-medium text-white">{displayName}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-2 sm:gap-2">
                           <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeClass}`}>
                             {label}
                           </span>
@@ -876,9 +892,9 @@ export function StaffDashboard({
         )}
 
         {/* SECTION 1 – TOP KPI ROW */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -887,13 +903,13 @@ export function StaffDashboard({
                   : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
             }
           >
-            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="text-emerald-400" aria-hidden>
+            <p className={`flex min-w-0 items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+              <span className="shrink-0 text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
               </span>
-              Players Submitted Today
+              <span className="truncate">Players Submitted Today</span>
             </p>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-white">
+            <p className="mt-2 text-lg font-bold tabular-nums text-white sm:text-2xl">
               {submitted} <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>/ {totalPlayers}</span>
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
@@ -907,7 +923,7 @@ export function StaffDashboard({
           </div>
 
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -916,19 +932,19 @@ export function StaffDashboard({
                   : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
             }
           >
-            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="text-emerald-400" aria-hidden>
+            <p className={`flex min-w-0 items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+              <span className="shrink-0 text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
               </span>
-              Average Wellness Score Today
+              <span className="truncate">Average Wellness Score Today</span>
             </p>
-            <p className={`mt-2 text-3xl font-bold tabular-nums ${isHighContrast ? "text-white" : ""} ${wellnessColor}`}>
+            <p className={`mt-2 text-xl font-bold tabular-nums sm:text-3xl ${isHighContrast ? "text-white" : ""} ${wellnessColor}`}>
               {avgWellness != null ? avgWellness.toFixed(1) : "—"}
             </p>
           </div>
 
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -937,17 +953,17 @@ export function StaffDashboard({
                   : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
             }
           >
-            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="text-emerald-400" aria-hidden>
+            <p className={`flex min-w-0 items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+              <span className="shrink-0 text-emerald-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
               </span>
-              Total Team Load Today
+              <span className="truncate">Total Team Load Today</span>
             </p>
             <p className="mt-2 text-3xl font-bold tabular-nums text-white">{totalLoad}</p>
           </div>
 
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -956,13 +972,13 @@ export function StaffDashboard({
                   : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
             }
           >
-            <p className={`flex items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="text-red-400" aria-hidden>
+            <p className={`flex min-w-0 items-center gap-2 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+              <span className="shrink-0 text-red-400" aria-hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               </span>
-              High Risk Players
+              <span className="truncate">High Risk Players</span>
             </p>
-            <p className="mt-2 text-3xl font-bold tabular-nums text-white">
+            <p className="mt-2 text-xl font-bold tabular-nums text-white sm:text-3xl">
               {highRiskCount}
               {highRiskCount > 0 && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-red-500/20 px-2 py-0.5 text-sm font-medium text-red-400">
@@ -975,7 +991,7 @@ export function StaffDashboard({
 
         {/* SECTION 2 – AT RISK PLAYERS PANEL */}
         <div
-          className={`rounded-xl p-5 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          className={`w-full rounded-xl p-4 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={
             themeId === "neon"
               ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -984,12 +1000,12 @@ export function StaffDashboard({
                 : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
           }
         >
-          <h2 className="mb-4 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
+          <h2 className="mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
             <Flag className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
             <span>At risk players</span>
           </h2>
           {atRisk.length > 0 ? (
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-3 space-y-2 md:mt-4 md:space-y-3">
               {atRisk.map((p) => {
                 const w = p.wellness ?? 0;
                 const f = p.fatigue ?? 0;
@@ -1040,9 +1056,9 @@ export function StaffDashboard({
         </div>
 
         {/* SECTION 3 – MINI CHARTS ROW */}
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -1055,7 +1071,7 @@ export function StaffDashboard({
               Last 7 days – Average wellness
             </h3>
             <p className={`mt-1 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>Team average</p>
-            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
+            <div className={`mt-3 h-[180px] md:h-40 md:min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {chartDataWellness.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartDataWellness} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -1100,7 +1116,7 @@ export function StaffDashboard({
           </div>
 
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -1113,7 +1129,7 @@ export function StaffDashboard({
               Last 7 days – Team load
             </h3>
             <p className={`mt-1 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>Team total</p>
-            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
+            <div className={`mt-3 h-[180px] md:h-40 md:min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {chartDataLoad.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartDataLoad} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
@@ -1156,7 +1172,7 @@ export function StaffDashboard({
           </div>
 
           <div
-            className={`rounded-xl p-5 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`w-full rounded-xl p-4 transition-all duration-200 hover:scale-[1.01] hover:shadow-[var(--card-shadow-hover)] md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -1168,11 +1184,11 @@ export function StaffDashboard({
             <h3 className={`border-b pb-2 text-base font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/50"}`}>
               Submission compliance %
             </h3>
-            <p className={`mt-1 flex items-center gap-2 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>
-              <span className="text-lg font-bold tabular-nums text-emerald-400">{submissionPct}%</span>
-              submitted today
+            <p className={`mt-1 flex min-w-0 items-center gap-2 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-emerald-400">{submissionPct}%</span>
+              <span className="truncate">submitted today</span>
             </p>
-            <div className={`mt-3 h-40 min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
+            <div className={`mt-3 h-[180px] md:h-40 md:min-h-[160px] ${isHighContrast ? "chart-high-contrast" : ""}`}>
               {donutData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -1216,10 +1232,10 @@ export function StaffDashboard({
         </div>
 
         {/* Quick links */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Link
             href="/wellness"
-            className={`flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`flex w-full min-w-0 items-start gap-3 rounded-xl p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -1238,7 +1254,7 @@ export function StaffDashboard({
           </Link>
           <Link
             href="/rpe"
-            className={`flex items-start gap-3 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            className={`flex w-full min-w-0 items-start gap-3 rounded-xl p-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] md:p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -1247,7 +1263,7 @@ export function StaffDashboard({
                   : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, boxShadow: "var(--card-shadow)" }
             }
           >
-            <span className="text-emerald-400" aria-hidden>
+            <span className="shrink-0 text-emerald-400" aria-hidden>
               <Activity className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">

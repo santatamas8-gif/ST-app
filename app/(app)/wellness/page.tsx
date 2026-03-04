@@ -31,7 +31,7 @@ export default async function WellnessPage() {
     return (
       <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
         <div className="mx-auto max-w-2xl space-y-6">
-          <h1 className="text-2xl font-bold tracking-tight text-white">Wellness</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>
           <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-4" style={{ borderRadius: 12 }}>
             <p className="font-medium text-red-400">Something went wrong</p>
             <p className="mt-1 text-sm text-zinc-400">Code: {loadError.code}</p>

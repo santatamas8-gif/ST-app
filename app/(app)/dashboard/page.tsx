@@ -9,6 +9,7 @@ import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
 import { MetricCard } from "@/components/MetricCard";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
+import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { TrendCharts } from "@/components/TrendCharts";
 import { StaffDashboard } from "@/components/StaffDashboard";
@@ -115,6 +116,8 @@ export default function DashboardPage() {
   const scheduleScrollRef = useRef<HTMLDivElement>(null);
   const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
+  const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
   const todayScheduleItemsForEffect = data?.todayScheduleItems ?? [];
   useEffect(() => {
     if (todayScheduleItemsForEffect.length === 0 || scheduleAutoPaused) return;
@@ -259,13 +262,13 @@ export default function DashboardPage() {
   const userDisplayName = data.userDisplayName ?? "User";
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
-      <div className="mx-auto max-w-6xl space-y-8">
+    <div className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
+      <div className="mx-auto max-w-6xl space-y-4 md:space-y-8">
         <div
           className={
             isHighContrast
-              ? "relative w-full overflow-hidden rounded-2xl border border-transparent px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-4"
-              : "w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-wrap items-center justify-between gap-4"
+              ? "relative w-full overflow-hidden rounded-2xl border border-transparent px-4 py-3 flex flex-nowrap items-center justify-between gap-2 sm:px-6 sm:py-4 md:overflow-visible md:flex-wrap md:gap-4"
+              : "w-full overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 flex flex-nowrap items-center justify-between gap-2 md:overflow-visible md:flex-wrap md:gap-4"
           }
           style={
             themeId === "neon"
@@ -280,23 +283,23 @@ export default function DashboardPage() {
                 : undefined
           }
         >
-          <p className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
-            <span>Welcome, {userDisplayName}!</span>
-            <span aria-hidden>👋</span>
+          <p className="flex min-w-0 flex-1 items-center gap-2 truncate text-base font-bold tracking-tight text-white md:flex-initial sm:text-xl lg:text-2xl">
+            <span className="truncate">Welcome, {userDisplayName}!</span>
+            <span aria-hidden className="shrink-0">👋</span>
           </p>
           {(teamSettings?.team_name || teamSettings?.team_logo_url) && (
             <div
-              className="ml-auto -mr-1 flex flex-wrap items-center justify-end gap-3 text-white sm:-mr-2"
+              className="ml-auto flex shrink-0 items-center justify-end gap-2 text-white md:gap-3 md:-mr-1 lg:-mr-2"
               style={isHighContrast ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : undefined}
             >
               {teamSettings?.team_name && (
-                <span className="text-lg font-bold text-white">{teamSettings.team_name}</span>
+                <span className="hidden text-lg font-bold text-white md:inline">{teamSettings.team_name}</span>
               )}
               {teamSettings?.team_logo_url && (
                 <img
                   src={teamSettings.team_logo_url}
                   alt="Team logo"
-                  className="mt-0.5 h-10 w-auto object-contain"
+                  className="mt-0.5 h-8 w-auto object-contain md:h-10"
                 />
               )}
             </div>
@@ -327,7 +330,7 @@ export default function DashboardPage() {
 
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
-          <h2 className={`mb-4 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
+          <h2 className={`mb-3 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
             <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
             <span>Today&apos;s Schedule</span>
             {todayScheduleItems.length > 0 && (
@@ -354,12 +357,18 @@ export default function DashboardPage() {
             {todayScheduleItems.length === 0 ? (
               <p className={`px-5 py-6 ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No schedule items today.</p>
             ) : (
-              <div ref={scheduleScrollRef} className="schedule-strip-scroll overflow-x-auto p-4">
+              <div
+                ref={scheduleScrollRef}
+                className="schedule-strip-scroll cursor-pointer p-4 overflow-x-auto md:cursor-default"
+                role={isMobile ? "button" : undefined}
+                tabIndex={isMobile ? 0 : undefined}
+                onClick={() => isMobile && setScheduleSheetOpen(true)}
+                onKeyDown={(e) => isMobile && (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
+              >
                 <div
-                  className={isHighContrast ? "flex gap-5" : "flex gap-3"}
-                  style={{ minWidth: "min-content" }}
+                  className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}
                 >
-                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 ${isHighContrast ? "gap-5" : "gap-3"}`} style={{ minWidth: "min-content" }}>
+                  <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
@@ -379,9 +388,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={`${item.id}-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${
-                            isMatch ? "w-52" : "w-44"
-                          }`}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
                           style={{
                             backgroundImage: isMatch
                               ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
@@ -391,7 +398,7 @@ export default function DashboardPage() {
                               : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
                           }}
                         >
-                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
                               className={`tabular-nums font-semibold text-white ${
                                 isMatch ? "text-base" : "text-sm"
@@ -417,7 +424,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={`${item.id}-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`}
+                          className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
                           style={
                             isMatch
                               ? {
@@ -430,7 +437,7 @@ export default function DashboardPage() {
                               : { ...MATT_CARD_STYLE, borderRadius: 12 }
                           }
                         >
-                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
                               className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
                             >
@@ -455,11 +462,11 @@ export default function DashboardPage() {
                         key={`${item.id}-${idx}`}
                         className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${
                           isMatch
-                            ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90"
-                            : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"
+                            ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48"
+                            : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"
                         }`}
                       >
-                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                        <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p
                             className={`tabular-nums font-semibold ${
                               isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
@@ -485,10 +492,11 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
+                  </div>
                   <div className="flex shrink-0 w-36 items-center justify-center" aria-hidden>
                     <div className="h-14 w-px bg-white/25" />
                   </div>
-                  </div>
+                  <div className="flex shrink-0 gap-3">
                   {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
@@ -508,7 +516,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={`${item.id}-dup-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-52" : "w-44"}`}
+                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
                           style={{
                             backgroundImage: isMatch
                               ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
@@ -518,7 +526,7 @@ export default function DashboardPage() {
                               : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
                           }}
                         >
-                          <div className="schedule-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
@@ -528,8 +536,8 @@ export default function DashboardPage() {
                     }
                     if (themeId === "matt") {
                       return (
-                        <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-52" : "w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
-                          <div className="matt-card-text min-w-0 flex-1 space-y-1.5 px-3 py-2.5">
+                        <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                        <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
@@ -538,8 +546,8 @@ export default function DashboardPage() {
                       );
                     }
                     return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-48 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90" : "w-40 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90"}`}>
-                        <div className="min-w-0 flex-1 px-3 py-2.5">
+                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
+                        <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
                           {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
@@ -547,18 +555,26 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </section>
 
+        <ScheduleBottomSheet
+          open={scheduleSheetOpen}
+          onClose={() => setScheduleSheetOpen(false)}
+          items={todayScheduleItems}
+          themeId={themeId ?? "dark"}
+        />
+
         {/* Today's status – Wellness & RPE only */}
         <section>
-          <h2 className={`mb-4 border-b pb-2 text-lg font-semibold text-white ${isHighContrast ? "border-white/25" : ""}`}>Today&apos;s status</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <h2 className={`mb-3 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>Today&apos;s status</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div
-              className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              className={`w-full rounded-xl border p-4 md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
               style={
                 themeId === "neon"
                   ? wellnessSubmitted
@@ -581,7 +597,7 @@ export default function DashboardPage() {
                 <HeartPulse className="h-4 w-4 text-emerald-400/80" aria-hidden />
                 <span>Wellness</span>
               </p>
-              <p className="mt-2 flex items-center gap-2 text-xl font-bold text-white">
+              <p className="mt-2 flex items-center gap-2 text-base font-bold text-white sm:text-xl">
                 {wellnessSubmitted ? (
                   <>
                     <span className="text-emerald-300" aria-hidden>✔</span>
@@ -608,7 +624,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div
-              className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+              className={`w-full rounded-xl border p-4 md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
               style={
                 themeId === "neon"
                   ? rpeSubmitted
@@ -631,7 +647,7 @@ export default function DashboardPage() {
                 <Activity className="h-4 w-4 text-emerald-400/80" aria-hidden />
                 <span>RPE</span>
               </p>
-              <p className="mt-2 flex items-center gap-2 text-xl font-bold text-white">
+              <p className="mt-2 flex items-center gap-2 text-base font-bold text-white sm:text-xl">
                 {rpeSubmitted ? (
                   <>
                     <span className="text-emerald-300" aria-hidden>✔</span>
@@ -676,7 +692,7 @@ export default function DashboardPage() {
 
         {/* Trends: 7-day Load then 28-day (one metric at a time) */}
         <section
-          className={`rounded-xl p-6 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          className={`rounded-xl p-4 md:p-6 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={
             themeId === "neon"
               ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -685,13 +701,13 @@ export default function DashboardPage() {
                 : { backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }
           }
         >
-          <h2 className={`mb-4 border-b pb-2 font-semibold text-white ${isHighContrast ? "border-white/25" : ""}`}>Trends</h2>
+          <h2 className={`mb-3 border-b pb-2 font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>Trends</h2>
           <TrendCharts chart7={chart7} chart28={chart28} />
         </section>
 
         {/* Metrics: primary first, then collapsible detailed */}
         <section
-          className={themeId === "neon" ? "rounded-xl p-6 neon-card-text" : themeId === "matt" ? "rounded-xl p-6 matt-card-text" : ""}
+          className={themeId === "neon" ? "rounded-xl p-4 md:p-6 neon-card-text" : themeId === "matt" ? "rounded-xl p-4 md:p-6 matt-card-text" : ""}
           style={
             themeId === "neon"
               ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -700,8 +716,8 @@ export default function DashboardPage() {
                 : undefined
           }
         >
-          <h2 className={`mb-4 text-lg font-semibold text-white ${isHighContrast ? "border-b border-white/25 pb-2" : ""}`}>Metrics</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <h2 className={`mb-3 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-b border-white/25 pb-2" : ""}`}>Metrics</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
             <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />
           </div>
@@ -709,7 +725,7 @@ export default function DashboardPage() {
             <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-400">
               More metrics
             </summary>
-            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <MetricCard
                 title="Avg sleep (7d)"
                 value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"}

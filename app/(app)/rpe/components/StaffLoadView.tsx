@@ -296,7 +296,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
     >
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">RPE / Load</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">RPE / Load</h1>
           <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
             Load monitoring – daily and weekly load, acute/chronic, risk.
           </p>

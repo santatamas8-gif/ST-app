@@ -38,16 +38,16 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
     dateLabel: formatDate(p.date),
   }));
 
-  const chartClass = "rounded-xl border border-zinc-800/90 bg-zinc-900/50 p-4 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)]";
+  const chartClass = "rounded-xl border border-zinc-800/90 bg-zinc-900/50 p-3 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] md:p-4";
   const chartStyle = { boxShadow: "var(--card-shadow)" };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* 7-day: Load only */}
       <div className={chartClass} style={chartStyle}>
         <h3 className="text-sm font-medium text-zinc-400">Load (last 7 days)</h3>
         <p className="mt-0.5 text-xs text-zinc-500">Training load over the past week.</p>
-        <div className="mt-4 h-64">
+        <div className="mt-3 h-[180px] md:mt-4 md:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data7} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <defs>
@@ -98,7 +98,7 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
             </button>
           ))}
         </div>
-        <div className="mt-4 h-64">
+        <div className="mt-3 h-[180px] md:mt-4 md:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data28} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />

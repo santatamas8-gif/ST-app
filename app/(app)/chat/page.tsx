@@ -54,7 +54,7 @@ export default async function ChatPage() {
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Chat</h1>
+            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Chat</h1>
             <p className="mt-1 text-sm text-zinc-400">
               {isAdmin
                 ? "Create rooms and talk with the team. Only you can add new rooms."

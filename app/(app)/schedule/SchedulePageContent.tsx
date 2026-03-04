@@ -22,7 +22,7 @@ export function SchedulePageContent({
   return (
     <div className={isPlayer ? "mx-auto max-w-4xl space-y-6" : ""}>
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+        <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
           <Calendar className="h-7 w-7 shrink-0 text-emerald-400" aria-hidden />
           <span>Schedule</span>
         </h1>

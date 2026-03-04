@@ -45,7 +45,7 @@ export default async function PlayerDetailPage({
       <Link href="/wellness" className="text-sm text-zinc-400 hover:text-white">
         ← Wellness
       </Link>
-      <h1 className="text-2xl font-bold tracking-tight text-white">{displayName}</h1>
+      <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">{displayName}</h1>
       <p className="text-zinc-400">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
 
       <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />

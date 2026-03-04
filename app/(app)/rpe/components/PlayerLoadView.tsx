@@ -82,7 +82,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
     >
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+          <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
             <Activity className="h-6 w-6 text-emerald-400" aria-hidden />
             <span>RPE / Load</span>
           </h1>

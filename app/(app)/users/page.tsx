@@ -12,7 +12,7 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
           Users
         </h1>
         <p className="mt-1 text-zinc-400">
