@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Activity, Calendar, HeartPulse, Pause, Play } from "lucide-react";
+import { Activity, Calendar, CalendarCheck, HeartPulse, Pause, Play } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
@@ -262,7 +262,7 @@ export default function DashboardPage() {
   const userDisplayName = data.userDisplayName ?? "User";
 
   return (
-    <div className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
+    <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-6 sm:mx-0 sm:px-6 sm:py-8 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-6xl space-y-4 md:space-y-8">
         <div
           className={
@@ -331,7 +331,7 @@ export default function DashboardPage() {
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
           <h2 className={`mb-3 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
-            <Calendar className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+            <Calendar className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
             <span>Today&apos;s Schedule</span>
             {todayScheduleItems.length > 0 && (
               <button
@@ -567,7 +567,10 @@ export default function DashboardPage() {
 
         {/* Today's status – Wellness & RPE only */}
         <section>
-          <h2 className={`mb-3 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>Today&apos;s status</h2>
+          <h2 className={`mb-3 flex items-center gap-2 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>
+            <CalendarCheck className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+            Today&apos;s status
+          </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div
               className={`w-full rounded-xl border p-4 md:p-5 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}

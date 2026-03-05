@@ -157,18 +157,27 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
         )}
 
         <div className={`rounded-xl px-4 py-5 sm:px-5 ${isHighContrast ? "bg-white/5" : "bg-zinc-800/60"}`} style={{ borderRadius: 10 }}>
+          {/* RPE label: larger; question below: white, larger */}
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-emerald-400" aria-hidden />
-            <label htmlFor="rpe-slider" className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+            <Activity className="h-5 w-5 text-emerald-400 sm:h-4 sm:w-4" aria-hidden />
+            <label htmlFor="rpe-slider" className={`text-base font-semibold sm:text-lg sm:font-medium ${isHighContrast ? "text-white" : "text-zinc-100"}`}>
               RPE (1–10)
             </label>
           </div>
-          <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+          <p className="mt-1 text-sm font-medium text-white sm:text-base">
             How difficult was your session?
           </p>
-          <div className="mt-3 flex items-center gap-3">
-            <span className={`w-[4.5rem] shrink-0 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Very easy</span>
-            <div className="flex min-w-0 flex-1 flex-col">
+          {/* Mobile: stacked – slider then labels row; desktop: row [Very easy] [slider] [Max effort] */}
+          <div className="mt-1.5 flex flex-col sm:mt-3 sm:flex-row sm:items-center sm:gap-3">
+            <div className="order-2 flex justify-between gap-2 -mt-2.5 sm:contents sm:mt-0">
+              <span className={`text-[10px] leading-tight sm:order-1 sm:w-[4.5rem] sm:shrink-0 sm:text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400 sm:text-zinc-500"}`}>
+                Very easy
+              </span>
+              <span className={`text-right text-[10px] leading-tight sm:order-3 sm:w-[4.5rem] sm:shrink-0 sm:text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400 sm:text-zinc-500"}`}>
+                Max effort
+              </span>
+            </div>
+            <div className="order-1 flex min-w-0 flex-1 flex-col py-3 sm:order-2 sm:py-0">
               <div className="relative h-6 w-full">
                 <span
                   className="absolute top-0 whitespace-nowrap rounded-md bg-zinc-900/95 px-1.5 py-0.5 text-xs font-semibold tabular-nums"
@@ -189,11 +198,10 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
                 max={10}
                 value={rpe}
                 onChange={(e) => setRpe(Number(e.target.value))}
-                className="scale-input-track rpe-input-track mt-1.5 h-2 w-full appearance-none rounded-full bg-transparent [--track-h:8px]"
+                className="scale-input-track rpe-input-track mt-1.5 h-2 w-full min-w-0 appearance-none rounded-full bg-transparent [--track-h:10px] sm:[--track-h:8px]"
                 style={{ ["--thumb-color" as string]: rpeThumb }}
               />
             </div>
-            <span className={`w-[4.5rem] shrink-0 text-right text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Max effort</span>
           </div>
         </div>
 

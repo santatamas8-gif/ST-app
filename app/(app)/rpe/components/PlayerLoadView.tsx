@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, Clock3 } from "lucide-react";
+import { Activity, BarChart2, Clock3, LayoutDashboard } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
@@ -77,17 +77,17 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
   return (
     <div
-      className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
+      className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-8">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
             <Activity className="h-6 w-6 text-emerald-400" aria-hidden />
             <span>RPE / Load</span>
           </h1>
-          <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-            Your sessions and load. Log duration and RPE; load is calculated automatically.
+          <p className={`mt-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+            Log duration and RPE — load is calculated automatically.
           </p>
         </div>
 
@@ -117,8 +117,9 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
         </div>
 
         {/* Overview – your load */}
-        <section className="space-y-3">
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+        <section className="space-y-4">
+          <h2 className={`flex items-center gap-2 border-b pb-3 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            <LayoutDashboard className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
             Overview
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
@@ -132,8 +133,9 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
         </section>
 
         {/* Charts – your load 7/14/28 days */}
-        <section className="space-y-3">
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+        <section className="space-y-4">
+          <h2 className={`flex items-center gap-2 border-b pb-3 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            <BarChart2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
             Charts
           </h2>
           <div className="flex flex-col gap-4">
@@ -174,8 +176,8 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
         </section>
 
         {/* Recent sessions table */}
-        <section className="space-y-2">
-          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+        <section className="space-y-4">
+          <h2 className={`flex items-center gap-2 border-b pb-3 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
             <Clock3 className="h-4 w-4 text-emerald-400" aria-hidden />
             <span>Recent sessions</span>
           </h2>
