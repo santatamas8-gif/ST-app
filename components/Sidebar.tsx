@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
-/** Chat, Schedule, Theme are only in the header as logos – exclude from sidebar list */
+/** On desktop: only Wellness, RPE, Chat in top bar; Schedule is in 3-dot flyout */
+const TOP_BAR_HREFS = ["/wellness", "/rpe", "/chat"];
+/** Chat, Schedule are header-only in original sidebar list (mobile) */
 const HEADER_ONLY_HREFS = ["/chat", "/schedule"];
 
 const THEME_SWATCH: Record<ThemeId, string> = {
@@ -40,14 +42,20 @@ interface SidebarProps {
   unreadChatCount?: number;
   /** True for admin or primary admin when staff (so they can open Users and reclaim admin). */
   canAccessUsers?: boolean;
+  /** Main content (layout passes children here for desktop dashboard panel + main). */
+  children?: React.ReactNode;
 }
 
-export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAccessUsers = false }: SidebarProps) {
+export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAccessUsers = false, children }: SidebarProps) {
   const pathname = usePathname();
   const { themeId, setThemeId } = useTheme();
   const [themePopoverOpen, setThemePopoverOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
+  const flyoutCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const themePopoverRef = useRef<HTMLDivElement>(null);
+  const stripAndFlyoutRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -128,6 +136,34 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   const sidebarNavItems = visibleItems.filter(
     (item) => !HEADER_ONLY_HREFS.includes(item.href)
   );
+  /** Desktop flyout: Dashboard, Schedule, Players, Users (Wellness, RPE, Chat are in top bar) */
+  const flyoutNavItems = visibleItems.filter(
+    (item) => !TOP_BAR_HREFS.includes(item.href)
+  );
+
+  const clearFlyoutCloseTimer = () => {
+    if (flyoutCloseTimerRef.current) {
+      clearTimeout(flyoutCloseTimerRef.current);
+      flyoutCloseTimerRef.current = null;
+    }
+  };
+  const scheduleFlyoutClose = () => {
+    clearFlyoutCloseTimer();
+    flyoutCloseTimerRef.current = setTimeout(() => setFlyoutOpen(false), 120);
+  };
+  const handleStripFlyoutMouseEnter = () => {
+    clearFlyoutCloseTimer();
+    setFlyoutOpen(true);
+  };
+  const handleStripFlyoutMouseLeave = () => {
+    if (pathname !== "/dashboard") scheduleFlyoutClose();
+  };
+
+  /** On dashboard keep flyout open; on other pages close it (more space). Hover still opens on any page. */
+  useEffect(() => {
+    if (pathname === "/dashboard") setFlyoutOpen(true);
+    else setFlyoutOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -212,111 +248,57 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     </>
   );
 
-  return (
+  const isDashboardDesktop = pathname === "/dashboard";
+  const menuPanelContent = (
     <>
-    <aside
-      className={`flex w-full flex-col border-b md:h-full md:w-64 md:border-b-0 md:border-r ${sidebarBorderClass}`}
-      style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
-    >
-      <div className={`flex h-14 min-h-[44px] items-center justify-between gap-2 border-b px-3 py-2 md:h-16 md:px-5 ${sidebarBorderClass}`}>
-        <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-initial">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition md:hidden ${headerIconClass(false)}`}
-            aria-label="Open menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
-            ST AMS
-          </Link>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-          <Link
-            href="/chat"
-            className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
-              headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))
-            }`}
-            title="Chat"
-            aria-label="Chat"
-          >
-            <MessageCircle className="h-5 w-5" />
-            {unreadChatCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                {unreadChatCount > 99 ? "99+" : unreadChatCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/schedule"
-            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`}
-            title="Schedule"
-            aria-label="Schedule"
-          >
-            <Calendar className="h-5 w-5" />
-          </Link>
-          <div className="relative" ref={themePopoverRef}>
-            <button
-              type="button"
-              onClick={() => setThemePopoverOpen((o) => !o)}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
-              title="Theme"
-              aria-label="Theme"
-              aria-expanded={themePopoverOpen}
-            >
-              <Palette className="h-5 w-5" />
-            </button>
-            {themePopoverOpen && (
-              <div
-                className={`absolute right-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`}
-                style={{ borderRadius: "10px" }}
-              >
-                {THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      setThemeId(t.id);
-                      setThemePopoverOpen(false);
-                    }}
-                    title={t.name}
-                    className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"
-                    }`}
-                    style={{ backgroundColor: THEME_SWATCH[t.id] }}
-                    aria-label={t.name}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <nav className="hidden flex-1 space-y-0.5 p-3 md:block">
-        {sidebarNavItems.map((item) => {
+      <nav className="flex-1 space-y-0.5 overflow-auto p-3 min-h-0">
+        {flyoutNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
               href={item.href}
-                className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  isActive ? activeNavClass : inactiveNavClass
-                }`}
+              className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                isActive ? activeNavClass : inactiveNavClass
+              }`}
             >
               {linkContent(item)}
             </Link>
           );
         })}
       </nav>
-      <div className={`hidden border-t p-3 md:block ${sidebarBorderClass}`}>
-        <p className={`truncate px-3 py-2 text-xs ${sidebarMutedClass}`} title={userEmail}>
+      <div className={`shrink-0 border-t p-3 ${sidebarBorderClass}`}>
+        <button
+          type="button"
+          onClick={() => setThemePanelOpen((o) => !o)}
+          className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium transition md:min-h-[44px] ${sidebarMutedClass} ${isNeon || isMatt ? "hover:bg-white/8 hover:text-white" : "hover:bg-zinc-800 hover:text-white"}`}
+          aria-expanded={themePanelOpen}
+          aria-label={themePanelOpen ? "Close theme options" : "Open theme options"}
+        >
+          <Palette className="h-5 w-5 shrink-0" />
+          <span>Theme</span>
+        </button>
+        {themePanelOpen && (
+          <div className="mb-2 flex flex-wrap gap-2 pl-2">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setThemeId(t.id)}
+                title={t.name}
+                className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"
+                }`}
+                style={{ backgroundColor: THEME_SWATCH[t.id] }}
+                aria-label={t.name}
+              />
+            ))}
+          </div>
+        )}
+        <p className={`mt-3 truncate px-3 py-2 text-xs ${sidebarMutedClass}`} title={userEmail}>
           {userEmail}
         </p>
-        <p className={`px-3 text-xs font-medium capitalize ${sidebarLabelClass}`}>
-          {role}
-        </p>
+        <p className={`px-3 text-xs font-medium capitalize ${sidebarLabelClass}`}>{role}</p>
         <form action="/api/auth/signout" method="post" className="mt-2">
           <button
             type="submit"
@@ -327,6 +309,122 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           </button>
         </form>
       </div>
+    </>
+  );
+
+  const flyoutContent = (
+    <div
+      className={`flex w-60 flex-col overflow-hidden rounded-b-lg border border-t-0 shadow-xl ${sidebarBorderClass}`}
+      style={{
+        ...(sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }),
+        maxHeight: "min(80vh, 480px)",
+      }}
+      onMouseEnter={handleStripFlyoutMouseEnter}
+      onMouseLeave={handleStripFlyoutMouseLeave}
+    >
+      {menuPanelContent}
+    </div>
+  );
+
+  return (
+    <>
+    <aside
+      className={`flex w-full shrink-0 flex-col border-b md:h-auto md:w-full md:border-r-0 ${sidebarBorderClass}`}
+      style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
+    >
+      {/* Mobile: full header row with hamburger, ST AMS, Chat, Schedule, Theme */}
+      <div className={`flex h-14 min-h-[44px] items-center justify-between gap-2 border-b px-3 py-2 md:hidden md:px-5 ${sidebarBorderClass}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-initial">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
+            aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+            ST AMS
+          </Link>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+          <Link href="/chat" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
+            <MessageCircle className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                {unreadChatCount > 99 ? "99+" : unreadChatCount}
+              </span>
+            )}
+          </Link>
+          <Link href="/schedule" className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`} title="Schedule" aria-label="Schedule">
+            <Calendar className="h-5 w-5" />
+          </Link>
+          <div className="relative" ref={themePopoverRef}>
+            <button type="button" onClick={() => setThemePopoverOpen((o) => !o)} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(false)}`} title="Theme" aria-label="Theme" aria-expanded={themePopoverOpen}>
+              <Palette className="h-5 w-5" />
+            </button>
+            {themePopoverOpen && (
+              <div className={`absolute right-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`} style={{ borderRadius: "10px" }}>
+                {THEMES.map((t) => (
+                  <button key={t.id} type="button" onClick={() => { setThemeId(t.id); setThemePopoverOpen(false); }} title={t.name} className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"}`} style={{ backgroundColor: THEME_SWATCH[t.id] }} aria-label={t.name} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop (md+): hamburger | back (when not dashboard) | ST AMS | 3 icons; flyout below hamburger */}
+      <div className={`hidden md:flex md:h-16 md:w-full md:flex-row md:items-center md:gap-2 md:border-b md:px-2 md:py-2 md:pr-4 ${sidebarBorderClass}`}>
+        <div
+          ref={stripAndFlyoutRef}
+          className="relative flex shrink-0 items-center"
+          onMouseEnter={handleStripFlyoutMouseEnter}
+          onMouseLeave={handleStripFlyoutMouseLeave}
+        >
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${headerIconClass(false)}`} aria-hidden>
+            <Menu className="h-6 w-6" />
+          </span>
+          {!isDashboardDesktop && flyoutOpen && (
+            <div className="absolute left-0 top-full z-50 mt-0.5">
+              {flyoutContent}
+            </div>
+          )}
+        </div>
+        {!isDashboardDesktop && (
+          <Link
+            href="/dashboard"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
+            title="Back to Dashboard"
+            aria-label="Back to Dashboard"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        )}
+        <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+          ST AMS
+        </Link>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+          <Link href="/wellness" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/wellness" || pathname.startsWith("/wellness/"))}`} title="Wellness" aria-label="Wellness">
+            <HeartPulse className="h-5 w-5" />
+            {todoToday && !todoToday.wellnessDone && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" title="To do today" aria-hidden />}
+          </Link>
+          <Link href="/rpe" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/rpe" || pathname.startsWith("/rpe/"))}`} title="RPE" aria-label="RPE">
+            <Activity className="h-5 w-5" />
+            {todoToday && !todoToday.rpeDone && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" title="To do today" aria-hidden />}
+          </Link>
+          <Link href="/chat" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
+            <MessageCircle className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                {unreadChatCount > 99 ? "99+" : unreadChatCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      </div>
+
       {/* Email + Sign out on mobile: only in drawer (hamburger menu), not below header */}
       <div className={`hidden border-t px-4 py-2 md:hidden ${sidebarBorderClass}`} aria-hidden>
         <div className="flex items-center justify-between">
@@ -335,10 +433,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <p className={`text-xs font-medium capitalize ${sidebarLabelClass}`}>{role}</p>
           </div>
           <form action="/api/auth/signout" method="post">
-            <button
-              type="submit"
-              className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} ${signOutHoverClass}`}
-            >
+            <button type="submit" className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm ${sidebarMutedClass} ${signOutHoverClass}`}>
               <LogOut className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
               Sign out
             </button>
@@ -346,6 +441,18 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         </div>
       </div>
     </aside>
+    {/* Main content: on desktop dashboard show full left panel + main; else main only. Laptop only. */}
+    <div className={`flex min-w-0 flex-1 flex-col ${isDashboardDesktop ? "md:flex-row" : ""}`}>
+      {isDashboardDesktop && (
+        <div
+          className={`hidden h-full min-h-0 w-64 shrink-0 flex-col border-r md:flex ${sidebarBorderClass}`}
+          style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
+        >
+          {menuPanelContent}
+        </div>
+      )}
+      <main className="min-w-0 flex-1 overflow-auto">{children}</main>
+    </div>
     {mobileMenuOpen && mobileDrawer}
     </>
   );

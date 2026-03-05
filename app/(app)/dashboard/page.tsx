@@ -400,9 +400,7 @@ export default function DashboardPage() {
                         >
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
-                              className={`tabular-nums font-semibold text-white ${
-                                isMatch ? "text-base" : "text-sm"
-                              }`}
+                              className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                             >
                               {timeStr}
                             </p>
@@ -439,7 +437,7 @@ export default function DashboardPage() {
                         >
                           <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
-                              className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
+                              className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                             >
                               {timeStr}
                             </p>
@@ -468,9 +466,7 @@ export default function DashboardPage() {
                       >
                         <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p
-                            className={`tabular-nums font-semibold ${
-                              isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
-                            }`}
+                            className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                           >
                             {timeStr}
                           </p>
@@ -527,7 +523,7 @@ export default function DashboardPage() {
                           }}
                         >
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
-                            <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                            <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                           </div>
@@ -538,7 +534,7 @@ export default function DashboardPage() {
                       return (
                         <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
                         <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
-                            <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                            <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                           </div>
@@ -548,7 +544,7 @@ export default function DashboardPage() {
                     return (
                       <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
                         <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
-                          <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
                           {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
                         </div>

@@ -171,7 +171,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                         }}
                       >
                         <div className="schedule-card-text space-y-1 px-4 py-3">
-                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>
                             {timeStr}
                           </p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">
@@ -207,7 +207,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                         }
                       >
                         <div className="matt-card-text space-y-1 px-4 py-3">
-                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>
                             {timeStr}
                           </p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">
@@ -236,9 +236,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                     >
                       <div className="px-4 py-3">
                         <p
-                          className={`tabular-nums font-semibold ${
-                            isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
-                          }`}
+                          className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                         >
                           {timeStr}
                         </p>

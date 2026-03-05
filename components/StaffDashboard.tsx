@@ -195,11 +195,7 @@ export function StaffDashboard({
       const inRef = statusDropdownRef.current?.contains(target);
       const inSheetDropdown = playersSheetDropdownRef.current?.contains(target);
       if (inSheetDropdown) return;
-      if (inRef && dropdownOpenIdRef.current) {
-        setDropdownOpenId(null);
-        setDropdownSheetButtonRect(null);
-        return;
-      }
+      // Only close when click is OUTSIDE the ref; inside (option, Save, Change status) let button handlers run
       if (!inRef) {
         setDropdownOpenId(null);
         setAvatarMenuOpenId(null);
@@ -306,13 +302,11 @@ export function StaffDashboard({
     });
     setSavingPlayerId(null);
     if (res.ok) {
-      setStatusOverrides((prev) => {
-        const next = { ...prev };
-        delete next[userId];
-        return next;
-      });
-      await onRefreshData?.();
-      router.refresh();
+      // Refetch later so override stays and card keeps showing new status (laptop)
+      setTimeout(() => {
+        onRefreshData?.();
+        router.refresh();
+      }, 100);
     } else {
       const data = await res.json().catch(() => ({}));
       setStatusOverrides((prev) => {
@@ -327,17 +321,20 @@ export function StaffDashboard({
   function onStatusSelect(p: PlayerWithStatus, value: string) {
     setPendingStatusPlayerId(p.id);
     setPendingStatusValue(value);
-    setPendingNotes(p.status_notes ?? "");
+    setPendingNotes("");
+    // Laptop: card switches to selected status immediately (preview)
+    setStatusOverrides((prev) => ({ ...prev, [p.id]: value }));
   }
 
-  async function onStatusSave(p: PlayerWithStatus) {
+  async function onStatusSave(p: PlayerWithStatus, valueOverride?: string) {
+    const valueToSave = valueOverride ?? pendingStatusValue;
     setDropdownOpenId(null);
     setDropdownSheetButtonRect(null);
-    setStatusOverrides((prev) => ({ ...prev, [p.id]: pendingStatusValue }));
+    setStatusOverrides((prev) => ({ ...prev, [p.id]: valueToSave }));
     setPendingStatusPlayerId(null);
     setPendingStatusValue("");
     setPendingNotes("");
-    await setPlayerStatus(p.id, pendingStatusValue, pendingNotes.trim() || null);
+    await setPlayerStatus(p.id, valueToSave, pendingNotes.trim() || null);
   }
 
   async function uploadAvatar(userId: string, file: File) {
@@ -575,9 +572,7 @@ export function StaffDashboard({
                         >
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
-                              className={`tabular-nums font-semibold text-white ${
-                                isMatch ? "text-base" : "text-sm"
-                              }`}
+                              className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                             >
                               {timeStr}
                             </p>
@@ -614,7 +609,7 @@ export function StaffDashboard({
                         >
                           <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
-                              className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}
+                              className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                             >
                               {timeStr}
                             </p>
@@ -643,9 +638,7 @@ export function StaffDashboard({
                       >
                         <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p
-                            className={`tabular-nums font-semibold ${
-                              isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"
-                            }`}
+                            className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                           >
                             {timeStr}
                           </p>
@@ -684,7 +677,7 @@ export function StaffDashboard({
                     if (themeId === "neon") return (
                       <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
                         <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
-                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                           {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                         </div>
@@ -693,7 +686,7 @@ export function StaffDashboard({
                     if (themeId === "matt") return (
                       <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
                         <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
-                          <p className={`tabular-nums font-semibold text-white ${isMatch ? "text-base" : "text-sm"}`}>{timeStr}</p>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                           {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                         </div>
@@ -702,7 +695,7 @@ export function StaffDashboard({
                     return (
                       <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
                         <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
-                          <p className={`tabular-nums font-semibold ${isMatch ? "text-base text-amber-400" : "text-sm text-emerald-400"}`}>{timeStr}</p>
+                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
                           {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
                         </div>
@@ -894,14 +887,14 @@ export function StaffDashboard({
                               </div>
                             )}
                       </div>
-                      <div className="min-w-0 flex-1 overflow-hidden">
+                      <div className="min-w-0 flex-1 overflow-hidden md:overflow-visible">
                         <p className="truncate font-medium text-white">{displayName}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-2 sm:gap-2">
                           <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeClass}`}>
                             {label}
                           </span>
                           {isAdmin && (
-                            <div className="relative z-20 inline-block">
+                            <div className="relative z-[100] inline-block">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -916,7 +909,7 @@ export function StaffDashboard({
                                 {isSaving ? "Saving…" : "Change status ▾"}
                               </button>
                               {isOpen && (
-                                <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl">
+                                <div className="absolute left-0 top-full z-[100] mt-1 w-72 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl">
                                   {pendingStatusPlayerId === p.id ? (
                                     <>
                                       <p className="mb-2 text-xs text-zinc-400">
@@ -936,6 +929,11 @@ export function StaffDashboard({
                                         <button
                                           type="button"
                                           onClick={() => {
+                                            setStatusOverrides((prev) => {
+                                              const next = { ...prev };
+                                              delete next[p.id];
+                                              return next;
+                                            });
                                             setPendingStatusPlayerId(null);
                                             setPendingStatusValue("");
                                             setPendingNotes("");
@@ -946,7 +944,11 @@ export function StaffDashboard({
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => onStatusSave(p)}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            onStatusSave(p, pendingStatusValue);
+                                          }}
                                           className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
                                         >
                                           Save

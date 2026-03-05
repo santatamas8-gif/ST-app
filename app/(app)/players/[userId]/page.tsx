@@ -42,16 +42,17 @@ export default async function PlayerDetailPage({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      <Link href="/wellness" className="text-sm text-zinc-400 hover:text-white">
-        ← Wellness
-      </Link>
+      <div className="flex gap-4 text-sm">
+        <Link href="/players" className="text-zinc-400 hover:text-white">← Players</Link>
+        <Link href="/wellness" className="text-zinc-400 hover:text-white">Wellness</Link>
+      </div>
       <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">{displayName}</h1>
       <p className="text-zinc-400">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
 
       <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
 
       {(user.role === "admin" || user.role === "staff") && (
-        <Card title="Availability (by day)">
+        <Card title="Availability (by day)" className="overflow-visible">
           <p className="mb-4 text-sm text-zinc-400">
             Set each day: Available, Injured, or Unavailable.
           </p>
