@@ -14,21 +14,21 @@ const FIELDS = [
     label: "How much energy do you have?",
     lowLabel: "No energy",
     highLabel: "Full of energy",
-    invertOnSubmit: true,
+    invertOnSubmit: false,
   },
   {
     key: "soreness",
     label: "How recovered do your muscles feel?",
     lowLabel: "Very sore",
     highLabel: "Fully recovered",
-    invertOnSubmit: true,
+    invertOnSubmit: false,
   },
   {
     key: "stress",
     label: "How stressed are you?",
     lowLabel: "Very stressed",
     highLabel: "Not stressed at all",
-    invertOnSubmit: true,
+    invertOnSubmit: false,
   },
   {
     key: "mood",
@@ -100,9 +100,9 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
         : undefined;
     const result = await submitDailyWellness({
       sleep_quality: sleepQuality,
-      fatigue: FIELDS.find((f) => f.key === "fatigue")?.invertOnSubmit ? 10 - fatigue : fatigue,
-      soreness: FIELDS.find((f) => f.key === "soreness")?.invertOnSubmit ? 10 - soreness : soreness,
-      stress: FIELDS.find((f) => f.key === "stress")?.invertOnSubmit ? 10 - stress : stress,
+      fatigue,
+      soreness,
+      stress,
       mood,
       illness,
       bed_time: bedTime || undefined,

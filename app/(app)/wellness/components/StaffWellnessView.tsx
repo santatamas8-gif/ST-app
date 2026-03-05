@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Activity, AlertTriangle, UserRound } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
@@ -59,16 +60,30 @@ function numberBadgeOpacity(value: number): number {
   return Math.min(1, Math.max(0.35, 0.35 + (value / 10) * 0.65));
 }
 
+/** Soreness badge by intensity: 1–4 light, 5–7 medium, 8–10 strong (higher = worse) */
+function sorenessBadgeStyle(value: number): CSSProperties {
+  if (value <= 4) return { backgroundColor: "rgba(180, 83, 9, 0.45)", color: "#fef3c7" };
+  if (value <= 7) return { backgroundColor: "rgba(146, 64, 14, 0.8)", color: "#fde68a" };
+  return { backgroundColor: "rgba(120, 53, 15, 1)", color: "#fef9c3" };
+}
+
+/** Pain badge by intensity: 1–4 light, 5–7 medium, 8–10 strong (higher = worse) */
+function painBadgeStyle(value: number): CSSProperties {
+  if (value <= 4) return { backgroundColor: "rgba(185, 28, 28, 0.45)", color: "#fecaca" };
+  if (value <= 7) return { backgroundColor: "rgba(153, 27, 27, 0.85)", color: "#fca5a5" };
+  return { backgroundColor: "rgba(127, 29, 29, 1)", color: "#fef2f2" };
+}
+
 const CARD_RADIUS = "12px";
 
 type SortOption = "newest" | "lowestWellness" | "highestFatigue" | "readinessAsc" | "readinessDesc";
 
 function isAtRisk(r: WellnessRow): boolean {
-  if (r.sleep_quality != null && r.sleep_quality <= 3) return true;
-  if (r.fatigue != null && r.fatigue >= 7) return true;
-  if (r.soreness != null && r.soreness >= 7) return true;
-  if (r.stress != null && r.stress >= 7) return true;
-  if (r.mood != null && r.mood <= 3) return true;
+  if (r.sleep_quality != null && r.sleep_quality <= 4) return true;
+  if (r.fatigue != null && r.fatigue <= 4) return true;
+  if (r.soreness != null && r.soreness <= 4) return true;
+  if (r.stress != null && r.stress <= 4) return true;
+  if (r.mood != null && r.mood <= 4) return true;
   if (r.illness === true) return true;
   return false;
 }
@@ -142,7 +157,8 @@ export function StaffWellnessView({
         return rb - ra;
       });
     } else {
-      rows = [...rows].sort((a, b) => (b.fatigue ?? 0) - (a.fatigue ?? 0));
+      // highestFatigue = worst first (lowest value = least energy)
+      rows = [...rows].sort((a, b) => (a.fatigue ?? 10) - (b.fatigue ?? 10));
     }
     return rows;
   }, [list, selectedDate, searchQuery, sortBy, emailByUserId, displayNameByUserId]);
@@ -164,6 +180,11 @@ export function StaffWellnessView({
     const rowsYesterday = list.filter((r) => r.date === yesterday);
     return rowsYesterday.length > 0 ? averageWellness(rowsYesterday) : null;
   }, [list, selectedDate]);
+
+  const teamReadinessAvg = useMemo(
+    () => (filteredAndSorted.length > 0 ? averageWellness(filteredAndSorted) : null),
+    [filteredAndSorted]
+  );
 
   const modalUser = modalUserId ? (displayNameByUserId[modalUserId] ?? emailByUserId[modalUserId] ?? modalUserId) : null;
 
@@ -440,7 +461,9 @@ export function StaffWellnessView({
                                 style={
                                   r.sleep_duration >= 8
                                     ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
-                                    : { backgroundColor: "rgba(220, 38, 38, 0.3)", color: "#fecaca" }
+                                    : r.sleep_duration >= 5
+                                      ? { backgroundColor: "rgba(234, 179, 8, 0.3)", color: "#fde047" }
+                                      : { backgroundColor: "rgba(220, 38, 38, 0.3)", color: "#fecaca" }
                                 }
                               >
                                 {r.sleep_duration}h
@@ -453,13 +476,13 @@ export function StaffWellnessView({
                             <BadgeScore value={r.sleep_quality} type="goodHigh" />
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.fatigue != null ? 10 - r.fatigue : null} type="goodHigh" />
+                            <BadgeScore value={r.fatigue} type="goodHigh" />
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.soreness != null ? 10 - r.soreness : null} type="goodHigh" />
+                            <BadgeScore value={r.soreness} type="goodHigh" />
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.stress != null ? 10 - r.stress : null} type="goodHigh" />
+                            <BadgeScore value={r.stress} type="goodHigh" />
                           </td>
                           <td className="px-2 py-2 text-center">
                             <BadgeScore value={r.mood} type="goodHigh" />
@@ -471,6 +494,18 @@ export function StaffWellnessView({
                       );
                     })}
                   </tbody>
+                  {filteredAndSorted.length > 0 && (
+                    <tfoot className={`border-t-2 ${isHighContrast ? "border-white/25 bg-white/8 text-white" : "border-zinc-500 bg-zinc-800/60 text-zinc-200"}`}>
+                      <tr>
+                        <td className="px-4 py-2.5 font-semibold" colSpan={9}>
+                          Team average
+                        </td>
+                        <td className={`border-l px-2 py-2.5 text-center ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
+                          <BadgeScore value={teamReadinessAvg} type="goodHigh" />
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </>
@@ -533,16 +568,23 @@ export function StaffWellnessView({
             className={`overflow-hidden rounded-xl border ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
             style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
           >
-            {/* Body parts – külön sáv */}
+            {/* Body parts – külön sáv + skála jelmagyarázat */}
             <div
-              className={`flex w-full items-center gap-2 px-4 py-2.5 sm:px-5 ${isHighContrast ? "bg-white/10" : "bg-zinc-700/80"}`}
+              className={`flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-5 ${isHighContrast ? "bg-white/10" : "bg-zinc-700/80"}`}
             >
-              <UserRound className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-              <span className={`text-base font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Body parts</span>
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                <span className={`text-base font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Body parts</span>
+              </div>
+              <p className={`text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+                Value 1–10: higher = stronger soreness/pain
+              </p>
             </div>
 
             {/* Tartalom: Soreness + Pain */}
             <div className={`px-4 py-4 sm:px-5 ${isHighContrast ? "neon-card-text" : ""}`}>
+            {/* Mobile: stacked list layout (unchanged) */}
+            <div className="md:hidden">
             {/* Soreness – enyhe sárga háttér, sáv + lista */}
             <div className={`-mx-4 rounded-lg bg-amber-500/10 px-4 pt-0 pb-3 sm:-mx-5 sm:px-5 ${isHighContrast ? "bg-amber-500/15" : ""}`}>
               <div className="flex items-center gap-2 py-2">
@@ -655,6 +697,122 @@ export function StaffWellnessView({
                   <li className={`text-sm ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>No pain reported.</li>
                 )}
               </ul>
+            </div>
+            </div>
+
+            {/* Laptop only: two tables side by side under Body parts */}
+            <div className="hidden md:grid md:grid-cols-2 md:gap-4">
+              {/* Soreness table */}
+              <div className={`overflow-hidden rounded-lg bg-amber-500/10 ${isHighContrast ? "bg-amber-500/15" : ""}`}>
+                <div className="flex items-center gap-2 border-b border-amber-500/30 px-3 py-2">
+                  <Activity className="h-5 w-5 shrink-0 text-amber-700" aria-hidden />
+                  <span className="text-base font-semibold text-amber-700">Soreness</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[200px] text-sm">
+                    <thead>
+                      <tr className={`border-b ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
+                        <th className="px-3 py-2 text-left font-semibold">Player</th>
+                        <th className="px-3 py-2 text-left font-semibold">Body part</th>
+                        <th className="px-3 py-2 text-center font-semibold">Value (1–10)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAndSorted
+                        .filter((r) => splitBodyParts(r.body_parts).soreness.length > 0)
+                        .map((r) => {
+                          const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
+                          const soreness = splitBodyParts(r.body_parts).soreness;
+                          return soreness.map(({ label, value }, idx) => {
+                            const isLastRow = idx === soreness.length - 1;
+                            return (
+                              <tr
+                                key={`${r.id}-${label}`}
+                                className={`border-b ${isLastRow ? "border-amber-500/70 border-b-4" : isHighContrast ? "border-white/10" : "border-zinc-700/80"}`}
+                              >
+                                {idx === 0 && (
+                                  <td rowSpan={soreness.length} className="align-top px-3 py-2">
+                                    <button type="button" onClick={() => setModalUserId(r.user_id)} className="text-emerald-400 hover:underline">
+                                      {displayName}
+                                    </button>
+                                  </td>
+                                )}
+                                <td className="px-3 py-2 text-zinc-300">{label}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <span
+                                    className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded px-1.5 text-xs font-bold tabular-nums"
+                                    style={sorenessBadgeStyle(value)}
+                                  >
+                                    {value}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })}
+                      {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).soreness.length === 0) && (
+                        <tr><td colSpan={3} className={`px-3 py-4 text-center text-sm ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>No soreness reported.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pain table */}
+              <div className={`overflow-hidden rounded-lg bg-red-500/10 ${isHighContrast ? "bg-red-500/15" : ""}`}>
+                <div className="flex items-center gap-2 border-b border-red-500/30 px-3 py-2">
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-red-700" aria-hidden />
+                  <span className="text-base font-semibold text-red-700">Pain</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[200px] text-sm">
+                    <thead>
+                      <tr className={`border-b ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
+                        <th className="px-3 py-2 text-left font-semibold">Player</th>
+                        <th className="px-3 py-2 text-left font-semibold">Body part</th>
+                        <th className="px-3 py-2 text-center font-semibold">Value (1–10)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAndSorted
+                        .filter((r) => splitBodyParts(r.body_parts).pain.length > 0)
+                        .map((r) => {
+                          const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
+                          const pain = splitBodyParts(r.body_parts).pain;
+                          return pain.map(({ label, value }, idx) => {
+                            const isLastRow = idx === pain.length - 1;
+                            return (
+                              <tr
+                                key={`${r.id}-${label}`}
+                                className={`border-b ${isLastRow ? "border-red-500/70 border-b-4" : isHighContrast ? "border-white/10" : "border-zinc-700/80"}`}
+                              >
+                                {idx === 0 && (
+                                  <td rowSpan={pain.length} className="align-top px-3 py-2">
+                                    <button type="button" onClick={() => setModalUserId(r.user_id)} className="text-emerald-400 hover:underline">
+                                      {displayName}
+                                    </button>
+                                  </td>
+                                )}
+                                <td className="px-3 py-2 text-zinc-300">{label}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <span
+                                    className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded px-1.5 text-xs font-bold tabular-nums"
+                                    style={painBadgeStyle(value)}
+                                  >
+                                    {value}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })}
+                      {filteredAndSorted.every((r) => splitBodyParts(r.body_parts).pain.length === 0) && (
+                        <tr><td colSpan={3} className={`px-3 py-4 text-center text-sm ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>No pain reported.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
             </div>
           </div>

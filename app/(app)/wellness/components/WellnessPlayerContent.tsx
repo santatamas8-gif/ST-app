@@ -56,23 +56,24 @@ export function WellnessPlayerContent({
         )}
 
         <DailyWellnessForm hasSubmittedToday={hasSubmittedToday} />
+      </div>
 
-        <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-white">Your 7-day & 28-day averages</h2>
-          {list.length === 0 ? (
-            <p
-              className={`rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-white/20 text-white/90" : themeId === "matt" ? "matt-card-text border-white/20 text-white/90" : "border-zinc-700 bg-zinc-900/50 text-zinc-400"}`}
-              style={{
-                borderRadius: CARD_RADIUS,
-                ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : {}),
-              }}
-            >
-              No wellness entries yet. Submit your first entry above to see your trends here.
-            </p>
-          ) : (
-            <PlayerWellnessTrend wellness={list} dates={dates} loadByDate={loadByDate} />
-          )}
-        </div>
+      {/* Averages section: full width like staff view so chart cards are not narrow */}
+      <div className="mx-auto w-full space-y-6 pt-2">
+        <h2 className="text-lg font-semibold text-white">Your 7-day & 28-day averages</h2>
+        {list.length === 0 ? (
+          <p
+            className={`mx-auto max-w-2xl rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-white/20 text-white/90" : themeId === "matt" ? "matt-card-text border-white/20 text-white/90" : "border-zinc-700 bg-zinc-900/50 text-zinc-400"}`}
+            style={{
+              borderRadius: CARD_RADIUS,
+              ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : {}),
+            }}
+          >
+            No wellness entries yet. Submit your first entry above to see your trends here.
+          </p>
+        ) : (
+          <PlayerWellnessTrend wellness={list} dates={dates} loadByDate={loadByDate} />
+        )}
       </div>
     </div>
   );

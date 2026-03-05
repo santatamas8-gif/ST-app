@@ -12,9 +12,13 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
+import type { LucideIcon } from "lucide-react";
+import { Clock, Moon, BatteryLow, Activity, Brain, Smile, HeartPulse, Dumbbell } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
+import { useTheme } from "@/components/ThemeProvider";
+import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 
 const CARD_RADIUS = "12px";
 
@@ -32,40 +36,33 @@ type MetricKey =
   | "wellness"
   | "load";
 
-const METRICS: { key: MetricKey; label: string; max?: number }[] = [
-  { key: "sleep_duration", label: "Sleep (h)" },
-  { key: "sleep_quality", label: "Sleep quality", max: 10 },
-  { key: "fatigue", label: "Fatigue", max: 10 },
-  { key: "soreness", label: "Soreness", max: 10 },
-  { key: "stress", label: "Stress", max: 10 },
-  { key: "mood", label: "Mood", max: 10 },
-  { key: "wellness", label: "Wellness score", max: 10 },
-  { key: "load", label: "Load" },
+const METRICS: { key: MetricKey; label: string; max?: number; Icon: LucideIcon }[] = [
+  { key: "sleep_duration", label: "Sleep (h)", Icon: Clock },
+  { key: "sleep_quality", label: "Sleep quality", max: 10, Icon: Moon },
+  { key: "fatigue", label: "Fatigue", max: 10, Icon: BatteryLow },
+  { key: "soreness", label: "Soreness", max: 10, Icon: Activity },
+  { key: "stress", label: "Stress", max: 10, Icon: Brain },
+  { key: "mood", label: "Mood", max: 10, Icon: Smile },
+  { key: "wellness", label: "Wellness score", max: 10, Icon: HeartPulse },
+  { key: "load", label: "Load", Icon: Dumbbell },
 ];
 
-/** Returns green / yellow / red for bar color based on metric and value (higher is better for mood, quality, wellness, sleep_duration; lower is better for fatigue, soreness, stress). */
+/** Bar colors: 1–4 red, 5–7 yellow, 8+ green. Wellness etc. are 1–10, higher = better. Load = intensity (1–10) × duration, so result is not 1–10 → no color bands. Sleep (h) uses hour bands. */
 function getBarColor(key: MetricKey, value: number | string): string {
   const n = typeof value === "number" ? value : Number(value);
   if (Number.isNaN(n)) return BAR_GREEN;
-  if (key === "load") return BAR_GREEN;
+  // Sleep duration (hours): 8+ green, 5–7 yellow, below 5 red
   if (key === "sleep_duration") {
     if (n >= 8) return BAR_GREEN;
-    if (n >= 6) return BAR_YELLOW;
+    if (n >= 5) return BAR_YELLOW;
     return BAR_RED;
   }
-  const highGood = ["sleep_quality", "mood", "wellness"].includes(key);
-  if (highGood) {
-    if (n >= 7) return BAR_GREEN;
-    if (n >= 4) return BAR_YELLOW;
-    return BAR_RED;
-  }
-  const lowGood = ["fatigue", "soreness", "stress"].includes(key);
-  if (lowGood) {
-    if (n <= 3) return BAR_GREEN;
-    if (n <= 6) return BAR_YELLOW;
-    return BAR_RED;
-  }
-  return BAR_GREEN;
+  // Load = (1–10 intensity) × duration → value can be large; no good/bad bands, use single color
+  if (key === "load") return BAR_GREEN;
+  // 1–10 scale, higher = better (sleep_quality, fatigue, soreness, stress, mood, wellness): 1–4 red, 5–7 yellow, 8+ green
+  if (n >= 8) return BAR_GREEN;
+  if (n >= 5) return BAR_YELLOW;
+  return BAR_RED;
 }
 
 function getMetricValue(row: WellnessRow | undefined, key: MetricKey, loadByDate: Map<string, number>, date: string): number | null {
@@ -95,6 +92,17 @@ interface PlayerWellnessTrendProps {
 }
 
 export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRecord }: PlayerWellnessTrendProps) {
+  const { themeId } = useTheme();
+  const isNeon = themeId === "neon";
+  const isMatt = themeId === "matt";
+  const cardStyle =
+    isNeon ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } as React.CSSProperties
+    : isMatt ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } as React.CSSProperties
+    : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" };
+  const cardBorderClass = isNeon || isMatt ? "border border-transparent" : "border";
+  const cardTextClass = isNeon ? "neon-card-text" : isMatt ? "matt-card-text" : "";
+  const tickFill = "var(--foreground)";
+
   const loadByDate = useMemo(
     () => new Map<string, number>(Object.entries(loadByDateRecord)),
     [loadByDateRecord]
@@ -158,10 +166,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
   return (
     <div className="space-y-8">
       {/* Top: select 7 or 28 – only that average is shown */}
-      <div
-        className="rounded-xl border border-zinc-700 p-4"
-        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
-      >
+      <div className={`rounded-xl border p-4 ${cardBorderClass} ${cardTextClass}`} style={cardStyle}>
         <div className="flex flex-col items-center justify-center gap-3">
           <div className="flex gap-2 sm:gap-3">
             <button
@@ -187,26 +192,29 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
               28-day average
             </button>
           </div>
-          <p className="text-center text-sm text-white sm:text-base">
-            {selectedPeriod === "7" ? (
-              <>
-                Wellness: <span className="font-semibold text-emerald-400">{summary7.wellness != null ? summary7.wellness.toFixed(1) : "—"}</span>
-                {" · "}
-                Sleep: <span className="font-semibold text-white">{summary7.sleep != null ? `${summary7.sleep.toFixed(1)}h` : "—"}</span>
-              </>
-            ) : (
-              <>
-                Wellness: <span className="font-semibold text-emerald-400">{summary28.wellness != null ? summary28.wellness.toFixed(1) : "—"}</span>
-                {" · "}
-                Sleep: <span className="font-semibold text-white">{summary28.sleep != null ? `${summary28.sleep.toFixed(1)}h` : "—"}</span>
-              </>
-            )}
-          </p>
+          <div className="mt-3 rounded-lg border-t pt-3" style={{ borderColor: "var(--card-border)", backgroundColor: "rgba(0,0,0,0.12)" }}>
+            <p className="text-center text-sm sm:text-base" style={{ color: "var(--foreground)" }}>
+              {selectedPeriod === "7" ? (
+                <>
+                  Wellness: <span className="font-semibold text-emerald-400">{summary7.wellness != null ? summary7.wellness.toFixed(1) : "—"}</span>
+                  {" · "}
+                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary7.sleep != null ? `${summary7.sleep.toFixed(1)}h` : "—"}</span>
+                </>
+              ) : (
+                <>
+                  Wellness: <span className="font-semibold text-emerald-400">{summary28.wellness != null ? summary28.wellness.toFixed(1) : "—"}</span>
+                  {" · "}
+                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary28.sleep != null ? `${summary28.sleep.toFixed(1)}h` : "—"}</span>
+                </>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Per-metric: 7/28 avg + bar chart (only selected period days; tooltip = date + value; faint avg line) */}
-      {METRICS.map(({ key, label, max = 10 }) => {
+      {/* Per-metric: 7/28 avg + bar chart; from sm (640px): 2 columns side-by-side, then next row */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {METRICS.map(({ key, label, max = 10, Icon }) => {
         const values7 = last7Dates.map((d) =>
           getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
         );
@@ -222,28 +230,32 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         const barSize = is7Day ? 48 : 24;
         const tickFontSize = is7Day ? 15 : 12;
         const yAxisWidth = is7Day ? 40 : 32;
-        const tickStyle = { fontSize: tickFontSize, fontWeight: 600, fill: "#e4e4e7" };
+        const tickStyle = { fontSize: tickFontSize, fontWeight: 600, fill: tickFill };
 
         return (
           <div
             key={key}
-            className="rounded-xl border border-zinc-700 p-4"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+            className={`rounded-xl border p-4 ${cardBorderClass} ${cardTextClass}`}
+            style={cardStyle}
           >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="font-medium text-white">{label}</h4>
-              <p className="text-sm text-zinc-400">
-                7d avg: <span className="font-medium text-zinc-300">{avg7 != null ? (key === "sleep_duration" ? `${avg7.toFixed(1)}h` : avg7.toFixed(1)) : "—"}</span>
-                {" · "}
-                28d avg: <span className="font-medium text-zinc-300">{avg28 != null ? (key === "sleep_duration" ? `${avg28.toFixed(1)}h` : avg28.toFixed(1)) : "—"}</span>
-              </p>
+            <div className="mb-2">
+              <h4 className="flex items-center gap-2.5 font-medium" style={{ color: "var(--foreground)" }}>
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1 ring-black/10"
+                  style={{ backgroundColor: "var(--card-border)", color: "var(--foreground)" }}
+                  aria-hidden
+                >
+                  <Icon className="h-6 w-6" strokeWidth={2} />
+                </span>
+                {label}
+              </h4>
             </div>
             <div className={`w-full min-w-0 ${is7Day ? "h-40" : "h-32"}`}>
               {hasAny ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartDataByPeriod}
-                    margin={{ top: 4, right: 4, left: is7Day ? -4 : -8, bottom: 0 }}
+                    margin={{ top: 2, right: 88, left: is7Day ? -4 : -8, bottom: 8 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis
@@ -267,11 +279,11 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         if (value == null) return null;
                         return (
                           <div
-                            className="rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-sm shadow-lg"
-                            style={{ borderColor: "#27272a", backgroundColor: "var(--card-bg)" }}
+                            className="rounded-lg border px-3 py-2 text-sm shadow-lg"
+                            style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)", color: "var(--foreground)" }}
                           >
-                            <p className="font-medium text-zinc-300">Date: {fullDate}{getDateContextLabel(fullDate)}</p>
-                            <p className="mt-1 font-medium text-white">{label}: {formatTooltipValue(key, value)}</p>
+                            <p className="font-medium opacity-80">Date: {fullDate}{getDateContextLabel(fullDate)}</p>
+                            <p className="mt-1 font-medium">{label}: {formatTooltipValue(key, value)}</p>
                           </div>
                         );
                       }}
@@ -283,6 +295,13 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         strokeWidth={1}
                         strokeDasharray="4 4"
                         strokeOpacity={0.7}
+                        label={{
+                          value: `${selectedPeriod === "7" ? "7d" : "28d"} avg ${key === "sleep_duration" ? `${periodAvg.toFixed(1)}h` : periodAvg.toFixed(1)}`,
+                          position: "right",
+                          fill: "var(--foreground)",
+                          fontSize: 13,
+                          fontWeight: 700,
+                        }}
                       />
                     )}
                     <Bar dataKey={dataKey} radius={[2, 2, 0, 0]} maxBarSize={barSize}>
@@ -301,7 +320,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+                <div className="flex h-full items-center justify-center text-sm opacity-60" style={{ color: "var(--foreground)" }}>
                   No data
                 </div>
               )}
@@ -309,6 +328,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

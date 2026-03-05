@@ -41,13 +41,13 @@ export default async function PlayerDetailPage({
   dates.reverse();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+    <div className="w-full space-y-6 px-4 py-8" style={{ backgroundColor: "var(--page-bg)", color: "var(--foreground)" }}>
       <div className="flex gap-4 text-sm">
-        <Link href="/players" className="text-zinc-400 hover:text-white">← Players</Link>
-        <Link href="/wellness" className="text-zinc-400 hover:text-white">Wellness</Link>
+        <Link href="/players" className="opacity-80 hover:opacity-100 transition-opacity">← Players</Link>
+        <Link href="/wellness" className="opacity-80 hover:opacity-100 transition-opacity">Wellness</Link>
       </div>
-      <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">{displayName}</h1>
-      <p className="text-zinc-400">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
+      <h1 className="text-lg font-bold tracking-tight sm:text-xl lg:text-2xl" style={{ color: "var(--foreground)" }}>{displayName}</h1>
+      <p className="opacity-70">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
 
       <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
 

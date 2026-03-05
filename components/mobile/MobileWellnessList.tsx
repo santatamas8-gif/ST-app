@@ -410,7 +410,7 @@ export function MobileWellnessList({
               <div className="flex justify-between gap-2 items-center">
                 <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Fatigue</dt>
                 <dd>
-                  <BadgeScore value={detailRow.fatigue != null ? 10 - detailRow.fatigue : null} type="goodHigh" />
+                  <BadgeScore value={detailRow.fatigue} type="goodHigh" />
                 </dd>
               </div>
               <div className="flex justify-between gap-2 items-center">
@@ -422,7 +422,7 @@ export function MobileWellnessList({
               <div className="flex justify-between gap-2 items-center">
                 <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Stress</dt>
                 <dd>
-                  <BadgeScore value={detailRow.stress != null ? 10 - detailRow.stress : null} type="goodHigh" />
+                  <BadgeScore value={detailRow.stress} type="goodHigh" />
                 </dd>
               </div>
               <div className="flex justify-between gap-2 items-center">
