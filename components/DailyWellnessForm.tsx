@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import { submitDailyWellness } from "@/app/actions/wellness";
 import { sleepDurationHours } from "@/utils/sleep";
 import { ScaleInput } from "@/components/ScaleInput";
@@ -44,6 +45,7 @@ interface DailyWellnessFormProps {
 }
 
 export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFormProps) {
+  const router = useRouter();
   const [bedTime, setBedTime] = useState("");
   const [wakeTime, setWakeTime] = useState("");
   const [sleepQuality, setSleepQuality] = useState(5);
@@ -56,6 +58,15 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const set = () => setIsMobile(mq.matches);
+    set();
+    mq.addEventListener("change", set);
+    return () => mq.removeEventListener("change", set);
+  }, []);
 
   const sleepDuration = useMemo(() => {
     if (!bedTime || !wakeTime) return null;
@@ -115,6 +126,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
       return;
     }
     setIsSuccess(true);
+    router.refresh(); // refetch page data so chart and list show the new entry
   }
 
   if (hasSubmittedToday) {
@@ -163,23 +175,23 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
 
   return (
     <div
-      className="rounded-xl border shadow-lg overflow-hidden"
+      className="wellness-player-form rounded-xl border shadow-lg overflow-hidden"
       style={{ backgroundColor: "var(--card-bg)", borderRadius: 12, borderColor: "var(--card-border)" }}
     >
-      <header className="border-b border-zinc-700/80 bg-emerald-950/25 px-5 py-4">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
-          <HeartPulse className="h-5 w-5 text-emerald-400" aria-hidden />
+      <header className="border-b border-zinc-700/80 bg-emerald-950/25 px-4 py-3.5 md:px-5 md:py-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-white md:text-lg">
+          <HeartPulse className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
           Daily wellness
         </h2>
       </header>
-      <form onSubmit={handleSubmit} className="space-y-6 p-5">
+      <form onSubmit={handleSubmit} className="min-w-0 space-y-4 p-3 md:space-y-6 md:p-5">
         {/* Sleep */}
-        <div className="space-y-4 rounded-xl border border-zinc-700/50 bg-slate-900/25 px-4 pb-4 pt-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            <Moon className="h-4 w-4" aria-hidden />
+        <div className="min-w-0 space-y-4 rounded-xl border border-zinc-700/50 bg-slate-900/25 py-4 px-3 md:space-y-4 md:px-4 md:pb-4 md:pt-4">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:text-sm">
+            <Moon className="h-4 w-4 shrink-0" aria-hidden />
             Sleep
           </h3>
-          <div className="space-y-4 pl-0">
+          <div className="space-y-6 pl-0 md:space-y-4">
             <div>
               <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
                 Bed time
@@ -225,12 +237,12 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
         </div>
 
         {/* Body */}
-        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-amber-950/20 px-4 pb-4 pt-6">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            <Activity className="h-4 w-4" aria-hidden />
+        <div className="min-w-0 space-y-4 rounded-xl border border-zinc-700/50 bg-amber-950/20 py-4 px-3 md:space-y-4 md:border-0 md:border-t md:border-zinc-700/80 md:px-4 md:pb-4 md:pt-6">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:text-sm">
+            <Activity className="h-4 w-4 shrink-0" aria-hidden />
             Body
           </h3>
-          <div className="space-y-4 pl-0">
+          <div className="space-y-6 pl-0 md:space-y-4">
             {FIELDS.filter((f) => f.key === "fatigue" || f.key === "soreness").map(({ key, label, lowLabel, highLabel }) => (
               <ScaleInput
                 key={key}
@@ -248,12 +260,12 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
         </div>
 
         {/* Mind */}
-        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-violet-950/20 px-4 pb-4 pt-6">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            <Brain className="h-4 w-4" aria-hidden />
+        <div className="min-w-0 space-y-4 rounded-xl border border-zinc-700/50 bg-violet-950/20 py-4 px-3 md:space-y-4 md:border-0 md:border-t md:border-zinc-700/80 md:px-4 md:pb-4 md:pt-6">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:text-sm">
+            <Brain className="h-4 w-4 shrink-0" aria-hidden />
             Mind
           </h3>
-          <div className="space-y-4 pl-0">
+          <div className="space-y-6 pl-0 md:space-y-4">
             {FIELDS.filter((f) => f.key === "stress" || f.key === "mood").map(({ key, label, lowLabel, highLabel }) => (
               <ScaleInput
                 key={key}
@@ -270,13 +282,13 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
           </div>
         </div>
 
-        <div className="space-y-4 rounded-xl border-t border-zinc-700/80 bg-zinc-800/30 px-4 pb-4 pt-6">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            <MoreHorizontal className="h-4 w-4" aria-hidden />
+        <div className="min-w-0 space-y-4 rounded-xl border py-4 px-3 md:space-y-4 md:border-0 md:border-t md:px-4 md:pb-4 md:pt-6" style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}>
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide md:text-sm" style={{ color: "var(--foreground)" }}>
+            <MoreHorizontal className="h-4 w-4 shrink-0" aria-hidden />
             Other
           </h3>
-          <div className="rounded-xl border border-zinc-600/50 bg-slate-900/25 p-4">
-            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-300">
+          <div className="rounded-xl border p-3 md:p-4" style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}>
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--foreground)" }}>
               <Pill className="h-5 w-5 text-amber-500/90" aria-hidden />
               Illness today (e.g. cold, fever, stomach)
             </p>
@@ -306,16 +318,18 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
                 Yes
               </button>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">Default is No — only tap Yes if you have illness.</p>
+            <p className="mt-1 text-xs opacity-80" style={{ color: "var(--foreground)" }}>Default is No — only tap Yes if you have illness.</p>
           </div>
-          <div className="mt-4 rounded-xl border-t border-zinc-600/50 bg-amber-950/20 p-4 pt-4">
-            <label className="block text-sm font-semibold text-zinc-300">
+          <div className="mt-3 min-w-0 overflow-hidden rounded-xl border-t p-3 pt-3 md:mt-4 md:overflow-visible md:p-4 md:pt-4" style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}>
+            <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
               Body map – soreness & pain (optional)
             </label>
-            <p className="mt-0.5 mb-2 text-xs text-zinc-500">
-              Tap a body part to set level (1–10). Use FRONT/BACK to switch side.
+            <p className="mt-0.5 mb-2 text-xs opacity-80" style={{ color: "var(--foreground)" }}>
+              Tap a body part to set level (1–10).<span className="hidden sm:inline"> Use FRONT/BACK to switch side.</span>
             </p>
-            <BodyMap value={bodyParts} onChange={setBodyParts} />
+            <div className="flex min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-xl h-[92vh] md:h-auto md:max-h-none md:flex-none">
+              <BodyMap value={bodyParts} onChange={setBodyParts} singleView={isMobile} touchFriendly={isMobile} defaultZoom={isMobile ? 1.35 : undefined} />
+            </div>
           </div>
         </div>
         {submitError && (
@@ -324,7 +338,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
           </div>
         )}
         {!canSubmit && !loading && (bedTime.trim() === "" || wakeTime.trim() === "") && (
-          <p className="text-sm text-amber-500/90">Fill in bed time and wake time to submit.</p>
+          <p className="text-sm text-amber-500/90">Please select Bed time and Wake time.</p>
         )}
         <button
           type="submit"

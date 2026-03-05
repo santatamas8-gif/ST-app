@@ -71,10 +71,11 @@ body {
     radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
 }
 
-/* Scale slider track: red (low) to green (high) – visible line you drag on */
+/* Scale slider track: red (low) to green (high) – same on all viewports including mobile */
 input.scale-input-track {
   -webkit-appearance: none;
   appearance: none;
+  background: transparent;
 }
 .scale-input-track::-webkit-slider-runnable-track {
   height: var(--track-h, 8px);
@@ -91,8 +92,8 @@ input.scale-input-track {
   background: var(--thumb-color, #16a34a);
   cursor: pointer;
   margin-top: -5px;
-  border: 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 .scale-input-track::-moz-range-track {
   height: var(--track-h, 8px);
@@ -106,8 +107,8 @@ input.scale-input-track {
   border-radius: 50%;
   background: var(--thumb-color, #16a34a);
   cursor: pointer;
-  border: 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 /* RPE slider: green (easy) → red (hard) */
 input.rpe-input-track {

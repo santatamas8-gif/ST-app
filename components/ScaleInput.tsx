@@ -61,7 +61,7 @@ export function ScaleInput({
   const thumbColor = thumbColorFor(colorValue, min, max);
   const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
   return (
-    <div>
+    <div className="min-w-0 overflow-visible">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={name} className="block min-w-0 flex-1">
           <span className="block text-sm font-semibold text-zinc-200">{label}</span>
@@ -76,14 +76,16 @@ export function ScaleInput({
         )}
       </div>
       {showEndLabels ? (
-        <div id={`${name}-ends`} className="mt-1.5 flex items-center gap-3" aria-hidden>
-          <span className="w-[8rem] shrink-0 truncate text-xs text-zinc-500" title={lowLabel ?? undefined}>
+        <div id={`${name}-ends`} className="mt-0.5 flex min-w-0 flex-col overflow-visible md:mt-1.5 md:flex-row md:items-center md:gap-3" aria-hidden>
+          {/* Desktop: left label */}
+          <span className="hidden shrink-0 truncate text-xs text-zinc-500 md:block md:w-[8rem]" title={lowLabel ?? undefined}>
             {lowLabel ?? ""}
           </span>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="relative h-7 w-full">
+          {/* Slider + value bubble (full width on mobile, flex-1 on desktop); py-3 on mobile = larger touch target */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-visible w-full py-3 md:min-w-0 md:py-0">
+            <div className="relative h-7 w-full overflow-visible">
               <span
-                className="absolute top-0 whitespace-nowrap rounded-md bg-zinc-800/95 px-2 py-0.5 text-sm font-semibold tabular-nums"
+                className="absolute top-0 whitespace-nowrap rounded-md bg-zinc-800/95 px-2 py-0.5 text-sm font-semibold tabular-nums shadow-sm"
                 style={{
                   left: `${percent}%`,
                   transform: "translateX(-50%)",
@@ -101,13 +103,19 @@ export function ScaleInput({
               max={max}
               value={value}
               onChange={(e) => onChange(Number(e.target.value))}
-              className="scale-input-track mt-0.5 h-2 w-full appearance-none rounded-full bg-transparent accent-emerald-500 [--track-h:8px]"
+              className="scale-input-track mt-0.5 h-2 w-full min-w-0 appearance-none rounded-full bg-transparent accent-emerald-500 [--track-h:10px] md:[--track-h:8px]"
               style={{ ["--thumb-color" as string]: thumbColor }}
             />
           </div>
-          <span className="w-[8rem] shrink-0 truncate text-right text-xs text-zinc-500" title={highLabel ?? undefined}>
+          {/* Desktop: right label */}
+          <span className="hidden shrink-0 truncate text-right text-xs text-zinc-500 md:block md:w-[8rem]" title={highLabel ?? undefined}>
             {highLabel ?? ""}
           </span>
+          {/* Mobile only: labels row – much closer to slider */}
+          <div className="flex justify-between gap-2 -mt-2.5 text-[10px] leading-tight text-zinc-400 md:hidden">
+            <span className="truncate max-w-[45%]" title={lowLabel ?? undefined}>{lowLabel ?? ""}</span>
+            <span className="truncate max-w-[45%] text-right" title={highLabel ?? undefined}>{highLabel ?? ""}</span>
+          </div>
         </div>
       ) : (
         <input
@@ -117,7 +125,7 @@ export function ScaleInput({
           max={max}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="scale-input-track mt-1.5 h-2 w-full appearance-none rounded-full bg-transparent accent-emerald-500 [--track-h:8px]"
+          className="scale-input-track mt-1.5 h-2 w-full appearance-none rounded-full bg-transparent accent-emerald-500 [--track-h:10px] md:[--track-h:8px]"
           style={{ ["--thumb-color" as string]: thumbColor }}
         />
       )}

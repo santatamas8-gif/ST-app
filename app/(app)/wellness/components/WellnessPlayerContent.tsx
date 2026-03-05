@@ -25,16 +25,19 @@ export function WellnessPlayerContent({
   const isHighContrast = themeId === "neon" || themeId === "matt";
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
-      <div className="mx-auto max-w-2xl space-y-6">
+    <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--page-bg)" }}>
+      <div className="mx-auto min-w-0 max-w-2xl space-y-6">
         <div>
           <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>
-          <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-            Submit once per day. All scales are 1 to 10{" "}
-            <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>
-              (1 = very poor, 10 = excellent)
+          <p className={`mt-1 text-xs sm:text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+            <span className="sm:hidden">Submit once per day. Scales 1–10 (1 = poor, 10 = excellent).</span>
+            <span className="hidden sm:inline">
+              Submit once per day. All scales are 1 to 10{" "}
+              <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>
+                (1 = very poor, 10 = excellent)
+              </span>
+              .
             </span>
-            .
           </p>
         </div>
 
@@ -60,7 +63,7 @@ export function WellnessPlayerContent({
 
       {/* Averages section: full width like staff view so chart cards are not narrow */}
       <div className="mx-auto w-full space-y-6 pt-2">
-        <h2 className="text-lg font-semibold text-white">Your 7-day & 28-day averages</h2>
+        <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>Your 7-day & 28-day averages</h2>
         {list.length === 0 ? (
           <p
             className={`mx-auto max-w-2xl rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-white/20 text-white/90" : themeId === "matt" ? "matt-card-text border-white/20 text-white/90" : "border-zinc-700 bg-zinc-900/50 text-zinc-400"}`}

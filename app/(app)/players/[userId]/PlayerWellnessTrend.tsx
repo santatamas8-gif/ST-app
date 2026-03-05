@@ -166,9 +166,9 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
   return (
     <div className="space-y-8">
       {/* Top: select 7 or 28 – only that average is shown */}
-      <div className={`rounded-xl border p-4 ${cardBorderClass} ${cardTextClass}`} style={cardStyle}>
+      <div className={`rounded-xl border p-3 md:p-4 ${cardBorderClass} ${cardTextClass}`} style={cardStyle}>
         <div className="flex flex-col items-center justify-center gap-3">
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setSelectedPeriod("7")}
@@ -178,7 +178,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
               }`}
             >
-              7-day average
+              7 Days
             </button>
             <button
               type="button"
@@ -189,7 +189,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
               }`}
             >
-              28-day average
+              28 Days
             </button>
           </div>
           <div className="mt-3 rounded-lg border-t pt-3" style={{ borderColor: "var(--card-border)", backgroundColor: "rgba(0,0,0,0.12)" }}>
@@ -212,8 +212,8 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         </div>
       </div>
 
-      {/* Per-metric: 7/28 avg + bar chart; from sm (640px): 2 columns side-by-side, then next row */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* Per-metric: 7/28 avg + bar chart; mobile: 1 col, sm+: 2 cols */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
       {METRICS.map(({ key, label, max = 10, Icon }) => {
         const values7 = last7Dates.map((d) =>
           getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
@@ -235,7 +235,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         return (
           <div
             key={key}
-            className={`rounded-xl border p-4 ${cardBorderClass} ${cardTextClass}`}
+            className={`min-w-0 rounded-xl border p-3 md:p-4 ${cardBorderClass} ${cardTextClass}`}
             style={cardStyle}
           >
             <div className="mb-2">

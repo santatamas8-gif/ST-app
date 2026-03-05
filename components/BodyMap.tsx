@@ -12,6 +12,8 @@ const SVG_BACK = "/body-map-back.svg";
 const SKIP_IDS = new Set(["Face and Skin", "Body"]);
 const PART_STROKE = "#a1a1aa";
 const PART_STROKE_WIDTH = 0.8;
+/** Transparent stroke width for larger touch hit area (viewBox units); mobile only */
+const TOUCH_HIT_STROKE = 18;
 const PANEL_BG = "#27272a";
 const BODY_FILL = "#52525b";
 const BODY_STROKE = "#71717a";
@@ -91,6 +93,9 @@ function BodyFigure({
   zoom,
   pan,
   onZoomPanChange,
+  className,
+  touchFriendly = false,
+  defaultZoom = 1,
 }: {
   parsed: ParsedSvg | null;
   view: "front" | "back";
@@ -100,6 +105,11 @@ function BodyFigure({
   zoom: number;
   pan: { x: number; y: number };
   onZoomPanChange: (zoom: number, pan: { x: number; y: number }) => void;
+  className?: string;
+  /** When true, render transparent stroke overlays for larger touch hit areas (mobile). */
+  touchFriendly?: boolean;
+  /** Zoom level used for "reset/fit" (e.g. 1.3 on mobile). */
+  defaultZoom?: number;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const lastTouchRef = React.useRef<{ x: number; y: number } | null>(null);
@@ -146,8 +156,8 @@ function BodyFigure({
   if (!parsed) {
     return (
       <div
-        className="flex min-h-[400px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400"
-        style={{ maxWidth: 320, backgroundColor: PANEL_BG }}
+        className={`flex min-h-[400px] items-center justify-center rounded-xl border border-zinc-600 text-zinc-400 ${className ?? ""}`}
+        style={{ backgroundColor: PANEL_BG }}
       >
         Loading…
       </div>
@@ -159,21 +169,20 @@ function BodyFigure({
   return (
     <div
       ref={containerRef}
-      className="relative select-none overflow-hidden rounded-xl border border-zinc-600"
-      style={{ maxWidth: 320, backgroundColor: PANEL_BG, touchAction: "none" }}
+      className={`relative select-none overflow-hidden rounded-xl border border-zinc-600 ${className ?? ""}`}
+      style={{ backgroundColor: PANEL_BG, touchAction: "none" }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
       <div
-        className="origin-center transition-transform duration-100"
+        className="origin-center h-full min-h-0 transition-transform duration-100 md:min-h-[400px]"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          minHeight: 400,
         }}
       >
-      <svg viewBox={viewBox} className="h-auto w-full" style={{ minHeight: 400 }} aria-hidden>
+      <svg viewBox={viewBox} className="h-full w-full min-h-0 md:h-auto md:min-h-[400px]" preserveAspectRatio="xMidYMid meet" aria-hidden>
         {/* Background outline (body silhouette on dark panel) */}
         {background && (
           <path
@@ -211,15 +220,27 @@ function BodyFigure({
                 </defs>
               )}
               {part.paths.map((d, i) => (
-                <path
-                  key={`${part.id}-${i}`}
-                  d={d}
-                  fill={fill}
-                  stroke={PART_STROKE}
-                  strokeWidth={PART_STROKE_WIDTH}
-                  className="cursor-pointer transition-all duration-150 hover:opacity-90"
-                  onClick={() => onPartClick(part.id)}
-                />
+                <g key={`${part.id}-${i}`}>
+                  <path
+                    d={d}
+                    fill={fill}
+                    stroke={PART_STROKE}
+                    strokeWidth={PART_STROKE_WIDTH}
+                    className="cursor-pointer transition-all duration-150 hover:opacity-90"
+                    onClick={() => onPartClick(part.id)}
+                  />
+                  {touchFriendly && (
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={TOUCH_HIT_STROKE}
+                      className="cursor-pointer"
+                      onClick={() => onPartClick(part.id)}
+                      aria-hidden
+                    />
+                  )}
+                </g>
               ))}
               {hasValue && (() => {
                 const firstD = part.paths[0];
@@ -274,10 +295,10 @@ function BodyFigure({
         >
           −
         </button>
-        {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
+        {(zoom !== defaultZoom || pan.x !== 0 || pan.y !== 0) && (
           <button
             type="button"
-            onClick={() => onZoomPanChange(1, { x: 0, y: 0 })}
+            onClick={() => onZoomPanChange(defaultZoom, { x: 0, y: 0 })}
             className="flex h-8 items-center justify-center rounded-lg text-xs text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
             aria-label="Reset zoom"
           >
@@ -292,15 +313,21 @@ function BodyFigure({
 interface BodyMapProps {
   value: BodyPartsState;
   onChange: (next: BodyPartsState) => void;
+  /** When true (e.g. mobile), only fetch/render the current view's SVG to avoid layout issues. */
+  singleView?: boolean;
+  /** When true (e.g. mobile), larger touch hit areas via transparent stroke overlays. */
+  touchFriendly?: boolean;
+  /** Initial/default zoom (e.g. 1.25 on mobile for a larger body). Fit button resets to this. */
+  defaultZoom?: number;
 }
 
-export function BodyMap({ value, onChange }: BodyMapProps) {
+export function BodyMap({ value, onChange, singleView = false, touchFriendly = false, defaultZoom = 1 }: BodyMapProps) {
   const [mode, setMode] = useState<"soreness" | "pain">("soreness");
   const [currentView, setCurrentView] = useState<"front" | "back">("front");
   const [searchQuery, setSearchQuery] = useState("");
   const [parsedFront, setParsedFront] = useState<ParsedSvg | null>(null);
   const [parsedBack, setParsedBack] = useState<ParsedSvg | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(defaultZoom);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
   const handleZoomPanChange = useCallback((newZoom: number, newPan: { x: number; y: number }) => {
@@ -308,7 +335,13 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
     setPan(newPan);
   }, []);
 
+  const handleFit = useCallback(() => {
+    setZoom(defaultZoom);
+    setPan({ x: 0, y: 0 });
+  }, [defaultZoom]);
+
   useEffect(() => {
+    if (singleView && currentView !== "front") return;
     let cancelled = false;
     fetch(SVG_FRONT)
       .then((r) => r.text())
@@ -321,9 +354,10 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [singleView, currentView]);
 
   useEffect(() => {
+    if (singleView && currentView !== "back") return;
     let cancelled = false;
     fetch(SVG_BACK)
       .then((r) => r.text())
@@ -336,7 +370,7 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [singleView, currentView]);
 
   const parsed = currentView === "front" ? parsedFront : parsedBack;
   const partIds = parsed?.parts.map((p) => p.id) ?? [];
@@ -388,62 +422,62 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-        <span className="text-xs font-medium text-zinc-500">Mode:</span>
-        <button
-          type="button"
-          onClick={() => setMode("soreness")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-            mode === "soreness"
-              ? "bg-amber-600 text-white"
-              : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-          }`}
-        >
-          Soreness
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("pain")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-            mode === "pain"
-              ? "bg-red-600 text-white"
-              : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-          }`}
-        >
-          Pain
-        </button>
-        <span className="hidden text-xs text-zinc-500 sm:inline" aria-hidden>|</span>
-        <span className="text-xs font-medium text-zinc-500">View:</span>
-        <button
-          type="button"
-          onClick={() => { setCurrentView("front"); setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className={`rounded-lg px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
-            currentView === "front"
-              ? "bg-emerald-500 text-white"
-              : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-          }`}
-        >
-          FRONT
-        </button>
-        <button
-          type="button"
-          onClick={() => { setCurrentView("back"); setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className={`rounded-lg px-3 py-1.5 text-sm font-semibold uppercase tracking-wide transition ${
-            currentView === "back"
-              ? "bg-emerald-500 text-white"
-              : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-          }`}
-        >
-          BACK
-        </button>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden space-y-3 min-w-0 md:flex-initial md:overflow-visible">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="w-[3rem] shrink-0 text-xs font-medium text-zinc-500">Mode:</span>
+          <button
+            type="button"
+            onClick={() => setMode("soreness")}
+            className={`min-w-[5.5rem] rounded-lg px-2 py-1 text-xs font-medium transition md:min-w-[6rem] md:px-3 md:py-1.5 md:text-sm ${
+              mode === "soreness"
+                ? "bg-amber-600 text-white"
+                : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+            }`}
+          >
+            Soreness
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("pain")}
+            className={`min-w-[5.5rem] rounded-lg px-2 py-1 text-xs font-medium transition md:min-w-[6rem] md:px-3 md:py-1.5 md:text-sm ${
+              mode === "pain"
+                ? "bg-red-600 text-white"
+                : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+            }`}
+          >
+            Pain
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-zinc-500 md:inline" aria-hidden>|</span>
+          <span className="w-[3rem] shrink-0 text-xs font-medium text-zinc-500">View:</span>
+          <button
+            type="button"
+            onClick={() => { setCurrentView("front"); setZoom(defaultZoom); setPan({ x: 0, y: 0 }); }}
+            className={`min-w-[5.5rem] rounded-lg px-2 py-1 text-xs font-semibold uppercase tracking-wide transition md:min-w-[6rem] md:px-3 md:py-1.5 md:text-sm ${
+              currentView === "front"
+                ? "bg-emerald-500 text-white"
+                : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+            }`}
+          >
+            FRONT
+          </button>
+          <button
+            type="button"
+            onClick={() => { setCurrentView("back"); setZoom(defaultZoom); setPan({ x: 0, y: 0 }); }}
+            className={`min-w-[5.5rem] rounded-lg px-2 py-1 text-xs font-semibold uppercase tracking-wide transition md:min-w-[6rem] md:px-3 md:py-1.5 md:text-sm ${
+              currentView === "back"
+                ? "bg-emerald-500 text-white"
+                : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+            }`}
+          >
+            BACK
+          </button>
+        </div>
       </div>
 
-      <p className="text-xs text-zinc-500 sm:hidden">
-        Pinch to zoom, drag to pan. Use +/− to zoom in on body parts.
-      </p>
-
-      <div className="mx-auto">
+      <div className="mx-auto min-h-0 w-full flex-1 min-w-0 overflow-hidden md:max-w-[320px] md:flex-none">
         <BodyFigure
           parsed={parsed}
           view={currentView}
@@ -453,11 +487,14 @@ export function BodyMap({ value, onChange }: BodyMapProps) {
           zoom={zoom}
           pan={pan}
           onZoomPanChange={handleZoomPanChange}
+          className="h-full min-h-0 w-full max-w-full md:max-w-[320px] md:h-auto"
+          touchFriendly={touchFriendly}
+          defaultZoom={defaultZoom}
         />
       </div>
 
-      <div className="relative">
-        <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2">
+      <div className="relative min-w-0">
+        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2">
           <span className="text-zinc-500" aria-hidden>
             🔍
           </span>
