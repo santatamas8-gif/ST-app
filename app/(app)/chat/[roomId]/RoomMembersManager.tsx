@@ -118,7 +118,7 @@ export function RoomMembersManager({
       {!hideTrigger && (
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(!open)}
         className={
           subtleOnDesktop
             ? "flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-emerald-500 hover:text-white md:rounded-lg md:border-0 md:bg-transparent md:px-2 md:py-1 md:font-normal md:text-zinc-500 md:hover:bg-zinc-700/50 md:hover:text-zinc-300"
