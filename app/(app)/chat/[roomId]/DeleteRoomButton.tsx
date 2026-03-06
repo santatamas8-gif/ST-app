@@ -4,7 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteChatRoom } from "@/app/actions/chat";
 
-export function DeleteRoomButton({ roomId }: { roomId: string }) {
+export function DeleteRoomButton({
+  roomId,
+  variant = "button",
+}: {
+  roomId: string;
+  /** 'menuitem' = minimal style for use inside a dropdown (e.g. mobile header menu). */
+  variant?: "button" | "menuitem";
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -23,6 +30,23 @@ export function DeleteRoomButton({ roomId }: { roomId: string }) {
   }
 
   const label = loading ? "Deleting…" : confirm ? "Confirm delete room" : "Delete room";
+
+  if (variant === "menuitem") {
+    return (
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={loading}
+        title={label}
+        aria-label={label}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+      >
+        <span aria-hidden>🗑️</span>
+        <span>{label}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

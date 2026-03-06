@@ -13,6 +13,10 @@ export function RoomMembersManager({
   availableUsers,
   currentUserId,
   subtleOnDesktop = false,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+  modal = false,
 }: {
   roomId: string;
   members: Member[];
@@ -20,9 +24,19 @@ export function RoomMembersManager({
   currentUserId: string;
   /** When true, use a low-emphasis trigger on md+ (e.g. for chat header). */
   subtleOnDesktop?: boolean;
+  /** When provided, control open state externally (e.g. from a menu). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** When true, do not render the trigger button (use with controlled open). */
+  hideTrigger?: boolean;
+  /** When true and open, render dropdown in a fixed overlay (for mobile menu). */
+  modal?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
+  const open = isControlled ? controlledOpen! : internalOpen;
+  const setOpen = (v: boolean) => (isControlled ? onOpenChange!(v) : setInternalOpen(v));
   const [adding, setAdding] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -46,8 +60,62 @@ export function RoomMembersManager({
   const displayName = (m: Member | AvailableUser) =>
     m.full_name?.trim() || m.email || ("user_id" in m ? m.user_id : m.id)?.slice(0, 8) || "";
 
+  const panelContent = (
+    <div
+      className="w-72 rounded-xl border p-4 shadow-lg"
+      style={{
+        backgroundColor: "var(--card-bg)",
+        borderColor: "var(--card-border)",
+      }}
+    >
+      <h3 className="mb-3 text-sm font-semibold text-white">Members</h3>
+      <ul className="mb-4 max-h-72 space-y-2 overflow-y-auto pr-1">
+        {members.map((m) => (
+          <li key={m.user_id} className="flex items-center justify-between gap-2 text-sm">
+            <span className="truncate text-zinc-300">{displayName(m)}</span>
+            {m.user_id !== currentUserId && (
+              <button
+                type="button"
+                onClick={() => handleRemove(m.user_id)}
+                disabled={!!removing}
+                className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+              >
+                {removing === m.user_id ? "Removing…" : "Remove"}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {availableUsers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="">Add person…</option>
+            {availableUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {displayName(u)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!selectedUserId || !!adding}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {adding ? "Adding…" : "Add"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="relative">
+      {!hideTrigger && (
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -74,55 +142,22 @@ export function RoomMembersManager({
           </>
         )}
       </button>
-      {open && (
-        <div className="absolute left-0 top-full z-40 mt-2 w-72 rounded-xl border p-4 shadow-lg"
-          style={{
-            backgroundColor: "var(--card-bg)",
-            borderColor: "var(--card-border)",
-          }}
+      )}
+      {open && modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-label="Members"
+          onClick={() => setOpen(false)}
         >
-          <h3 className="mb-3 text-sm font-semibold text-white">Members</h3>
-          <ul className="mb-4 max-h-72 space-y-2 overflow-y-auto pr-1">
-            {members.map((m) => (
-              <li key={m.user_id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate text-zinc-300">{displayName(m)}</span>
-                {m.user_id !== currentUserId && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(m.user_id)}
-                    disabled={!!removing}
-                    className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-                  >
-                    {removing === m.user_id ? "Removing…" : "Remove"}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          {availableUsers.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="">Add person…</option>
-                {availableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {displayName(u)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAdd}
-                disabled={!selectedUserId || !!adding}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
-              >
-                {adding ? "Adding…" : "Add"}
-              </button>
-            </div>
-          )}
+          <div onClick={(e) => e.stopPropagation()}>
+            {panelContent}
+          </div>
+        </div>
+      )}
+      {open && !modal && (
+        <div className="absolute left-0 top-full z-40 mt-2">
+          {panelContent}
         </div>
       )}
     </div>

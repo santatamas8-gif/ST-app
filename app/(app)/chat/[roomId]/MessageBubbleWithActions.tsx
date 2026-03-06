@@ -142,7 +142,7 @@ export function MessageBubbleWithActions({
   const showTimeInHeader = showHeaderDateTime && !isOwn;
   const hasHeaderContent = showSender || showTimeInHeader;
   return (
-    <li
+    <div
       className={`group flex flex-col ${hasHeaderContent ? "gap-1" : "gap-0"} ${isOwn ? "items-end" : "items-start"}`}
     >
       {hasHeaderContent && (
@@ -161,7 +161,7 @@ export function MessageBubbleWithActions({
       )}
       <div
         ref={wrapperRef}
-        className={`flex w-fit max-w-[min(85%,20rem)] flex-col ${isOwn ? "items-end" : "items-start"}`}
+        className={`flex w-fit max-w-[min(80%,calc(100vw-2rem))] flex-col lg:max-w-[min(85%,20rem)] ${isOwn ? "items-end" : "items-start"}`}
       >
         <div
           role="button"
@@ -173,7 +173,7 @@ export function MessageBubbleWithActions({
               onToggleActions?.();
             }
           }}
-          className={`cursor-pointer rounded-2xl border px-3.5 py-2.5 shadow-sm ${
+          className={`cursor-pointer rounded-2xl border px-3 py-2 shadow-sm lg:px-3.5 lg:py-2.5 ${
             isOwn
               ? "border-emerald-500/20 bg-emerald-500/20 text-white"
               : "border-zinc-700/50 bg-zinc-800/90 text-zinc-200"
@@ -217,7 +217,7 @@ export function MessageBubbleWithActions({
                 <img
                   src={message.attachment_url}
                   alt="Attachment"
-                  className="max-h-48 cursor-pointer rounded-xl object-contain hover:opacity-95"
+                  className="max-h-48 max-w-full cursor-pointer rounded-xl object-contain hover:opacity-95"
                 />
               </button>
               {lightboxOpen && (
@@ -284,7 +284,7 @@ export function MessageBubbleWithActions({
         {actionsOpen && (
           <div
             role="menu"
-            className="relative z-10 mt-0.5 flex max-w-[min(100vw-2rem,20rem)] flex-wrap items-center gap-0.5 rounded-md border border-zinc-700/40 bg-zinc-800/95 px-1.5 py-1 shadow-sm"
+            className="relative z-10 mt-0.5 flex max-w-[min(100vw-2rem,20rem)] flex-wrap items-center gap-0.5 rounded-lg border border-zinc-700/50 bg-zinc-800/90 px-1 py-0.5 shadow-sm lg:rounded-md lg:border-zinc-700/40 lg:bg-zinc-800/95 lg:px-1.5 lg:py-1"
             style={{ borderColor: "var(--card-border)" }}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
@@ -293,7 +293,7 @@ export function MessageBubbleWithActions({
           >
             {time && (
               <span
-                className="mr-1.5 border-r border-zinc-600/80 pr-1.5 text-[10px] text-zinc-500 tabular-nums"
+                className="mr-1 border-r border-zinc-600/80 pr-1 text-[10px] text-zinc-500 tabular-nums lg:mr-1.5 lg:pr-1.5"
                 aria-hidden
               >
                 {time}
@@ -307,7 +307,7 @@ export function MessageBubbleWithActions({
                   handleDelete();
                 }}
                 disabled={deleting}
-                className="min-h-[32px] min-w-[32px] rounded-md px-2 py-1 text-[11px] text-red-400 hover:bg-red-500/15 disabled:opacity-50"
+                className="min-h-[28px] min-w-[28px] rounded px-1.5 py-0.5 text-[10px] text-red-400 hover:bg-red-500/15 disabled:opacity-50 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
                 title="Delete message"
               >
                 {deleting ? "…" : "Delete"}
@@ -320,7 +320,7 @@ export function MessageBubbleWithActions({
                   e.stopPropagation();
                   handleCopy();
                 }}
-                className="min-h-[32px] min-w-[32px] rounded-md px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10"
+                className="min-h-[28px] min-w-[28px] rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-white/10 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
                 title="Copy"
                 aria-label="Copy message"
               >
@@ -338,14 +338,14 @@ export function MessageBubbleWithActions({
               <button
                 type="submit"
                 disabled={liking}
-                className={`flex min-h-[32px] min-w-[32px] items-center justify-center gap-0.5 rounded-md px-2 py-1 text-[11px] disabled:opacity-50 ${
+                className={`flex min-h-[28px] min-w-[28px] items-center justify-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] disabled:opacity-50 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px] ${
                   userLiked ? "text-emerald-400 hover:bg-emerald-500/15" : "text-zinc-400 hover:bg-white/10"
                 }`}
                 title={userLiked ? "Unlike" : "Like"}
                 aria-label={userLiked ? "Unlike" : "Like"}
               >
                 <Heart
-                  className={`h-3 w-3 pointer-events-none ${userLiked ? "fill-emerald-400 text-emerald-400" : ""}`}
+                  className={`h-2.5 w-2.5 pointer-events-none lg:h-3 lg:w-3 ${userLiked ? "fill-emerald-400 text-emerald-400" : ""}`}
                   aria-hidden
                 />
                 {likeCount > 0 && <span className="pointer-events-none">{likeCount}</span>}
@@ -362,16 +362,16 @@ export function MessageBubbleWithActions({
                 });
                 onCloseActions?.();
               }}
-              className="flex min-h-[32px] min-w-[32px] items-center justify-center gap-0.5 rounded-md px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10"
+              className="flex min-h-[28px] min-w-[28px] items-center justify-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-white/10 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
               title="Reply"
               aria-label="Reply"
             >
-              <Reply className="h-3 w-3" />
+              <Reply className="h-2.5 w-2.5 lg:h-3 lg:w-3" />
               <span>Reply</span>
             </button>
           </div>
         )}
       </div>
-    </li>
+    </div>
   );
 }

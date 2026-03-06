@@ -121,11 +121,11 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
   }, [body]);
 
   const textareaCommon =
-    "w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 resize-none";
+    "w-full min-w-0 bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 resize-none";
   const textareaDesktop =
     "min-h-[40px] max-h-[120px] py-2 px-0 leading-[1.4] border-0 focus:ring-0 md:placeholder:opacity-80";
   const textareaMobile =
-    "min-h-[72px] rounded-lg border border-zinc-600 px-3 py-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 md:border-0 md:min-h-[40px] md:max-h-[120px] md:py-2 md:px-0 md:focus:ring-0";
+    "min-h-[38px] max-h-[120px] rounded-md border-0 py-2 pl-2 pr-1 leading-[1.35] focus:ring-0 placeholder:align-middle md:border-0 md:min-h-[40px] md:max-h-[120px] md:py-2 md:px-0 md:leading-[1.4] md:focus:ring-0";
 
   return (
     <form
@@ -133,11 +133,11 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       onSubmit={handleSubmit}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      className="flex flex-col gap-2 border-t pt-4"
+      className="flex flex-col gap-2 border-t pt-2 lg:pt-4"
       style={{ borderColor: "var(--card-border)" }}
     >
       {replyingTo && (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm">
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-1.5 text-xs lg:py-2 lg:text-sm">
           <span className="min-w-0 truncate text-zinc-400">
             Replying to <strong className="text-zinc-300">{replyingTo.senderName}</strong>
             {replyingTo.body && (
@@ -163,10 +163,10 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
         disabled={uploading}
       />
 
-      {/* Mobile-only: big attachment preview above composer */}
+      {/* Mobile-only: attachment preview above composer */}
       {attachmentUrl && (
         <div className="relative inline-block md:hidden">
-          <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
+          <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
             <Image
               src={attachmentUrl}
               alt="Attachment"
@@ -185,76 +185,52 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {/* Single composer: desktop = one row bar [ add image | input | send ], mobile = stacked */}
+      {/* Composer: mobile = single row [ + | textarea | Send ]; desktop = one row bar [ add image | input | send ] */}
       <div
-        className="flex flex-col gap-2 md:flex-row md:items-center md:rounded-2xl md:border md:border-zinc-700/60 md:bg-zinc-800/90 md:px-2.5 md:py-1.5 md:shadow-sm"
+        className="flex flex-row flex-nowrap items-center gap-1.5 rounded-xl border border-zinc-700/50 bg-zinc-800/70 px-1.5 py-1.5 shadow-sm lg:gap-2 lg:rounded-2xl lg:border-zinc-700/60 lg:bg-zinc-800/90 lg:px-2.5 lg:py-1.5"
         style={{ borderColor: "var(--card-border)" }}
       >
-        {/* Left (desktop) / second row (mobile): add image + desktop thumbnail; mobile only: send */}
-        <div className="order-2 flex flex-row items-center justify-between gap-2 md:order-1 md:justify-start md:gap-1.5">
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading || uploading}
-              className="flex h-10 min-w-[2.5rem] flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-50 md:h-9 md:w-9 md:min-w-0 md:rounded-lg md:px-0"
-              aria-label="Add image"
-              title="Add image"
-            >
-              {uploading ? (
-                <>
-                  <span className="text-xs md:hidden">Uploading…</span>
-                  <span className="hidden text-xs md:inline">…</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="h-5 w-5 flex-shrink-0" />
-                  <span className="text-xs md:hidden">Add image</span>
-                </>
-              )}
-            </button>
-            {attachmentUrl && (
-              <div className="relative hidden flex-shrink-0 md:block">
-                <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">
-                  <Image
-                    src={attachmentUrl}
-                    alt="Attachment"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAttachmentUrl(null)}
-                  className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600"
-                  aria-label="Remove attachment"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            {body.length >= 3000 && (
-              <span
-                className={`text-xs md:hidden ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
-                aria-live="polite"
-              >
-                {body.length} / 4000
-              </span>
-            )}
-          </div>
+        {/* Left: add image (+); on desktop also thumbnail when attachment present */}
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
           <button
-            type="submit"
-            disabled={loading || !canSend}
-            className="flex h-10 min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 md:hidden"
-            aria-label="Send message"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploading}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-50 md:h-9 md:w-9 md:rounded-lg"
+            aria-label="Add image"
+            title="Add image"
           >
-            {loading ? "Sending…" : "Send"}
+            {uploading ? (
+              <span className="text-xs">…</span>
+            ) : (
+              <Plus className="h-5 w-5 md:h-4 md:w-4" />
+            )}
           </button>
+          {attachmentUrl && (
+            <div className="relative hidden flex-shrink-0 md:block">
+              <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">
+                <Image
+                  src={attachmentUrl}
+                  alt="Attachment"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setAttachmentUrl(null)}
+                className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600"
+                aria-label="Remove attachment"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Center: textarea — order 1 on mobile (first), order 2 on desktop */}
-        <div className="order-1 flex min-w-0 flex-1 items-center md:order-2">
+        {/* Center: textarea (expands); auto-resize kept via existing useEffect */}
+        <div className="flex min-w-0 flex-1 items-center self-center">
           <textarea
             ref={textareaRef}
             value={body}
@@ -262,7 +238,7 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
             onKeyDown={onKeyDown}
             placeholder="Write a message…"
             title="Enter to send, Shift+Enter for new line"
-            rows={2}
+            rows={1}
             maxLength={4000}
             className={`${textareaCommon} ${textareaMobile} ${textareaDesktop}`}
             disabled={loading}
@@ -270,11 +246,11 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           />
         </div>
 
-        {/* Right (desktop only): char count + send */}
-        <div className="hidden items-center gap-2 md:order-3 md:flex md:flex-shrink-0">
+        {/* Right: char count (desktop) + send */}
+        <div className="flex shrink-0 items-center gap-2">
           {body.length >= 3000 && (
             <span
-              className={`text-[10px] tabular-nums ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
+              className={`hidden text-[10px] tabular-nums md:inline ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
               aria-live="polite"
             >
               {body.length}/4000
@@ -283,10 +259,10 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           <button
             type="submit"
             disabled={loading || !canSend}
-            className="flex h-9 min-w-[36px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            className="flex h-8 min-w-[36px] shrink-0 items-center justify-center rounded-md bg-emerald-600 px-2.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 md:h-9 md:min-w-[36px] md:rounded-lg md:px-3.5"
             aria-label="Send message"
           >
-            <Send className="h-4 w-4 lg:hidden" />
+            <Send className="h-4 w-4 md:h-4 md:w-4 lg:hidden" />
             <span className="hidden lg:inline">{loading ? "Sending…" : "Send"}</span>
           </button>
         </div>

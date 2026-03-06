@@ -7,7 +7,7 @@ export default async function ChatPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+    <div className="hidden flex-1 flex-col items-center justify-center px-6 py-12 text-center lg:flex">
       <MessageCircle
         className="mb-5 h-14 w-14 text-zinc-500"
         aria-hidden

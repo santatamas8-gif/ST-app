@@ -19,7 +19,7 @@ export default async function ChatLayoutWrapper({
   const isAdmin = user.role === "admin";
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] min-h-0 w-full flex-col px-3 sm:px-0 lg:h-[calc(100vh-5rem)]">
+    <div className="flex min-h-0 w-full flex-col h-[calc(100vh-4rem)] sm:h-[calc(100vh-6rem)] lg:h-[calc(100vh-5rem)] px-0 lg:px-3">
       <ChatLayout
         rooms={rooms}
         unreadByRoom={unreadByRoom}

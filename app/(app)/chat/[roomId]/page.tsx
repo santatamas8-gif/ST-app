@@ -68,13 +68,13 @@ export default async function ChatRoomPage({
       <MarkRoomRead roomId={roomId} />
       <ChatRoomRealtime roomId={roomId} />
       <div
-        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 lg:rounded-xl lg:border"
         style={{
           backgroundColor: "var(--card-bg)",
           borderColor: "var(--card-border)",
         }}
       >
-        <div className="flex min-h-0 flex-1 flex-col w-full lg:max-w-[960px] lg:mx-auto">
+        <div className="flex min-h-0 flex-1 flex-col w-full min-w-0 lg:max-w-[960px] lg:mx-auto">
           <ChatHeader
             roomName={room.name}
             membersCount={membersList.length}

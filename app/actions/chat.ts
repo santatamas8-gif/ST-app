@@ -5,6 +5,11 @@ import { getAppUser, isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { ChatRoomRow, ChatMessageRow, ChatRoomMemberRow } from "@/lib/types";
 
+/** Revalidate chat layout so sidebar (rooms list, last message, unread) refetches. Call from client after realtime events. */
+export async function revalidateChatLayout(): Promise<void> {
+  revalidatePath("/chat");
+}
+
 export async function getChatRooms(): Promise<ChatRoomRow[]> {
   const user = await getAppUser();
   if (!user) return [];
@@ -190,6 +195,18 @@ export async function deleteMessage(messageId: string, roomId: string): Promise<
   if (!user) return { error: "Not authenticated" };
 
   const supabase = await createClient();
+  const { data: message, error: fetchError } = await supabase
+    .from("chat_messages")
+    .select("user_id")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!message) return { error: "Message not found." };
+  const isOwn = message.user_id === user.id;
+  if (!isOwn && !isAdmin(user.role)) {
+    return { error: "You can only delete your own messages." };
+  }
+
   const { error } = await supabase.from("chat_messages").delete().eq("id", messageId);
   if (error) return { error: error.message };
   revalidatePath(`/chat/${roomId}`);
@@ -201,6 +218,16 @@ export async function setLastRead(roomId: string): Promise<void> {
   if (!user) return;
 
   const supabase = await createClient();
+  if (!isAdmin(user.role)) {
+    const { data: member } = await supabase
+      .from("chat_room_members")
+      .select("user_id")
+      .eq("room_id", roomId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!member) return;
+  }
+
   await supabase.from("chat_room_reads").upsert(
     { user_id: user.id, room_id: roomId, last_read_at: new Date().toISOString() },
     { onConflict: "user_id,room_id" }

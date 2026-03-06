@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAppUser } from "@/lib/auth";
+import { getAppUser, isAdmin } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "chat-attachments";
@@ -38,6 +39,20 @@ export async function POST(request: Request) {
       { error: "File must be 5MB or smaller." },
       { status: 400 }
     );
+  }
+
+  // Only admin or room members may upload attachments for this room
+  if (!isAdmin(user.role)) {
+    const supabase = await createClient();
+    const { data: member } = await supabase
+      .from("chat_room_members")
+      .select("user_id")
+      .eq("room_id", roomId.trim())
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!member) {
+      return NextResponse.json({ error: "You are not a member of this room." }, { status: 403 });
+    }
   }
 
   const ext = file.type === "image/png" ? "png" : file.type === "image/gif" ? "gif" : file.type === "image/webp" ? "webp" : "jpg";

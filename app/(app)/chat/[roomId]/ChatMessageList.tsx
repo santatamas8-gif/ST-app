@@ -114,8 +114,8 @@ export function ChatMessageList({
         ref={scrollRef}
         className="chat-message-scroll flex-1 overflow-y-auto overflow-x-hidden"
       >
-        {/* Inner container = centered content column with max-width */}
-        <div className="mx-auto w-full max-w-[880px] px-3 pb-20 pt-4 lg:pb-24">
+        {/* Inner container = centered content column with max-width; mobile: comfortable padding and bottom space above composer + safe area */}
+        <div className="mx-auto w-full max-w-[880px] px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-24 pt-3 lg:px-3 lg:pb-24 lg:pl-3 lg:pr-3 lg:pt-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <MessageCircle
@@ -171,16 +171,16 @@ export function ChatMessageList({
             return (
               <Fragment key={m.id}>
                 {showDate && (
-                  <li className="mt-4 flex w-full items-center gap-3 py-2 first:mt-0" aria-hidden>
+                  <li className="mt-3 flex w-full items-center gap-2 py-1.5 first:mt-0 lg:mt-4 lg:gap-3 lg:py-2" aria-hidden>
                     <span className="h-px flex-1 shrink-0 bg-zinc-700/50" />
-                    <span className="shrink-0 rounded-full border border-zinc-700/60 bg-zinc-800/80 px-3 py-1 text-[11px] font-medium tracking-wide text-zinc-500">
+                    <span className="shrink-0 rounded-full border border-zinc-700/60 bg-zinc-800/80 px-2.5 py-0.5 text-[10px] font-medium tracking-wide text-zinc-500 lg:px-3 lg:py-1 lg:text-[11px]">
                       {getDateLabel(m.created_at)}
                     </span>
                     <span className="h-px flex-1 shrink-0 bg-zinc-700/50" />
                   </li>
                 )}
                 <li
-                  className={isConsecutiveInGroup ? "mt-0.5" : "mt-4"}
+                  className={isConsecutiveInGroup ? "mt-1 lg:mt-0.5" : "mt-5 lg:mt-4"}
                   ref={isFirstUnread ? firstUnreadRef : undefined}
                 >
                   {bubble}
@@ -196,7 +196,7 @@ export function ChatMessageList({
         <button
           type="button"
           onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 shadow-md hover:bg-zinc-600 hover:text-white md:bottom-4 md:right-4"
+          className="absolute bottom-20 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 shadow-md hover:bg-zinc-600 hover:text-white lg:bottom-4 lg:h-9 lg:w-9"
           title="Jump to bottom"
           aria-label="Jump to bottom"
         >
