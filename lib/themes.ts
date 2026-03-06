@@ -9,10 +9,11 @@ export const THEMES: {
   /** Text color – light on dark themes, dark on light theme */
   foreground: string;
 }[] = [
+  /* Default theme for all roles (player, admin, staff) on desktop and mobile. Users can change via Theme in sidebar. */
   {
     id: "dark",
     name: "Dark",
-    pageBg: "#0f1216",
+    pageBg: "#1a1a1a",
     cardBg: "#181d24",
     cardBorder: "#2d3239",
     foreground: "#fafafa",
