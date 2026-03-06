@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { X, Plus, Send } from "lucide-react";
 import { sendMessage } from "@/app/actions/chat";
 import { useReply } from "./ReplyContext";
+
+const DESKTOP_TEXTAREA_MIN_H = 40;
+const DESKTOP_TEXTAREA_MAX_H = 120;
 
 export function SendMessageForm({ roomId }: { roomId: string }) {
   const router = useRouter();
@@ -17,6 +20,7 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,6 +105,28 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
     }
   }
 
+  // Auto-resize textarea on desktop (single-row bar)
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const syncHeight = () => {
+      ta.style.height = "auto";
+      const h = Math.min(Math.max(ta.scrollHeight, DESKTOP_TEXTAREA_MIN_H), DESKTOP_TEXTAREA_MAX_H);
+      ta.style.height = `${h}px`;
+    };
+    syncHeight();
+    const ro = new ResizeObserver(syncHeight);
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, [body]);
+
+  const textareaCommon =
+    "w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none disabled:opacity-50 resize-none";
+  const textareaDesktop =
+    "min-h-[40px] max-h-[120px] py-2 px-0 leading-[1.4] border-0 focus:ring-0 md:placeholder:opacity-80";
+  const textareaMobile =
+    "min-h-[72px] rounded-lg border border-zinc-600 px-3 py-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 md:border-0 md:min-h-[40px] md:max-h-[120px] md:py-2 md:px-0 md:focus:ring-0";
+
   return (
     <form
       ref={formRef}
@@ -136,8 +162,10 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
         onChange={onFileChange}
         disabled={uploading}
       />
+
+      {/* Mobile-only: big attachment preview above composer */}
       {attachmentUrl && (
-        <div className="relative inline-block">
+        <div className="relative inline-block md:hidden">
           <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
             <Image
               src={attachmentUrl}
@@ -156,44 +184,114 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           </button>
         </div>
       )}
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder="Write a message…"
-        title="Enter to send, Shift+Enter for new line"
-        rows={2}
-        maxLength={4000}
-        className="min-h-[72px] w-full resize-y rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-        disabled={loading}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+
+      {/* Single composer: desktop = one row bar [ add image | input | send ], mobile = stacked */}
+      <div
+        className="flex flex-col gap-2 md:flex-row md:items-center md:rounded-2xl md:border md:border-zinc-700/60 md:bg-zinc-800/90 md:px-2.5 md:py-1.5 md:shadow-sm"
+        style={{ borderColor: "var(--card-border)" }}
+      >
+        {/* Left (desktop) / second row (mobile): add image + desktop thumbnail; mobile only: send */}
+        <div className="order-2 flex flex-row items-center justify-between gap-2 md:order-1 md:justify-start md:gap-1.5">
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || uploading}
+              className="flex h-10 min-w-[2.5rem] flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-50 md:h-9 md:w-9 md:min-w-0 md:rounded-lg md:px-0"
+              aria-label="Add image"
+              title="Add image"
+            >
+              {uploading ? (
+                <>
+                  <span className="text-xs md:hidden">Uploading…</span>
+                  <span className="hidden text-xs md:inline">…</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-xs md:hidden">Add image</span>
+                </>
+              )}
+            </button>
+            {attachmentUrl && (
+              <div className="relative hidden flex-shrink-0 md:block">
+                <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">
+                  <Image
+                    src={attachmentUrl}
+                    alt="Attachment"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachmentUrl(null)}
+                  className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600"
+                  aria-label="Remove attachment"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            {body.length >= 3000 && (
+              <span
+                className={`text-xs md:hidden ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
+                aria-live="polite"
+              >
+                {body.length} / 4000
+              </span>
+            )}
+          </div>
           <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={loading || uploading}
-            className="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white disabled:opacity-50"
+            type="submit"
+            disabled={loading || !canSend}
+            className="flex h-10 min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 md:hidden"
+            aria-label="Send message"
           >
-            {uploading ? "Uploading…" : "Add image"}
+            {loading ? "Sending…" : "Send"}
           </button>
+        </div>
+
+        {/* Center: textarea — order 1 on mobile (first), order 2 on desktop */}
+        <div className="order-1 flex min-w-0 flex-1 items-center md:order-2">
+          <textarea
+            ref={textareaRef}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Write a message…"
+            title="Enter to send, Shift+Enter for new line"
+            rows={2}
+            maxLength={4000}
+            className={`${textareaCommon} ${textareaMobile} ${textareaDesktop}`}
+            disabled={loading}
+            style={{ minHeight: DESKTOP_TEXTAREA_MIN_H }}
+          />
+        </div>
+
+        {/* Right (desktop only): char count + send */}
+        <div className="hidden items-center gap-2 md:order-3 md:flex md:flex-shrink-0">
           {body.length >= 3000 && (
             <span
-              className={`text-xs ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
+              className={`text-[10px] tabular-nums ${body.length >= 3800 ? "text-amber-400" : "text-zinc-500"}`}
               aria-live="polite"
             >
-              {body.length} / 4000
+              {body.length}/4000
             </span>
           )}
+          <button
+            type="submit"
+            disabled={loading || !canSend}
+            className="flex h-9 min-w-[36px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            aria-label="Send message"
+          >
+            <Send className="h-4 w-4 lg:hidden" />
+            <span className="hidden lg:inline">{loading ? "Sending…" : "Send"}</span>
+          </button>
         </div>
-        <button
-          type="submit"
-          disabled={loading || !canSend}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-        >
-          {loading ? "Sending…" : "Send"}
-        </button>
       </div>
+
       {error && <p className="text-sm text-red-400">{error}</p>}
     </form>
   );

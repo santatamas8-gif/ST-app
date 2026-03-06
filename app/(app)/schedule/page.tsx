@@ -12,7 +12,7 @@ export default async function SchedulePage() {
 
   return (
     <div
-      className={isPlayer ? "min-h-screen px-4 py-8 sm:px-6 lg:px-8" : "space-y-6"}
+      className={isPlayer ? "min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8" : "space-y-6 -mx-4 overflow-x-hidden px-3 sm:mx-0 sm:px-0"}
       style={isPlayer ? { backgroundColor: "var(--page-bg)" } : undefined}
     >
       <SchedulePageContent canEdit={canEdit} isAdmin={isAdmin} isPlayer={isPlayer} />

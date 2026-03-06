@@ -387,14 +387,14 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {!canEdit && (
         <div
-          className={`rounded-xl border px-4 py-3 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+          className={`rounded-xl border px-3 py-2.5 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
           style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
         >
-          <p className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>Next session</p>
-          <p className="mt-1 text-base font-semibold text-white">
+          <p className={`text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>Next session</p>
+          <p className="mt-0.5 text-sm font-semibold text-white">
             {nextSessionSummary ?? "No upcoming sessions"}
           </p>
         </div>
@@ -404,15 +404,15 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         <button
           type="button"
           onClick={handlePrevMonth}
-          className={`rounded-lg border px-4 py-2.5 text-sm font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
+          className={`rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
         >
           ← Prev
         </button>
-        <span className="text-lg font-semibold text-white">{monthLabel}</span>
+        <span className="text-sm font-semibold text-white">{monthLabel}</span>
         <button
           type="button"
           onClick={handleNextMonth}
-          className={`rounded-lg border px-4 py-2.5 text-sm font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
+          className={`rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
         >
           Next →
         </button>
@@ -422,11 +422,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
         className={`overflow-x-auto rounded-xl border ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
         style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
       >
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-xs sm:text-sm">
           <thead>
             <tr className={isHighContrast ? "border-b border-white/20" : "border-b border-zinc-700"}>
               {WEEKDAYS.map((d) => (
-                <th key={d} className={`px-2 py-3 text-center font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+                <th key={d} className={`px-1 py-2 sm:px-2 sm:py-2.5 text-center font-medium ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
                   {d}
                 </th>
               ))}
@@ -450,26 +450,26 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   return (
                     <td
                       key={ci}
-                      className={`border-b p-2 ${isHighContrast ? "border-white/10" : "border-zinc-800"}`}
+                      className={`border-b p-1 sm:p-1.5 ${isHighContrast ? "border-white/10" : "border-zinc-800"}`}
                     >
                       {date ? (
                         <button
                           type="button"
                           onClick={() => setSelectedDate(date)}
-                          className={`flex h-16 w-full flex-col items-center justify-center rounded-lg text-center transition ${dayClass}`}
+                          className={`flex h-12 sm:h-14 w-full flex-col items-center justify-center rounded-md text-center transition ${dayClass}`}
                         >
-                          <span className={`text-sm font-medium ${isToday ? "text-amber-300" : isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                          <span className={`text-xs font-medium tabular-nums ${isToday ? "text-amber-300" : isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
                             {date.slice(8)}
-                            {isToday && <span className="ml-1 text-xs text-amber-400">Today</span>}
+                            {isToday && <span className="ml-0.5 text-[10px] text-amber-400">Today</span>}
                           </span>
                           {items.length > 0 && (
-                            <span className="mt-1 text-xs text-emerald-400">
-                              {items.length} item{items.length !== 1 ? "s" : ""}
+                            <span className="mt-0.5 text-[10px] sm:text-xs text-emerald-400">
+                              {items.length}
                             </span>
                           )}
                         </button>
                       ) : (
-                        <div className="h-16" />
+                        <div className="h-12 sm:h-14" />
                       )}
                     </td>
                   );
@@ -490,18 +490,18 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
 
       {selectedDate && (
         <div
-          className={`rounded-xl border p-5 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+          className={`min-w-0 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
           style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
         >
-          <h2 className="mb-4 text-lg font-semibold text-white">
+          <h2 className="mb-3 text-sm font-semibold text-white">
             Program for {selectedDate}{getDateContextLabel(selectedDate)}
           </h2>
           {timeSaveError && (
-            <p className="mb-2 text-sm text-red-400">{timeSaveError}</p>
+            <p className="mb-2 text-xs text-red-400">{timeSaveError}</p>
           )}
           {selectedItems.length === 0 && (
-            <div className="mb-4 rounded-lg border border-zinc-700/60 bg-zinc-800/50 px-4 py-4">
-              <p className="text-sm text-zinc-400">No program for this day.</p>
+            <div className="mb-3 rounded-lg border border-zinc-700/60 bg-zinc-800/50 px-3 py-3">
+              <p className="text-xs text-zinc-400">No program for this day.</p>
               {canEdit && (() => {
                 const yesterday = getYesterday(selectedDate!);
                 const yesterdayItems = itemsByDate.get(yesterday) ?? [];
@@ -511,11 +511,11 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       type="button"
                       onClick={handleCopyFromYesterday}
                       disabled={copyLoading || yesterdayItems.length === 0}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {copyLoading ? "Copying…" : yesterdayItems.length > 0 ? `Copy from yesterday (${yesterdayItems.length} items)` : "Copy from yesterday (no items)"}
+                      {copyLoading ? "Copying…" : yesterdayItems.length > 0 ? `Copy from yesterday (${yesterdayItems.length})` : "Copy from yesterday"}
                     </button>
-                    {copyError && <p className="text-sm text-red-400">{copyError}</p>}
+                    {copyError && <p className="text-xs text-red-400">{copyError}</p>}
                   </div>
                 );
               })()}
@@ -536,10 +536,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
               return (
                 <li
                   key={item.id}
-                  className={`grid grid-cols-[1fr_minmax(8rem,2fr)_auto] gap-3 items-center rounded-lg border border-zinc-700/60 px-3 py-2.5 shadow-sm ${leftBorder} ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
+                  className={`grid grid-cols-[1fr_minmax(6rem,1.5fr)_auto] gap-2 items-center rounded-lg border border-zinc-700/60 px-3 py-2.5 shadow-sm ${leftBorder} ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
                 >
                   <div className="min-w-0">
-                    <p className="flex items-center gap-2 font-medium text-white text-sm">
+                    <p className="flex items-center gap-1.5 font-medium text-white text-xs">
                       {item.activity_type === "match"
                         ? (item.team_a?.trim() && item.team_b?.trim()
                           ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
@@ -583,12 +583,12 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       )
                     )}
                     {item.notes?.trim() ? (
-                      <p className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
-                        <LocationPinIcon className={`h-3.5 w-3.5 shrink-0 ${isHighContrast ? "text-white/60" : "text-zinc-500"}`} />
+                      <p className={`flex items-center gap-1 text-[10px] sm:text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                        <LocationPinIcon className={`h-3 w-3 shrink-0 ${isHighContrast ? "text-white/60" : "text-zinc-500"}`} />
                         {item.notes.trim()}
                       </p>
                     ) : null}
-                    <p className={`text-xs tabular-nums ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                    <p className={`text-[10px] sm:text-xs tabular-nums ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                       {timeStr != null ? timeStr : isAdmin && !isEditing ? (
                         <button
                           type="button"
@@ -687,9 +687,9 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                       <button
                         type="button"
                         onClick={() => handleRemove(item.id)}
-                        className="rounded-lg bg-red-500/20 p-1.5 text-red-400 hover:bg-red-500/30"
+                        className="rounded-md bg-red-500/20 p-1 text-red-400 hover:bg-red-500/30"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
                         <span className="sr-only">Remove</span>
                       </button>
                     )}
@@ -739,9 +739,18 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                   </div>
                 </div>
               ) : isAdmin && addingType != null ? (
-                <div className="flex flex-wrap items-center gap-3 rounded-lg bg-zinc-800/80 px-3 py-3" lang="en-GB">
-                  <span className="text-sm font-medium text-zinc-300">{ACTIVITY_LABELS[addingType]}</span>
-                  <div className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-900/80 px-2 py-1.5">
+                <div className="flex flex-col gap-3 rounded-lg bg-zinc-800/80 px-3 py-3 min-w-0" lang="en-GB">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-zinc-300 truncate">{ACTIVITY_LABELS[addingType]}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
+                      className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-900/80 px-2 py-1.5">
                     <label className="flex flex-col gap-0.5">
                       <span className="text-xs text-zinc-500">Start</span>
                       <input
@@ -749,7 +758,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                         step="60"
                         value={addStart}
                         onChange={(e) => setAddStart(e.target.value)}
-                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none"
+                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none min-w-0"
                         aria-label="Start time (24h)"
                         title="24h, e.g. 09:00"
                       />
@@ -762,62 +771,56 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
                         step="60"
                         value={addEnd}
                         onChange={(e) => setAddEnd(e.target.value)}
-                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none"
+                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none min-w-0"
                         aria-label="End time (24h)"
                         title="24h, e.g. 14:30"
                       />
                     </label>
                   </div>
                   {addingType === "match" && (
-                    <>
-                      <input
-                        type="text"
-                        value={addTeamA}
-                        onChange={(e) => setAddTeamA(e.target.value)}
-                        placeholder="Team A (e.g. Real Madrid)"
-                        maxLength={100}
-                        className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
-                      />
-                      <span className="text-zinc-500 text-sm">vs.</span>
-                      <input
-                        type="text"
-                        value={addTeamB}
-                        onChange={(e) => setAddTeamB(e.target.value)}
-                        placeholder="Team B (e.g. FC Barcelona)"
-                        maxLength={100}
-                        className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
-                      />
-                    </>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs text-zinc-500">Teams</span>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <input
+                          type="text"
+                          value={addTeamA}
+                          onChange={(e) => setAddTeamA(e.target.value)}
+                          placeholder="Team A"
+                          maxLength={100}
+                          className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500 sm:max-w-[10rem]"
+                        />
+                        <span className="text-zinc-500 text-sm shrink-0">vs.</span>
+                        <input
+                          type="text"
+                          value={addTeamB}
+                          onChange={(e) => setAddTeamB(e.target.value)}
+                          placeholder="Team B"
+                          maxLength={100}
+                          className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500 sm:max-w-[10rem]"
+                        />
+                      </div>
+                    </div>
                   )}
-                  <label className="flex flex-col gap-0.5">
-                    <span className="text-xs text-zinc-500">Notes</span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs text-zinc-500">Notes (optional)</span>
                     <input
                       type="text"
                       value={addNotes}
                       onChange={(e) => setAddNotes(e.target.value)}
-                      placeholder="Optional"
+                      placeholder="e.g. location"
                       maxLength={100}
-                      className="w-32 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
+                      className="w-full min-w-0 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
                       aria-label="Notes (max 100)"
                     />
-                  </label>
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
-                      disabled={addLoading}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
-                      className="rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200"
-                    >
-                      Cancel
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
+                    disabled={addLoading}
+                    className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    Add
+                  </button>
                 </div>
               ) : null}
             </div>

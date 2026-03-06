@@ -41,7 +41,7 @@ export default async function PlayerDetailPage({
   dates.reverse();
 
   return (
-    <div className="w-full space-y-6 px-4 py-8" style={{ backgroundColor: "var(--page-bg)", color: "var(--foreground)" }}>
+    <div className="w-full min-w-0 -mx-4 overflow-x-hidden space-y-6 px-3 py-8 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)", color: "var(--foreground)" }}>
       <div className="flex gap-4 text-sm">
         <Link href="/players" className="opacity-80 hover:opacity-100 transition-opacity">← Players</Link>
         <Link href="/wellness" className="opacity-80 hover:opacity-100 transition-opacity">Wellness</Link>

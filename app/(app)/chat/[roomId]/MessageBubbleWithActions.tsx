@@ -138,23 +138,30 @@ export function MessageBubbleWithActions({
     message.attachment_url &&
     /\.(jpe?g|png|gif|webp)(\?|$)/i.test(message.attachment_url);
 
-  const hasHeaderContent = showSender || showHeaderDateTime;
+  /* For own messages: don't show time in header (it goes at bottom-right of bubble). For others: show time in header when first of day. */
+  const showTimeInHeader = showHeaderDateTime && !isOwn;
+  const hasHeaderContent = showSender || showTimeInHeader;
   return (
     <li
-      className={`group flex flex-col ${hasHeaderContent ? "gap-0.5" : "gap-0"} ${isOwn ? "items-end" : "items-start"}`}
+      className={`group flex flex-col ${hasHeaderContent ? "gap-1" : "gap-0"} ${isOwn ? "items-end" : "items-start"}`}
     >
       {hasHeaderContent && (
-        <div className="flex min-h-[1.25rem] flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-          <span className="text-zinc-500">
-            {showSender && label}
-            {showSender && showHeaderDateTime && " · "}
-            {showHeaderDateTime && `${dateLabel}, ${time}`}
-          </span>
+        <div className={`flex min-h-[1.25rem] flex-wrap items-baseline gap-x-2 gap-y-0.5 ${isOwn ? "flex-row-reverse" : ""}`}>
+          {showSender && (
+            <span className="text-xs font-medium text-zinc-300">
+              {label}
+            </span>
+          )}
+          {showTimeInHeader && (
+            <span className="text-[10px] text-zinc-500 tabular-nums">
+              {time}
+            </span>
+          )}
         </div>
       )}
       <div
         ref={wrapperRef}
-        className={`flex w-fit max-w-[85%] flex-col ${isOwn ? "items-end" : "items-start"}`}
+        className={`flex w-fit max-w-[min(85%,20rem)] flex-col ${isOwn ? "items-end" : "items-start"}`}
       >
         <div
           role="button"
@@ -166,28 +173,30 @@ export function MessageBubbleWithActions({
               onToggleActions?.();
             }
           }}
-          className={`cursor-pointer rounded-lg px-3 py-2 ${
-            isOwn ? "bg-emerald-600/30 text-white" : "bg-zinc-800 text-zinc-200"
+          className={`cursor-pointer rounded-2xl border px-3.5 py-2.5 shadow-sm ${
+            isOwn
+              ? "border-emerald-500/20 bg-emerald-500/20 text-white"
+              : "border-zinc-700/50 bg-zinc-800/90 text-zinc-200"
           }`}
-          title="Click to show options"
+          title={fullDateTime ? `Sent ${fullDateTime}` : "Click to show options"}
           aria-label="Toggle message options"
         >
         {replyTo && (
           <div
-            className={`mb-1.5 border-l-2 pl-2 text-xs ${
-              isOwn ? "border-white/40 text-white/80" : "border-zinc-500 text-zinc-400"
+            className={`mb-2 rounded-lg border-l-2 pl-2.5 text-xs ${
+              isOwn ? "border-emerald-400/40 text-white/90" : "border-zinc-500/80 text-zinc-400"
             }`}
           >
-            <span className="font-medium">{replyTo.senderName}</span>
+            <span className={`font-medium ${isOwn ? "text-white/90" : "text-zinc-300"}`}>{replyTo.senderName}</span>
             {replyTo.body && (
-              <span className="block truncate">
+              <span className={`mt-0.5 block truncate ${isOwn ? "text-white/70" : "text-zinc-500"}`}>
                 {replyTo.body.length > 60 ? replyTo.body.slice(0, 60) + "…" : replyTo.body}
               </span>
             )}
           </div>
         )}
         {message.body ? (
-          <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.body}</p>
         ) : null}
         {message.body && extractFirstUrl(message.body) && (
           <LinkPreview url={extractFirstUrl(message.body)!} isOwn={isOwn} />
@@ -201,14 +210,14 @@ export function MessageBubbleWithActions({
                   e.stopPropagation();
                   setLightboxOpen(true);
                 }}
-                className="mt-1 block max-h-48 overflow-hidden rounded text-left"
+                className="mt-2 block max-h-48 overflow-hidden rounded-xl text-left"
                 aria-label="Open image"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={message.attachment_url}
                   alt="Attachment"
-                  className="max-h-48 cursor-pointer rounded object-contain hover:opacity-90"
+                  className="max-h-48 cursor-pointer rounded-xl object-contain hover:opacity-95"
                 />
               </button>
               {lightboxOpen && (
@@ -250,33 +259,23 @@ export function MessageBubbleWithActions({
               href={message.attachment_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 block text-xs text-emerald-400 underline"
+              className="mt-2 inline-block text-xs text-emerald-400 underline decoration-emerald-500/50 hover:decoration-emerald-400"
               onClick={(e) => e.stopPropagation()}
             >
               Attachment
             </a>
           )
         ) : null}
-        {actionsOpen && fullDateTime && (
-          <div className={`mt-1 ${isOwn ? "text-right" : "text-left"}`}>
-            <span
-              className={`text-[10px] ${isOwn ? "text-white/60" : "text-zinc-500"}`}
-              aria-hidden
-            >
-              Sent: {fullDateTime}
-            </span>
-          </div>
-        )}
         {likeCount > 0 && (
           <div
-            className={`mt-1 flex items-center gap-0.5 ${isOwn ? "justify-end" : "justify-start"}`}
+            className={`mt-1.5 flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
             aria-label={`${likeCount} like${likeCount !== 1 ? "s" : ""}`}
           >
             <Heart
               className={`h-3.5 w-3.5 ${userLiked ? "fill-emerald-400 text-emerald-400" : "text-zinc-500"}`}
               aria-hidden
             />
-            <span className={`text-[10px] ${userLiked && isOwn ? "text-white/70" : userLiked ? "text-emerald-400" : "text-zinc-500"}`}>
+            <span className={`text-[10px] ${userLiked && isOwn ? "text-white/60" : userLiked ? "text-emerald-400" : "text-zinc-500"}`}>
               {likeCount}
             </span>
           </div>
@@ -285,13 +284,21 @@ export function MessageBubbleWithActions({
         {actionsOpen && (
           <div
             role="menu"
-            className="relative z-10 mt-1.5 flex max-w-[min(100vw-2rem,20rem)] flex-wrap items-center gap-1 rounded-xl border border-zinc-600 bg-zinc-800/95 px-2 py-1.5 shadow-lg backdrop-blur-sm"
+            className="relative z-10 mt-0.5 flex max-w-[min(100vw-2rem,20rem)] flex-wrap items-center gap-0.5 rounded-md border border-zinc-700/40 bg-zinc-800/95 px-1.5 py-1 shadow-sm"
             style={{ borderColor: "var(--card-border)" }}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           >
+            {time && (
+              <span
+                className="mr-1.5 border-r border-zinc-600/80 pr-1.5 text-[10px] text-zinc-500 tabular-nums"
+                aria-hidden
+              >
+                {time}
+              </span>
+            )}
             {canDelete && (
               <button
                 type="button"
@@ -300,7 +307,7 @@ export function MessageBubbleWithActions({
                   handleDelete();
                 }}
                 disabled={deleting}
-                className="min-h-[44px] min-w-[44px] rounded-lg px-2.5 py-2 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                className="min-h-[32px] min-w-[32px] rounded-md px-2 py-1 text-[11px] text-red-400 hover:bg-red-500/15 disabled:opacity-50"
                 title="Delete message"
               >
                 {deleting ? "…" : "Delete"}
@@ -313,7 +320,7 @@ export function MessageBubbleWithActions({
                   e.stopPropagation();
                   handleCopy();
                 }}
-                className="min-h-[44px] min-w-[44px] rounded-lg px-2.5 py-2 text-xs text-zinc-300 hover:bg-white/10"
+                className="min-h-[32px] min-w-[32px] rounded-md px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10"
                 title="Copy"
                 aria-label="Copy message"
               >
@@ -331,14 +338,14 @@ export function MessageBubbleWithActions({
               <button
                 type="submit"
                 disabled={liking}
-                className={`flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-xs disabled:opacity-50 ${
-                  userLiked ? "text-emerald-400 hover:bg-emerald-500/20" : "text-zinc-300 hover:bg-white/10"
+                className={`flex min-h-[32px] min-w-[32px] items-center justify-center gap-0.5 rounded-md px-2 py-1 text-[11px] disabled:opacity-50 ${
+                  userLiked ? "text-emerald-400 hover:bg-emerald-500/15" : "text-zinc-400 hover:bg-white/10"
                 }`}
                 title={userLiked ? "Unlike" : "Like"}
                 aria-label={userLiked ? "Unlike" : "Like"}
               >
                 <Heart
-                  className={`h-3.5 w-3.5 pointer-events-none ${userLiked ? "fill-emerald-400 text-emerald-400" : ""}`}
+                  className={`h-3 w-3 pointer-events-none ${userLiked ? "fill-emerald-400 text-emerald-400" : ""}`}
                   aria-hidden
                 />
                 {likeCount > 0 && <span className="pointer-events-none">{likeCount}</span>}
@@ -355,11 +362,11 @@ export function MessageBubbleWithActions({
                 });
                 onCloseActions?.();
               }}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-xs text-zinc-300 hover:bg-white/10"
+              className="flex min-h-[32px] min-w-[32px] items-center justify-center gap-0.5 rounded-md px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/10"
               title="Reply"
               aria-label="Reply"
             >
-              <Reply className="h-3.5 w-3.5" />
+              <Reply className="h-3 w-3" />
               <span>Reply</span>
             </button>
           </div>

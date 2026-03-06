@@ -15,18 +15,16 @@ export function SchedulePageContent({
 }) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
-  const description =
-    "Daily program (breakfast, lunch, dinner, training, gym, recovery, pre-activation). " +
-    (canEdit ? "Click a day to add or remove items." : "View the program for each day.");
+  const description = canEdit ? "Tap a day to add or edit the program." : "Tap a day to see the program.";
 
   return (
-    <div className={isPlayer ? "mx-auto max-w-4xl space-y-6" : ""}>
+    <div className={isPlayer ? "mx-auto max-w-4xl space-y-4" : ""}>
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
-          <Calendar className="h-7 w-7 shrink-0 text-emerald-400" aria-hidden />
+        <h1 className="flex items-center gap-2 text-base font-bold tracking-tight text-white sm:text-lg lg:text-xl">
+          <Calendar className="h-5 w-5 shrink-0 text-emerald-400 sm:h-6 sm:w-6" aria-hidden />
           <span>Schedule</span>
         </h1>
-        <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>{description}</p>
+        <p className={`mt-0.5 text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>{description}</p>
       </div>
       <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} />
     </div>

@@ -17,7 +17,7 @@ export default async function PlayersListPage() {
     .order("email", { ascending: true });
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 -mx-4 overflow-x-hidden space-y-6 px-3 sm:mx-0 sm:px-0">
       <div>
         <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Players</h1>
         <p className="mt-1 text-zinc-400">

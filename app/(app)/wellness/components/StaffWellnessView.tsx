@@ -211,10 +211,10 @@ export function StaffWellnessView({
 
   return (
     <div
-      className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
+      className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl min-w-0 space-y-8">
         {/* HEADER */}
         <div>
           <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>

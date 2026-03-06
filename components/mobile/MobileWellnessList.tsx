@@ -162,10 +162,10 @@ export function MobileWellnessList({
   }, [rowsForDate, missingUserIds, filter]);
 
   return (
-    <div className="min-h-screen px-4 py-6" style={{ backgroundColor: "var(--page-bg)" }}>
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-6 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)" }}>
+      <div className="mx-auto max-w-7xl min-w-0">
         {/* Sticky filter/search header */}
-        <div className="sticky top-0 z-10 -mx-4 px-4 py-3 pb-4" style={{ backgroundColor: "var(--page-bg)" }}>
+        <div className="sticky top-0 z-10 -mx-3 px-3 py-3 pb-4" style={{ backgroundColor: "var(--page-bg)" }}>
           <h1 className="text-lg font-bold tracking-tight text-white">Wellness</h1>
           <p className={`mt-1 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
             Daily submissions. Table and body map by selected date.

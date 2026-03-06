@@ -12,11 +12,14 @@ export function RoomMembersManager({
   members,
   availableUsers,
   currentUserId,
+  subtleOnDesktop = false,
 }: {
   roomId: string;
   members: Member[];
   availableUsers: AvailableUser[];
   currentUserId: string;
+  /** When true, use a low-emphasis trigger on md+ (e.g. for chat header). */
+  subtleOnDesktop?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -48,15 +51,28 @@ export function RoomMembersManager({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-emerald-500 hover:text-white"
+        className={
+          subtleOnDesktop
+            ? "flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-emerald-500 hover:text-white md:rounded-lg md:border-0 md:bg-transparent md:px-2 md:py-1 md:font-normal md:text-zinc-500 md:hover:bg-zinc-700/50 md:hover:text-zinc-300"
+            : "flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-emerald-500 hover:text-white"
+        }
         title="Manage members"
         aria-label={`Members (${members.length})`}
       >
-        <span className="text-sm">👥</span>
-        <span className="hidden sm:inline">Members</span>
-        <span className="rounded-full bg-zinc-800 px-1.5 text-[10px] text-zinc-300">
-          {members.length}
-        </span>
+        {subtleOnDesktop ? (
+          <>
+            <span className="text-sm" aria-hidden>👥</span>
+            <span className="hidden md:inline">Members</span>
+          </>
+        ) : (
+          <>
+            <span className="text-sm">👥</span>
+            <span className="hidden sm:inline">Members</span>
+            <span className="rounded-full bg-zinc-800 px-1.5 text-[10px] text-zinc-300">
+              {members.length}
+            </span>
+          </>
+        )}
       </button>
       {open && (
         <div className="absolute left-0 top-full z-40 mt-2 w-72 rounded-xl border p-4 shadow-lg"
