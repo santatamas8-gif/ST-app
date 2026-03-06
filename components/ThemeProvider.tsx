@@ -20,7 +20,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) return { themeId: "dark" as ThemeId, setThemeId: () => {} };
+  if (!ctx) return { themeId: "neon" as ThemeId, setThemeId: () => {} };
   return ctx;
 }
 
@@ -29,7 +29,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
-    const id = THEMES.some((t) => t.id === stored) ? stored : "dark";
+    const id = THEMES.some((t) => t.id === stored) ? stored : "neon";
     setThemeIdState(id);
     applyTheme(id);
   }, []);
@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ themeId: themeId ?? "dark", setThemeId }}>
+    <ThemeContext.Provider value={{ themeId: themeId ?? "neon", setThemeId }}>
       {children}
     </ThemeContext.Provider>
   );
