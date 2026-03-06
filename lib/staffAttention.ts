@@ -3,9 +3,10 @@ import type { WellnessRow } from "@/lib/types";
 import { readinessScore } from "@/utils/readiness";
 import { averageWellness } from "@/utils/wellness";
 
-const READINESS_AT_RISK_BELOW = 50;
-const FATIGUE_AT_RISK_ABOVE = 7;
-const SORENESS_AT_RISK_ABOVE = 7;
+/** Critical zone on 0–100: 1–4 on 1–10 scale ≈ 10–40, so risk when readiness < 40 */
+const READINESS_AT_RISK_BELOW = 40;
+/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
+const AT_RISK_BELOW = 5; // value < 5 means Critical (1-4)
 
 export interface AttentionPlayer {
   user_id: string;
@@ -72,10 +73,12 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
     const reasons: string[] = [];
     if (readiness != null && readiness < READINESS_AT_RISK_BELOW)
       reasons.push(`readiness ${readiness}`);
-    if ((row.fatigue ?? 0) >= FATIGUE_AT_RISK_ABOVE)
+    if ((row.fatigue ?? 10) < AT_RISK_BELOW)
       reasons.push(`fatigue ${row.fatigue}`);
-    if ((row.soreness ?? 0) >= SORENESS_AT_RISK_ABOVE)
+    if ((row.soreness ?? 10) < AT_RISK_BELOW)
       reasons.push(`soreness ${row.soreness}`);
+    if ((row.stress ?? 10) < AT_RISK_BELOW)
+      reasons.push(`stress ${row.stress}`);
     if (reasons.length > 0) {
       atRisk.push({
         user_id: row.user_id,

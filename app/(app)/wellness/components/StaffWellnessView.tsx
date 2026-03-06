@@ -78,12 +78,13 @@ const CARD_RADIUS = "12px";
 
 type SortOption = "newest" | "lowestWellness" | "highestFatigue" | "readinessAsc" | "readinessDesc";
 
+/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
 function isAtRisk(r: WellnessRow): boolean {
-  if (r.sleep_quality != null && r.sleep_quality <= 4) return true;
-  if (r.fatigue != null && r.fatigue <= 4) return true;
-  if (r.soreness != null && r.soreness <= 4) return true;
-  if (r.stress != null && r.stress <= 4) return true;
-  if (r.mood != null && r.mood <= 4) return true;
+  if (r.sleep_quality != null && r.sleep_quality < 5) return true;
+  if (r.mood != null && r.mood < 5) return true;
+  if (r.fatigue != null && r.fatigue < 5) return true;
+  if (r.soreness != null && r.soreness < 5) return true;
+  if (r.stress != null && r.stress < 5) return true;
   if (r.illness === true) return true;
   return false;
 }
@@ -409,6 +410,9 @@ export function StaffWellnessView({
                     Critical
                   </span>
                 </span>
+                <p className={`mt-2 w-full text-xs md:hidden ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+                  Scale: 1–4 poor, 5–7 okay, 8+ great
+                </p>
               </div>
               <div className={`overflow-x-auto ${isHighContrast ? "rounded-b-xl ring-1 ring-white/10" : ""}`}>
                 <table className={`w-full text-left text-sm ${isHighContrast ? "border border-white/10" : ""}`}>

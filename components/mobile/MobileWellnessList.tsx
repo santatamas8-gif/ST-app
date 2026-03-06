@@ -25,32 +25,33 @@ function timeToHHmm(s: string | null | undefined): string | null {
 
 type FilterChip = "all" | "missing" | "watch" | "critical";
 
+/** Bands: 1–4 = Critical, 5–7 = Watch, 8+ = Good. High risk = only Critical zone (1–4). */
 function getStatusBadge(readiness: number | null): { label: string; className: string } {
   if (readiness == null) return { label: "—", className: "bg-zinc-600/60 text-zinc-400" };
-  if (readiness <= 3) return { label: "Critical", className: "bg-red-500/50 text-red-300 ring-1 ring-red-400/30" };
-  if (readiness <= 6) return { label: "Watch", className: "bg-yellow-500/60 text-yellow-400 ring-1 ring-yellow-400/40" };
+  if (readiness <= 4) return { label: "Critical", className: "bg-red-500/50 text-red-300 ring-1 ring-red-400/30" };
+  if (readiness <= 7) return { label: "Watch", className: "bg-yellow-500/60 text-yellow-400 ring-1 ring-yellow-400/40" };
   return { label: "Good", className: "bg-emerald-500/50 text-emerald-400 ring-1 ring-emerald-400/30" };
 }
 
 function getStatusLabel(readiness: number | null): "Good" | "Watch" | "Critical" {
   if (readiness == null) return "Good";
-  if (readiness <= 3) return "Critical";
-  if (readiness <= 6) return "Watch";
+  if (readiness <= 4) return "Critical";
+  if (readiness <= 7) return "Watch";
   return "Good";
 }
 
 const SORT_ORDER: Record<string, number> = { Critical: 0, Watch: 1, Missing: 2, Good: 3 };
 
-/** Max 3 top issues from row values (simple thresholds). */
+/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
 function getTopIssues(row: WellnessRow): string[] {
   const issues: string[] = [];
   if (row.illness === true) issues.push("Illness");
-  if (row.sleep_quality != null && row.sleep_quality <= 3) issues.push("Sleep low");
+  if (row.sleep_quality != null && row.sleep_quality < 5) issues.push("Sleep low");
   if (row.sleep_duration != null && row.sleep_duration < 8) issues.push("Sleep short");
-  if (row.fatigue != null && row.fatigue >= 7) issues.push("Fatigue high");
-  if (row.soreness != null && row.soreness >= 7) issues.push("Soreness high");
-  if (row.stress != null && row.stress >= 7) issues.push("Stress high");
-  if (row.mood != null && row.mood <= 3) issues.push("Mood low");
+  if (row.fatigue != null && row.fatigue < 5) issues.push("Fatigue low");
+  if (row.soreness != null && row.soreness < 5) issues.push("Soreness low");
+  if (row.stress != null && row.stress < 5) issues.push("Stress low");
+  if (row.mood != null && row.mood < 5) issues.push("Mood low");
   return issues.slice(0, 3);
 }
 
@@ -416,7 +417,7 @@ export function MobileWellnessList({
               <div className="flex justify-between gap-2 items-center">
                 <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Soreness</dt>
                 <dd>
-                  <BadgeScore value={detailRow.soreness != null ? 10 - detailRow.soreness : null} type="goodHigh" />
+                  <BadgeScore value={detailRow.soreness} type="goodHigh" />
                 </dd>
               </div>
               <div className="flex justify-between gap-2 items-center">

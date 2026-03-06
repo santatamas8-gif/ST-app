@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Activity, Calendar, Flag, HeartPulse, Pause, Play, Users, X } from "lucide-react";
+import { Activity, Calendar, CheckCircle, Flag, HeartPulse, Pause, Play, Users, X } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
@@ -155,6 +155,7 @@ export function StaffDashboard({
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
   const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
+  const [mobileKpiSheet, setMobileKpiSheet] = useState<null | "submitted" | "highrisk">(null);
   const playersSheetDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownOpenIdRef = useRef<string | null>(null);
   dropdownOpenIdRef.current = dropdownOpenId;
@@ -220,6 +221,18 @@ export function StaffDashboard({
   }, [playersSheetOpen]);
 
   useEffect(() => {
+    if (!mobileKpiSheet) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [mobileKpiSheet]);
+
+  useEffect(() => {
     if (!dropdownOpenId) return;
     const preventTouch = (e: TouchEvent) => {
       if (playersSheetDropdownRef.current && e.target instanceof Node && playersSheetDropdownRef.current.contains(e.target)) return;
@@ -254,6 +267,8 @@ export function StaffDashboard({
   const missingCount = missingWellness.length;
   const atRiskCount = atRisk.length;
   const highRiskCount = atRiskCount;
+  const missingIds = new Set((attentionToday?.missingWellness ?? []).map((m) => m.user_id));
+  const submittedNames = (playersWithStatus ?? []).filter((p) => !missingIds.has(p.id)).map((p) => (p.full_name?.trim() || p.email) ?? "");
 
   const submissionPct = totalPlayers > 0 ? Math.round((submitted / totalPlayers) * 100) : 0;
 
@@ -374,7 +389,7 @@ export function StaffDashboard({
 
   return (
     <div
-      className="min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+      className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-6 sm:mx-0 sm:px-6 sm:py-8 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl space-y-4 md:space-y-8">
@@ -1255,39 +1270,148 @@ export function StaffDashboard({
                   value: String(highRiskCount),
                   innerBg: highRiskCount > 0 ? (themeId === "neon" ? "rgba(239,68,68,0.12)" : themeId === "matt" ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.1)") : themeId === "neon" ? "rgba(16,185,129,0.12)" : themeId === "matt" ? "rgba(255,255,255,0.06)" : undefined,
                 },
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center">
-                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
-                    <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40">
-                      <circle cx="20" cy="20" r={R} fill="none" stroke={trackColor} strokeWidth={ringStroke} />
-                      <circle
-                        cx="20"
-                        cy="20"
-                        r={R}
-                        fill="none"
-                        stroke={item.stroke}
-                        strokeWidth={ringStroke}
-                        strokeLinecap="round"
-                        strokeDasharray={`${(item.pct / 100) * C} ${C}`}
-                        strokeDashoffset={0}
-                      />
-                    </svg>
-                    <div
-                      className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full text-base font-bold tabular-nums text-white ${!item.innerBg ? "bg-zinc-800/95" : ""}`}
-                      style={item.innerBg ? { backgroundColor: item.innerBg } : undefined}
-                    >
-                      {item.value}
+              ].map((item, idx) => {
+                const isSubmitted = idx === 0;
+                const isHighRisk = idx === 3;
+                const isTappable = isSubmitted || isHighRisk;
+                const Wrapper = isTappable ? "button" : "div";
+                const wrapperProps = isTappable
+                  ? {
+                      type: "button" as const,
+                      onClick: () => setMobileKpiSheet(isSubmitted ? "submitted" : "highrisk"),
+                      className: "flex flex-col items-center touch-manipulation cursor-pointer text-left md:cursor-default",
+                    }
+                  : { className: "flex flex-col items-center" };
+                return (
+                  <Wrapper key={idx} {...wrapperProps}>
+                    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
+                      <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r={R} fill="none" stroke={trackColor} strokeWidth={ringStroke} />
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r={R}
+                          fill="none"
+                          stroke={item.stroke}
+                          strokeWidth={ringStroke}
+                          strokeLinecap="round"
+                          strokeDasharray={`${(item.pct / 100) * C} ${C}`}
+                          strokeDashoffset={0}
+                        />
+                      </svg>
+                      <div
+                        className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full text-base font-bold tabular-nums text-white ${!item.innerBg ? "bg-zinc-800/95" : ""}`}
+                        style={item.innerBg ? { backgroundColor: item.innerBg } : undefined}
+                      >
+                        {item.value}
+                      </div>
                     </div>
-                  </div>
-                  <p className={`mt-2 text-center text-xs font-medium ${isHighContrast ? "text-white/85" : "text-zinc-400"}`}>
-                    {item.label}
-                  </p>
-                </div>
-              ))}
+                    <p className={`mt-2 text-center text-xs font-medium ${isHighContrast ? "text-white/85" : "text-zinc-400"}`}>
+                      {item.label}
+                    </p>
+                  </Wrapper>
+                );
+              })}
               </div>
             </div>
           );
         })()}
+
+        {/* Mobile only: centered modal for Who submitted / High risk; background not scrollable */}
+        {mobileKpiSheet && (
+          <>
+            <div
+              className="fixed inset-0 z-40 overflow-hidden md:hidden"
+              style={{
+                background: "linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.98) 50%, black 100%)",
+                touchAction: "none",
+                overflow: "hidden",
+              }}
+              aria-hidden
+              onTouchMove={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={() => setMobileKpiSheet(null)}
+            />
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 md:hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="kpi-sheet-title"
+              onClick={(e) => e.target === e.currentTarget && setMobileKpiSheet(null)}
+            >
+              <div
+                className="flex max-h-[70vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-zinc-700/80 shadow-2xl"
+                style={{
+                  ...(themeId === "neon"
+                    ? { background: "linear-gradient(135deg, #041311, #020617)", borderColor: "rgba(255,255,255,0.08)" }
+                    : themeId === "matt"
+                      ? { ...MATT_CARD_STYLE, borderColor: "rgba(255,255,255,0.2)" }
+                      : { backgroundColor: "var(--card-bg)" }),
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`flex items-center justify-between border-b px-4 py-3 ${isHighContrast ? "border-white/10" : "border-zinc-700/80"}`}>
+                  <h2 id="kpi-sheet-title" className="flex items-center gap-2 text-lg font-semibold text-white">
+                    {mobileKpiSheet === "submitted" ? (
+                      <>
+                        <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+                        Who submitted
+                      </>
+                    ) : (
+                      <>
+                        <Flag className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
+                        High risk
+                      </>
+                    )}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setMobileKpiSheet(null)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
+                  style={
+                    themeId === "neon"
+                      ? { background: "linear-gradient(135deg, #041311, #020617)" }
+                      : themeId === "matt"
+                        ? MATT_CARD_STYLE
+                        : { backgroundColor: "var(--card-bg)" }
+                  }
+                >
+                  {mobileKpiSheet === "submitted" ? (
+                    <p className={`text-sm leading-relaxed ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                      {submittedNames.length > 0 ? submittedNames.join(", ") : "—"}
+                    </p>
+                  ) : (
+                    <div className={`space-y-3 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                      {atRisk.length > 0 ? (
+                        atRisk.map((p) => (
+                          <div key={p.user_id} className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
+                            <p className="font-medium text-white">{p.full_name?.trim() || p.email}</p>
+                            {p.reason && (
+                              <p className={`mt-1 text-xs ${isHighContrast ? "text-red-300/90" : "text-red-400/90"}`}>
+                                {p.reason}
+                              </p>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p>—</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Desktop: full KPI cards */}
         <div className="hidden grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 md:grid">
