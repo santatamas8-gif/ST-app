@@ -194,12 +194,12 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   const mobileDrawer = (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/60 md:hidden"
+        className="no-print fixed inset-0 z-40 bg-black/60 md:hidden"
         aria-hidden
         onClick={() => setMobileMenuOpen(false)}
       />
       <div
-        className="fixed inset-y-0 left-0 z-50 flex w-full max-w-[280px] flex-col md:hidden"
+        className="no-print fixed inset-y-0 left-0 z-50 flex w-full max-w-[280px] flex-col md:hidden"
         style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
         role="dialog"
         aria-label="Navigation menu"
@@ -329,7 +329,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
   return (
     <>
     <aside
-      className={`flex w-full shrink-0 flex-col border-b md:h-auto md:w-full md:border-r-0 ${sidebarBorderClass}`}
+      className={`no-print flex w-full shrink-0 flex-col border-b md:h-auto md:w-full md:border-r-0 ${sidebarBorderClass}`}
       style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
     >
       {/* Mobile: full header row with hamburger, ST AMS, Chat, Schedule, Theme */}
@@ -445,7 +445,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     <div className={`flex min-w-0 flex-1 flex-col ${isDashboardDesktop ? "md:flex-row" : ""}`}>
       {isDashboardDesktop && (
         <div
-          className={`hidden h-full min-h-0 w-64 shrink-0 flex-col border-r md:flex ${sidebarBorderClass}`}
+          className={`no-print hidden h-full min-h-0 w-64 shrink-0 flex-col border-r md:flex ${sidebarBorderClass}`}
           style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
         >
           {menuPanelContent}

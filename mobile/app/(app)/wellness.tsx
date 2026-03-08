@@ -26,7 +26,8 @@ function calcSleepHours(bed: string, wake: string): number | null {
   let bedMins = bH * 60 + (bM ?? 0);
   let wakeMins = wH * 60 + (wM ?? 0);
   if (wakeMins <= bedMins) wakeMins += 24 * 60;
-  return Math.round(((wakeMins - bedMins) / 60) * 100) / 100;
+  const durationMins = wakeMins - bedMins;
+  return Math.round((durationMins / 60) * 100) / 100;
 }
 
 export default function WellnessScreen() {

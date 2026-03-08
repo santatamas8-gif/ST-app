@@ -12,6 +12,17 @@ export async function submitSession(form: SessionFormInput) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  const { data: existing } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("date", form.date)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return { error: "You have already submitted RPE for this day." };
+  }
+
   const load = sessionLoad(form.duration, form.rpe);
 
   const { error } = await supabase.from("sessions").insert({

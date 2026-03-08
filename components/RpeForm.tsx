@@ -53,7 +53,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
 
   const durationNum = duration ? parseInt(duration, 10) : 0;
   const load = durationNum > 0 && rpe >= 1 ? sessionLoad(durationNum, rpe) : null;
-  const canSubmit = durationNum >= 1 && durationNum <= 300 && !loading;
+  const canSubmit = durationNum >= 1 && durationNum <= 300 && !loading && !hasSubmittedToday;
   const rpeThumb = rpeThumbColor(rpe, 1, 10);
   const rpePercent = ((rpe - 1) / (10 - 1)) * 100;
 

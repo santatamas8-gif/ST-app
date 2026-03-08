@@ -38,19 +38,20 @@ export default async function ChatRoomPage({
   }
 
   const messages = await getMessages(roomId);
-  const userIds = [...new Set(messages.map((m) => m.user_id))];
   let displayNameByUserId: Record<string, string> = {};
-  if (userIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, email, full_name")
-      .in("id", userIds);
-    if (profiles) {
-      for (const p of profiles) {
-        const name = (p as { full_name?: string | null }).full_name;
-        const email = p.email ?? "—";
-        displayNameByUserId[p.id] =
-          name && typeof name === "string" && name.trim() ? name.trim() : email;
+  const { data: nameRows } = await supabase.rpc("get_chat_room_display_names", {
+    p_room_id: roomId,
+  });
+  if (nameRows && Array.isArray(nameRows)) {
+    for (const row of nameRows) {
+      const id = (row as { user_id?: string }).user_id;
+      const fullName = (row as { full_name?: string | null }).full_name;
+      const email = (row as { email?: string | null }).email ?? "—";
+      if (id) {
+        displayNameByUserId[id] =
+          fullName && typeof fullName === "string" && fullName.trim()
+            ? fullName.trim()
+            : email;
       }
     }
   }

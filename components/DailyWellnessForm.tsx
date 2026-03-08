@@ -12,14 +12,14 @@ import { HeartPulse, Moon, Activity, Brain, MoreHorizontal, Pill, Check } from "
 const FIELDS = [
   {
     key: "fatigue",
-    label: "How much energy do you have?",
+    label: "How much energy do you have? (fatigue)",
     lowLabel: "No energy",
     highLabel: "Full of energy",
     invertOnSubmit: false,
   },
   {
     key: "soreness",
-    label: "How recovered do your muscles feel?",
+    label: "How recovered do your muscles feel? (soreness)",
     lowLabel: "Very sore",
     highLabel: "Fully recovered",
     invertOnSubmit: false,

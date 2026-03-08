@@ -64,6 +64,60 @@
   background: #71717a;
 }
 
+/* Login page: stadium / sports-field atmosphere – dark, soft distant lights, green glow, non-distracting */
+.login-page-bg {
+  background: #080a0c;
+  background-image:
+    /* Distant stadium-style lights along top */
+    radial-gradient(ellipse 140% 60% at 20% -10%, rgba(16, 185, 129, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 120% 50% at 80% -5%, rgba(34, 197, 94, 0.12) 0%, transparent 50%),
+    /* Softer green glow accents lower */
+    radial-gradient(ellipse 100% 70% at 0% 100%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 60% at 100% 95%, rgba(16, 185, 129, 0.06) 0%, transparent 45%),
+    /* Central vignette so card area stays calm */
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(8, 10, 12, 0.7) 0%, transparent 70%),
+    linear-gradient(180deg, #080a0c 0%, #0a0d10 30%, #0c0f12 60%, #080a0c 100%);
+}
+
+/* Login page: glass-style card – translucent, blur, soft glow (desktop + mobile) */
+.login-card {
+  background: rgba(17, 24, 28, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 48px -8px rgba(16, 185, 129, 0.12);
+}
+
+/* Login inputs: subtle emerald glow on focus */
+.login-input:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Login Sign in button: slight glow */
+.login-signin-btn:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+.login-signin-btn:not(:disabled):hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Print: hide sidebar/nav; main content (e.g. wellness table) prints; preserve colors in PDF */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  /* Force background and text colors to appear in print/PDF (desktop wellness export) */
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

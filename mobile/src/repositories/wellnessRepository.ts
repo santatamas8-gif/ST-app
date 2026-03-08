@@ -153,5 +153,6 @@ function sleepDurationHours(bed: string, wake: string): number | null {
   const b = new Date(`1970-01-01T${bed}`);
   let w = new Date(`1970-01-01T${wake}`);
   if (w <= b) w = new Date(w.getTime() + 24 * 60 * 60 * 1000);
-  return (w.getTime() - b.getTime()) / (60 * 60 * 1000);
+  const hours = (w.getTime() - b.getTime()) / (60 * 60 * 1000);
+  return Math.round(hours * 100) / 100;
 }

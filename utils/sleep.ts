@@ -1,6 +1,7 @@
 /**
  * Compute sleep duration in hours from bed time and wake time (HH:mm or HH:mm:ss).
  * Handles overnight (wake next day).
+ * Returns precise decimal hours, rounded to 2 decimals (e.g. 5.92, 7.93).
  */
 export function sleepDurationHours(bedTime: string, wakeTime: string): number | null {
   if (!bedTime || !wakeTime) return null;

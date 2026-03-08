@@ -813,7 +813,7 @@ export function StaffDashboard({
                     <div
                       className={`relative z-10 flex min-w-0 flex-1 items-center gap-2 overflow-visible p-3 sm:items-start sm:gap-3 sm:p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
                     >
-                      <div className="relative shrink-0">
+                      <div className={`relative shrink-0 ${isAvatarMenuOpen ? "z-[105]" : ""}`}>
                         {isAdmin ? (
                           <>
                             <input
@@ -857,7 +857,7 @@ export function StaffDashboard({
                               )}
                             </button>
                             {isAvatarMenuOpen && (
-                              <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl">
+                              <div className="absolute left-0 top-full z-[110] mt-1 min-w-[160px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl">
                                 <button
                                   type="button"
                                   onClick={() => {

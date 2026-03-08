@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Activity, AlertTriangle, UserRound } from "lucide-react";
+import { Activity, AlertTriangle, UserRound, FileDown } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { WellnessRow } from "@/lib/types";
@@ -335,7 +335,7 @@ export function StaffWellnessView({
 
         {/* TABLE */}
         <div
-          className={`mt-2 overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+          className={`wellness-print-area mt-2 overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filteredAndSorted.length === 0 ? (
@@ -358,13 +358,6 @@ export function StaffWellnessView({
                       className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDate(todayISO())}
-                    className={`min-h-[36px] shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700/80"}`}
-                  >
-                    Today
-                  </button>
                   <div className="relative min-w-0 flex-1 basis-32 sm:max-w-[180px]">
                     <input
                       ref={searchInputRef}
@@ -396,20 +389,30 @@ export function StaffWellnessView({
                     <option value="readinessDesc" style={{ backgroundColor: "#fff", color: "#18181b" }}>Readiness (high→low)</option>
                   </select>
                 </div>
-                <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium sm:gap-x-3">
-                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-6 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
+                <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
+                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-5 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
                     Good
                   </span>
-                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-6 rounded bg-yellow-500/60 ring-1 ring-yellow-400/40" aria-hidden />
+                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-5 rounded bg-yellow-500/60 ring-1 ring-yellow-400/40" aria-hidden />
                     Watch
                   </span>
-                  <span className={`inline-flex items-center gap-1 ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-6 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
+                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                    <span className="inline-block h-3 w-5 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
                     Critical
                   </span>
-                </span>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium no-print sm:ml-2 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-700/80 text-zinc-200 hover:bg-zinc-600"}`}
+                    title="Export / Save as PDF (opens print dialog)"
+                    aria-label="Export as PDF"
+                  >
+                    <FileDown className="h-3.5 w-3.5" aria-hidden />
+                    Export PDF
+                  </button>
+                </div>
                 <p className={`mt-2 w-full text-xs md:hidden ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
                   Scale: 1–4 poor, 5–7 okay, 8+ great
                 </p>

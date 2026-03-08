@@ -17,6 +17,17 @@ export async function submitWellness(form: WellnessFormInput) {
       ? sleepDurationHours(form.bed_time, form.wake_time)
       : null;
 
+  const { data: existing } = await supabase
+    .from("wellness")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("date", form.date)
+    .maybeSingle();
+
+  if (existing) {
+    return { error: "You have already submitted for this day." };
+  }
+
   const { error } = await supabase.from("wellness").insert({
     user_id: user.id,
     date: form.date,
@@ -31,7 +42,10 @@ export async function submitWellness(form: WellnessFormInput) {
     bodyweight: form.bodyweight ?? null,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "You have already submitted for this day." };
+    return { error: error.message };
+  }
   revalidatePath("/wellness");
   revalidatePath("/dashboard");
   return { success: true };
@@ -99,7 +113,10 @@ export async function submitDailyWellness(data: {
     body_parts: bodyPartsFiltered,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "You have already submitted for today." };
+    return { error: error.message };
+  }
   revalidatePath("/wellness");
   revalidatePath("/dashboard");
   return { success: true };
