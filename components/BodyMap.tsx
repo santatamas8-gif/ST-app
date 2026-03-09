@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { List } from "lucide-react";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 
 export type BodyPartsState = Record<string, { soreness: number; pain: number }>;
@@ -177,12 +178,12 @@ function BodyFigure({
       onTouchCancel={handleTouchEnd}
     >
       <div
-        className="origin-center h-full min-h-0 transition-transform duration-100 md:min-h-[400px]"
+        className="origin-center h-full min-h-[260px] min-w-full w-full transition-transform duration-100 md:min-h-[400px]"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
       >
-      <svg viewBox={viewBox} className="h-full w-full min-h-0 md:h-auto md:min-h-[400px]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+      <svg viewBox={viewBox} className="h-full w-full min-h-[260px] min-w-full md:h-auto md:min-h-[400px]" preserveAspectRatio="xMidYMid meet" aria-hidden>
         {/* Background outline (body silhouette on dark panel) */}
         {background && (
           <path
@@ -422,8 +423,8 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden space-y-3 min-w-0 md:flex-initial md:overflow-visible">
-      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-2">
+    <div className="flex min-h-0 min-w-[260px] flex-1 flex-col overflow-visible space-y-3 w-full md:flex-initial md:overflow-visible">
+      <div className="flex shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-2">
         <div className="flex items-center gap-2">
           <span className="w-[3rem] shrink-0 text-xs font-medium text-zinc-500">Mode:</span>
           <button
@@ -477,7 +478,8 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
         </div>
       </div>
 
-      <div className="mx-auto min-h-0 w-full flex-1 min-w-0 overflow-hidden md:max-w-[320px] md:flex-none">
+      {/* Body map keret – a test ábra */}
+      <div className="mx-auto h-[74vh] min-h-[450px] w-full min-w-[260px] shrink-0 overflow-hidden md:h-auto md:min-h-0 md:max-w-[320px] md:flex-none">
         <BodyFigure
           parsed={parsed}
           view={currentView}
@@ -487,13 +489,13 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
           zoom={zoom}
           pan={pan}
           onZoomPanChange={handleZoomPanChange}
-          className="h-full min-h-0 w-full max-w-full md:max-w-[320px] md:h-auto"
+          className="h-full min-h-0 min-w-full w-full max-w-full md:max-w-[320px] md:h-auto"
           touchFriendly={touchFriendly}
           defaultZoom={defaultZoom}
         />
       </div>
 
-      <div className="relative min-w-0">
+      <div className="relative mt-3 shrink-0 min-w-0">
         <div className="flex min-w-0 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2">
           <span className="text-zinc-500" aria-hidden>
             🔍
@@ -527,11 +529,17 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
         )}
       </div>
 
-      {entries.length > 0 && (
-        <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-3">
-          <p className="mb-2 text-xs font-medium text-zinc-400">Selected areas</p>
-          <ul className="space-y-1.5 text-sm">
-            {entries.map(([partId, v]) => (
+      {/* Külön keret: kijelölt body parts (soreness + pain) – bodymap keret alatt */}
+      <div className="mt-4 flex max-h-[38vh] min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-zinc-600 bg-zinc-800/80 p-3 shadow-inner">
+        <p className="mb-2 flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+          <List className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Selected body parts
+        </p>
+        <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden text-sm">
+          {entries.length === 0 ? (
+            <li className="py-2 text-zinc-500">Tap body parts above to add them here.</li>
+          ) : (
+            entries.map(([partId, v]) => (
               <li key={partId} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-zinc-300">{getBodyPartLabel(partId)}</span>
                 <span className="flex items-center gap-2">
@@ -555,10 +563,10 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
                   </button>
                 </span>
               </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            ))
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

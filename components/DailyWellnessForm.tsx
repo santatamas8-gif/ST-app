@@ -327,8 +327,8 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             <p className="mt-0.5 mb-2 text-xs opacity-80" style={{ color: "var(--foreground)" }}>
               Tap a body part to set level (1–10).<span className="hidden sm:inline"> Use FRONT/BACK to switch side.</span>
             </p>
-            <div className="flex min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-xl h-[92vh] md:h-auto md:max-h-none md:flex-none">
-              <BodyMap value={bodyParts} onChange={setBodyParts} singleView={isMobile} touchFriendly={isMobile} defaultZoom={isMobile ? 1.35 : undefined} />
+            <div className="flex min-h-[320px] min-w-full w-full flex-shrink-0 flex-col overflow-visible rounded-xl md:h-auto md:min-h-0 md:max-h-none md:flex-none">
+              <BodyMap value={bodyParts} onChange={setBodyParts} singleView={isMobile} touchFriendly={isMobile} defaultZoom={isMobile ? 1.2 : undefined} />
             </div>
           </div>
         </div>

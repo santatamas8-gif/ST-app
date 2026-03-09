@@ -109,6 +109,9 @@ export default function LoginPage() {
               Sign up
             </Link>
           </p>
+          <p className="mt-4 text-center text-xs text-zinc-500">
+            Add to home screen for quicker access.
+          </p>
         </div>
       </div>
     </div>
