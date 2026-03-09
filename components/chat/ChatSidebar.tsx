@@ -168,6 +168,7 @@ export function ChatSidebar({
                 <li key={room.id}>
                   <Link
                     href={`/chat/${room.id}`}
+                    prefetch={true}
                     className={`group flex min-h-[60px] items-center gap-3 rounded-xl px-3.5 py-2.5 transition-colors active:scale-[0.99] lg:min-h-0 lg:items-start lg:rounded-xl lg:px-3 lg:py-2.5 ${
                       isActive
                         ? "bg-emerald-500/20 ring-1.5 ring-emerald-500/40 shadow-md lg:bg-emerald-500/15 lg:ring-1 lg:ring-emerald-500/30 lg:shadow-sm"

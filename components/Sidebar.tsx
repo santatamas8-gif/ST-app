@@ -222,6 +222,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
                 className={`flex min-h-[48px] items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
                   isActive ? activeNavClass : inactiveNavClass
                 }`}
@@ -258,6 +259,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive ? activeNavClass : inactiveNavClass
               }`}
@@ -344,12 +346,12 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+          <Link href="/dashboard" prefetch={true} className={`shrink-0 text-lg font-bold tracking-tight transition-opacity duration-200 hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
             ST AMS
           </Link>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-          <Link href="/chat" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
+          <Link href="/chat" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
             <MessageCircle className="h-5 w-5" />
             {unreadChatCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
@@ -357,7 +359,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
               </span>
             )}
           </Link>
-          <Link href="/schedule" className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`} title="Schedule" aria-label="Schedule">
+          <Link href="/schedule" prefetch={true} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`} title="Schedule" aria-label="Schedule">
             <Calendar className="h-5 w-5" />
           </Link>
           <div className="relative" ref={themePopoverRef}>
@@ -395,6 +397,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         {!isDashboardDesktop && (
           <Link
             href="/dashboard"
+            prefetch={true}
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${headerIconClass(false)}`}
             title="Back to Dashboard"
             aria-label="Back to Dashboard"
@@ -402,19 +405,19 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
             <ArrowLeft className="h-5 w-5" />
           </Link>
         )}
-        <Link href="/dashboard" className={`shrink-0 text-lg font-bold tracking-tight transition-opacity hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+        <Link href="/dashboard" prefetch={true} className={`shrink-0 text-lg font-bold tracking-tight transition-opacity hover:opacity-90 md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
           ST AMS
         </Link>
         <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-          <Link href="/wellness" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/wellness" || pathname.startsWith("/wellness/"))}`} title="Wellness" aria-label="Wellness">
+          <Link href="/wellness" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/wellness" || pathname.startsWith("/wellness/"))}`} title="Wellness" aria-label="Wellness">
             <HeartPulse className="h-5 w-5" />
             {todoToday && !todoToday.wellnessDone && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" title="To do today" aria-hidden />}
           </Link>
-          <Link href="/rpe" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/rpe" || pathname.startsWith("/rpe/"))}`} title="RPE" aria-label="RPE">
+          <Link href="/rpe" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/rpe" || pathname.startsWith("/rpe/"))}`} title="RPE" aria-label="RPE">
             <Activity className="h-5 w-5" />
             {todoToday && !todoToday.rpeDone && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" title="To do today" aria-hidden />}
           </Link>
-          <Link href="/chat" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
+          <Link href="/chat" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
             <MessageCircle className="h-5 w-5" />
             {unreadChatCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">

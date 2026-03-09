@@ -53,6 +53,7 @@ export function ChatHeader({
       <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-3">
         <Link
           href="/chat"
+          prefetch={true}
           className="flex shrink-0 items-center justify-center rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white lg:hidden"
           aria-label="Back to chats"
         >
