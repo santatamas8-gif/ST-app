@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { X, Pill, Clock, Moon, BatteryLow, Activity, Brain, Smile, Gauge } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow } from "@/utils/wellness";
 import { useTheme } from "@/components/ThemeProvider";
@@ -153,7 +153,7 @@ export function MobileWellnessList({
         ? items
         : filter === "missing"
           ? items.filter((i) => i.type === "missing")
-          : items.filter((i) => i.type === "row" && i.status === filter);
+          : items.filter((i) => i.type === "row" && i.status.toLowerCase() === filter);
     return filtered.sort((a, b) => {
       const statusA = a.type === "row" ? a.status : "Missing";
       const statusB = b.type === "row" ? b.status : "Missing";
@@ -331,24 +331,23 @@ export function MobileWellnessList({
       {/* Mobile detail panel */}
       {detailRow && (
         <div
-          className="fixed inset-0 z-50 flex flex-col overflow-x-hidden"
-          style={{ backgroundColor: "var(--page-bg)" }}
+          className="fixed inset-0 z-50 flex flex-col overflow-x-hidden bg-gradient-to-b from-zinc-900 via-zinc-900/98 to-zinc-950"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="mobile-wellness-detail-title"
         >
           <div
-            className={`sticky top-0 z-20 flex shrink-0 flex-col border-b px-4 py-3 ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
-            style={{ backgroundColor: "var(--page-bg)" }}
+            className={`sticky top-0 z-20 flex shrink-0 flex-col border-b px-4 pb-3 pt-2 ${isHighContrast ? "border-white/20" : "border-emerald-500/25"} bg-zinc-900/95 shadow-md`}
           >
             <div className="flex items-center justify-between">
-              <h2 id="mobile-wellness-detail-title" className="text-lg font-bold text-white">
+              <h2 id="mobile-wellness-detail-title" className="text-xl font-bold tracking-tight text-white drop-shadow-sm">
                 {displayNameByUserId[detailRow.user_id] ?? emailByUserId[detailRow.user_id] ?? detailRow.user_id}
               </h2>
               <button
                 type="button"
                 onClick={() => setDetailRow(null)}
-                className={`rounded-lg p-2 hover:text-white ${isHighContrast ? "text-white/70 hover:bg-white/10" : "text-zinc-400 hover:bg-zinc-700"}`}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 hover:bg-zinc-600 hover:text-white active:scale-95 transition-transform"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -358,14 +357,14 @@ export function MobileWellnessList({
               const readiness = wellnessAverageFromRow(detailRow);
               const statusBadge = getStatusBadge(readiness ?? null);
               return (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className={`rounded-lg px-2.5 py-1 text-xs font-medium text-white ${isHighContrast ? "bg-white/15" : "bg-zinc-700/80"}`}>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className={`rounded-xl border-l-2 border-emerald-500/50 px-3 py-2 text-xs font-semibold text-white shadow-sm ${isHighContrast ? "bg-white/15" : "bg-zinc-800/90"}`}>
                     Readiness {readiness != null ? readiness.toFixed(1) : "—"}
                   </span>
-                  <span className={`rounded-lg px-2.5 py-1 text-xs font-medium text-white ${isHighContrast ? "bg-white/15" : "bg-zinc-700/80"}`}>
+                  <span className={`rounded-xl border-l-2 border-emerald-500/50 px-3 py-2 text-xs font-semibold text-white shadow-sm ${isHighContrast ? "bg-white/15" : "bg-zinc-800/90"}`}>
                     Sleep {detailRow.sleep_duration != null ? `${detailRow.sleep_duration}h` : "—"}
                   </span>
-                  <span className={`rounded-lg px-2.5 py-1 text-xs font-medium ${statusBadge.className}`}>
+                  <span className={`rounded-xl px-3 py-2 text-xs font-semibold ring-1 ring-white/10 shadow-sm ${statusBadge.className}`}>
                     {statusBadge.label}
                   </span>
                 </div>
@@ -374,140 +373,197 @@ export function MobileWellnessList({
           </div>
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+96px)]">
             {getTopIssues(detailRow).length > 0 && (
-              <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                <p className="text-xs font-medium text-amber-400/90">Top issues</p>
-                <ul className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-amber-200/90">
+              <div className="mb-4 rounded-xl border border-amber-500/30 border-l-4 border-l-amber-500/60 bg-amber-500/10 px-4 py-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-400/90">Top issues</p>
+                <ul className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-amber-200/90">
                   {getTopIssues(detailRow).map((issue) => (
                     <li key={issue}>{issue}</li>
                   ))}
                 </ul>
               </div>
             )}
-            <dl className={`space-y-3 text-sm ${isHighContrast ? "text-white/90" : ""}`}>
-              <div className="flex justify-between gap-2">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Illness</dt>
+            <div className="mb-4 rounded-xl border border-emerald-500/25 bg-zinc-800/50 px-4 py-3.5 shadow-sm ring-1 ring-emerald-500/5">
+              <dl className={`divide-y divide-zinc-700/50 text-sm ${isHighContrast ? "text-white/90" : ""}`}>
+              <div className="flex justify-between gap-3 items-center py-3.5 first:pt-0">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Pill className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Illness
+                </dt>
                 <dd>
                   {detailRow.illness === true ? (
-                    <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">Yes</span>
+                    <span className="rounded-md bg-red-500/25 px-2.5 py-1 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">Yes</span>
                   ) : (
-                    <span className={isHighContrast ? "text-white/80" : "text-zinc-400"}>No</span>
+                    <span className="rounded-md bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/25">No</span>
                   )}
                 </dd>
               </div>
-              <div className="flex justify-between gap-2">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Bed → Wake</dt>
-                <dd className="tabular-nums text-white">
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Clock className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Bed → Wake
+                </dt>
+                <dd
+                  className={`rounded-lg px-2.5 py-1.5 tabular-nums font-medium ring-1 ${
+                    detailRow.sleep_duration != null
+                      ? detailRow.sleep_duration >= 8
+                        ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/20"
+                        : detailRow.sleep_duration >= 6
+                          ? "bg-amber-500/15 text-amber-300 ring-amber-500/25"
+                          : "bg-red-500/15 text-red-300 ring-red-500/25"
+                      : "bg-zinc-700/50 text-white ring-zinc-600/50"
+                  }`}
+                >
                   {timeToHHmm(detailRow.bed_time) != null && timeToHHmm(detailRow.wake_time) != null
                     ? `${timeToHHmm(detailRow.bed_time)} → ${timeToHHmm(detailRow.wake_time)}`
                     : timeToHHmm(detailRow.bed_time) ?? timeToHHmm(detailRow.wake_time) ?? "—"}
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Sleep quality</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Moon className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Sleep quality
+                </dt>
                 <dd>
                   <BadgeScore value={detailRow.sleep_quality} type="goodHigh" />
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Fatigue</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <BatteryLow className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Fatigue
+                </dt>
                 <dd>
                   <BadgeScore value={detailRow.fatigue} type="goodHigh" />
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Soreness</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Activity className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Soreness
+                </dt>
                 <dd>
                   <BadgeScore value={detailRow.soreness} type="goodHigh" />
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Stress</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Brain className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Stress
+                </dt>
                 <dd>
                   <BadgeScore value={detailRow.stress} type="goodHigh" />
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Mood</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Smile className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Mood
+                </dt>
                 <dd>
                   <BadgeScore value={detailRow.mood} type="goodHigh" />
                 </dd>
               </div>
-              <div className="flex justify-between gap-2 items-center">
-                <dt className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Readiness</dt>
+              <div className="flex justify-between gap-3 items-center py-3.5 last:pb-0">
+                <dt className={`flex items-center gap-2.5 font-medium ${isHighContrast ? "text-white/70" : "text-zinc-300"}`}>
+                  <Gauge className="h-4 w-4 shrink-0 text-emerald-400/70" aria-hidden />
+                  Readiness
+                </dt>
                 <dd>
                   <BadgeScore value={wellnessAverageFromRow(detailRow)} type="goodHigh" />
                 </dd>
               </div>
-            </dl>
+              </dl>
+            </div>
 
             {/* Body map – only inside player details panel on mobile; one view at a time */}
             {detailRow.body_parts && Object.keys(detailRow.body_parts).length > 0 && (
               <div
-                className={`mt-6 rounded-xl border px-4 py-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : "border-zinc-700 bg-zinc-800/50"}`}
+                className={`mt-6 rounded-xl border px-4 py-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : "border-emerald-500/25 bg-emerald-500/5 ring-1 ring-emerald-500/10"}`}
                 style={
                   themeId === "neon"
                     ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
                     : themeId === "matt"
                       ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
-                      : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }
+                      : { borderRadius: CARD_RADIUS }
                 }
               >
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className={`text-xs font-medium ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>Body map</span>
-                  <button
-                    type="button"
-                    onClick={() => setBodyMapMode("soreness")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                      bodyMapMode === "soreness"
-                        ? "bg-amber-600 text-white"
-                        : isHighContrast
-                          ? "bg-white/10 text-white/80 hover:bg-white/20"
-                          : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                    }`}
-                  >
-                    Soreness
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBodyMapMode("pain")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                      bodyMapMode === "pain"
-                        ? "bg-red-600 text-white"
-                        : isHighContrast
-                          ? "bg-white/10 text-white/80 hover:bg-white/20"
-                          : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                    }`}
-                  >
-                    Pain
-                  </button>
-                </div>
-                <div className="mb-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBodyMapView("front")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                      bodyMapView === "front"
-                        ? "bg-emerald-600 text-white"
-                        : isHighContrast
-                          ? "bg-white/10 text-white/80 hover:bg-white/20"
-                          : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                    }`}
-                  >
-                    Front
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBodyMapView("back")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                      bodyMapView === "back"
-                        ? "bg-emerald-600 text-white"
-                        : isHighContrast
-                          ? "bg-white/10 text-white/80 hover:bg-white/20"
-                          : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                    }`}
-                  >
-                    Back
-                  </button>
+                {/* Csak mobil sheet: Body map feljebb zölddel, Mode/View kis felirat a sorok fölé */}
+                <div className="mb-3">
+                  <div className="flex justify-center">
+                    <span
+                      className={`text-xs font-semibold uppercase ${
+                        isHighContrast ? "text-white/90" : "text-emerald-400"
+                      }`}
+                    >
+                      Body map
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex justify-center">
+                    <div className="w-full max-w-[12rem]">
+                      <p className={`mb-0.5 text-[9px] font-medium uppercase tracking-wide ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                        Mode
+                      </p>
+                      <div className="grid grid-cols-2 grid-rows-[1.85rem] gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setBodyMapMode("soreness")}
+                          className={`flex items-center justify-center rounded border text-xs font-medium transition ${
+                            bodyMapMode === "soreness"
+                              ? "border-amber-500/50 bg-amber-600 text-white"
+                              : isHighContrast
+                                ? "border-white/20 bg-white/10 text-white/80"
+                                : "border-zinc-600/80 bg-zinc-700/80 text-zinc-400"
+                          }`}
+                        >
+                          Soreness
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBodyMapMode("pain")}
+                          className={`flex items-center justify-center rounded border text-xs font-medium transition ${
+                            bodyMapMode === "pain"
+                              ? "border-red-500/50 bg-red-600 text-white"
+                              : isHighContrast
+                                ? "border-white/20 bg-white/10 text-white/80"
+                                : "border-zinc-600/80 bg-zinc-700/80 text-zinc-400"
+                          }`}
+                        >
+                          Pain
+                        </button>
+                      </div>
+                      <p className={`mb-0.5 mt-1 text-[9px] font-medium uppercase tracking-wide ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                        View
+                      </p>
+                      <div className="grid grid-cols-2 grid-rows-[1.85rem] gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setBodyMapView("front")}
+                          className={`flex items-center justify-center rounded border text-xs font-medium transition ${
+                            bodyMapView === "front"
+                              ? "border-emerald-500/50 bg-emerald-600 text-white"
+                              : isHighContrast
+                                ? "border-white/20 bg-white/10 text-white/80"
+                                : "border-zinc-600/80 bg-zinc-700/80 text-zinc-400"
+                          }`}
+                        >
+                          Front
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBodyMapView("back")}
+                          className={`flex items-center justify-center rounded border text-xs font-medium transition ${
+                            bodyMapView === "back"
+                              ? "border-emerald-500/50 bg-emerald-600 text-white"
+                              : isHighContrast
+                                ? "border-white/20 bg-white/10 text-white/80"
+                                : "border-zinc-600/80 bg-zinc-700/80 text-zinc-400"
+                          }`}
+                        >
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div
                   className={
@@ -523,18 +579,32 @@ export function MobileWellnessList({
                     size="default"
                   />
                 </div>
-                <ul className={`mt-3 space-y-1 text-sm ${isHighContrast ? "text-white/80" : "text-zinc-300"}`}>
+                <ul className="mt-3 space-y-2 text-sm">
                   {Object.entries(detailRow.body_parts).map(([partId, v]) => {
                     const s = v.s ?? 0;
                     const p = v.p ?? 0;
                     const label = getBodyPartLabel(partId);
-                    const parts: string[] = [];
-                    if (s > 0) parts.push(`soreness ${s}`);
-                    if (p > 0) parts.push(`pain ${p}`);
-                    if (parts.length === 0) return null;
+                    if (s === 0 && p === 0) return null;
+                    const hasBoth = s > 0 && p > 0;
+                    const leftAccent = hasBoth ? "border-l-amber-400/60" : p > 0 ? "border-l-red-500/70" : "border-l-amber-500/70";
                     return (
-                      <li key={partId}>
-                        {label}: {parts.join(", ")}
+                      <li
+                        key={partId}
+                        className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-l-4 ${leftAccent} bg-zinc-800/80 px-3 py-2.5 shadow-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}
+                      >
+                        <span className="font-medium">{label}</span>
+                        <span className="flex items-center gap-2">
+                          {s > 0 && (
+                            <span className="rounded-md bg-amber-500/25 px-2 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                              Soreness {s}
+                            </span>
+                          )}
+                          {p > 0 && (
+                            <span className="rounded-md bg-red-500/25 px-2 py-0.5 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
+                              Pain {p}
+                            </span>
+                          )}
+                        </span>
                       </li>
                     );
                   })}

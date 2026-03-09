@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
@@ -10,6 +10,7 @@ import { LoadKpiCard } from "./LoadKpiCard";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
+import { Calendar, User, X } from "lucide-react";
 
 const CARD_RADIUS = "12px";
 
@@ -107,6 +108,13 @@ function formatLoadBreakdown(
   return `(${parts.join(" + ")}) = ${totalLoad}`;
 }
 
+/** RPE 1–4 green, 5–7 yellow, 8+ red (only the number is colored) */
+function rpeColorClass(rpe: number): string {
+  if (rpe >= 8) return "text-red-400 font-bold";
+  if (rpe >= 5) return "text-amber-400 font-semibold";
+  return "text-emerald-400 font-semibold";
+}
+
 export type PeriodDays = 7 | 14 | 28;
 
 export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }: StaffLoadViewProps) {
@@ -117,8 +125,30 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [modalUserId, setModalUserId] = useState<string | null>(null);
+  const [showAllPlayersSheet, setShowAllPlayersSheet] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useSearchShortcut(searchInputRef);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const set = () => setIsMobile(mq.matches);
+    set();
+    mq.addEventListener("change", set);
+    return () => mq.removeEventListener("change", set);
+  }, []);
+
+  useEffect(() => {
+    if (!showAllPlayersSheet || !isMobile) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [showAllPlayersSheet, isMobile]);
 
   const [week1Start, setWeek1Start] = useState(() => {
     const d = new Date();
@@ -283,6 +313,13 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
     );
   }, [playerChartData, dailyChartSortOrder]);
 
+  /** Same order as chart (for sheet list on mobile). */
+  const sortedTableRowsByChartOrder = useMemo(() => {
+    return [...tableRows].sort((a, b) =>
+      dailyChartSortOrder === "asc" ? a.load - b.load : b.load - a.load
+    );
+  }, [tableRows, dailyChartSortOrder]);
+
   const modalUser = modalUserId
     ? displayNameByUserId[modalUserId] ?? emailByUserId[modalUserId] ?? modalUserId
     : null;
@@ -416,7 +453,18 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                   </button>
                 </div>
               </div>
-              <PlayerLoadBarChart data={sortedPlayerChartData} />
+              <PlayerLoadBarChart data={isMobile ? sortedPlayerChartData.slice(0, 10) : sortedPlayerChartData} />
+              {isMobile && sortedPlayerChartData.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPlayersSheet(true)}
+                  className="mt-3 w-full rounded-lg border border-zinc-600 bg-zinc-800/80 py-2.5 text-sm font-medium text-emerald-400 hover:bg-zinc-700/80"
+                >
+                  {sortedPlayerChartData.length > 10
+                    ? `View all (${sortedPlayerChartData.length}) players`
+                    : "View list"}
+                </button>
+              )}
             </div>
             <div
               className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
@@ -608,6 +656,99 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           spikePercent={modalSpike}
           onClose={() => setModalUserId(null)}
         />
+      )}
+
+      {showAllPlayersSheet && isMobile && (
+        <div
+          className="fixed inset-0 z-50 flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-zinc-900 via-zinc-900/98 to-zinc-950"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-emerald-500/25 bg-gradient-to-r from-zinc-800/90 to-zinc-800/70 px-4 py-4 shadow-lg shadow-black/20">
+            <h3 className="text-lg font-bold tracking-tight text-white drop-shadow-sm">Today&apos;s load – all players</h3>
+            <button
+              type="button"
+              onClick={() => setShowAllPlayersSheet(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 shadow-inner hover:bg-zinc-600 hover:text-white active:scale-95 transition-transform"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="shrink-0 px-4 py-3">
+            <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-300 shadow-sm ring-1 ring-emerald-500/25">
+              <Calendar className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              {selectedDate}
+            </span>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-1">
+            <div className="mb-3 rounded-xl border border-emerald-500/25 border-t-emerald-500/50 bg-emerald-500/10 px-4 py-2.5 shadow-inner">
+              <div className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs font-semibold uppercase tracking-wider text-emerald-200/90">
+                <span>Player</span>
+                <span className="text-right whitespace-nowrap">Duration × RPE = Load</span>
+              </div>
+            </div>
+            <ul className="space-y-2.5">
+            {sortedTableRowsByChartOrder.map((row) => {
+              const sessionsForDay = list.filter((s) => s.date === selectedDate && s.user_id === row.userId);
+              const name = displayNameByUserId[row.userId] ?? emailByUserId[row.userId] ?? row.userId;
+              const maxRpe = sessionsForDay.length
+                ? Math.max(0, ...sessionsForDay.map((s) => s.rpe ?? 0))
+                : 0;
+              const zone = maxRpe >= 8 ? "red" : maxRpe >= 5 ? "yellow" : "green";
+              const accentBg = zone === "red" ? "bg-red-500/60" : zone === "yellow" ? "bg-amber-500/60" : "bg-emerald-500/60";
+              const iconBg = zone === "red" ? "bg-red-500/20 text-red-400" : zone === "yellow" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400";
+              const formulaContent = sessionsForDay.length === 0 ? (
+                <span className="text-zinc-500">—</span>
+              ) : sessionsForDay.length === 1 ? (
+                (() => {
+                  const s = sessionsForDay[0];
+                  const rpe = s.rpe ?? null;
+                  return (
+                    <>
+                      <span className="text-zinc-400">{s.duration ?? 0}</span>
+                      <span className="text-zinc-500"> × </span>
+                      {rpe != null ? <span className={rpeColorClass(rpe)}>{rpe}</span> : <span className="text-zinc-500">—</span>}
+                      <span className="text-zinc-500"> = </span>
+                      <span className="text-zinc-400">{row.load}</span>
+                    </>
+                  );
+                })()
+              ) : (
+                <>
+                  <span className="text-zinc-500">(</span>
+                  {sessionsForDay.map((s, i) => (
+                    <span key={i}>
+                      {i > 0 && <span className="text-zinc-500"> + </span>}
+                      <span className="text-zinc-400">{s.duration ?? 0}</span>
+                      <span className="text-zinc-500">×</span>
+                      {s.rpe != null ? <span className={rpeColorClass(s.rpe)}>{s.rpe}</span> : <span className="text-zinc-500">—</span>}
+                    </span>
+                  ))}
+                  <span className="text-zinc-500">) = </span>
+                  <span className="text-zinc-400">{row.load}</span>
+                </>
+              );
+              return (
+                <li
+                  key={row.userId}
+                  className="relative grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-emerald-500/20 bg-zinc-800/70 px-3.5 py-3.5 shadow-md shadow-black/10 ring-1 ring-emerald-500/10"
+                >
+                  <span className={`absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-r-full ${accentBg} shadow-sm`} aria-hidden />
+                  <div className="flex min-w-0 items-center gap-2.5 pl-2">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconBg} ring-1 ring-white/5`}>
+                      <User className="h-4 w-4" aria-hidden />
+                    </span>
+                    <span className="min-w-0 break-words text-sm font-semibold leading-snug text-white">{name}</span>
+                  </div>
+                  <div className="shrink-0 rounded-lg bg-zinc-800/80 px-2.5 py-1.5 text-right font-mono text-sm tabular-nums ring-1 ring-emerald-500/20">
+                    {formulaContent}
+                  </div>
+                </li>
+              );
+            })}
+            </ul>
+          </div>
+        </div>
       )}
     </div>
   );

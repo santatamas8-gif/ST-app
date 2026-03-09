@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { List } from "lucide-react";
+import { List, Activity, AlertCircle, X } from "lucide-react";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 
 export type BodyPartsState = Record<string, { soreness: number; pain: number }>;
@@ -530,40 +530,49 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
       </div>
 
       {/* Külön keret: kijelölt body parts (soreness + pain) – bodymap keret alatt */}
-      <div className="mt-4 flex max-h-[38vh] min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-zinc-600 bg-zinc-800/80 p-3 shadow-inner">
-        <p className="mb-2 flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white">
-          <List className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <div className="mt-4 flex max-h-[38vh] min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-emerald-500/25 bg-zinc-800/90 p-3 shadow-inner ring-1 ring-emerald-500/10">
+        <p className="mb-3 flex shrink-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white">
+          <List className="h-4 w-4 shrink-0 text-emerald-400/80" aria-hidden />
           Selected body parts
         </p>
-        <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden text-sm">
+        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden text-sm">
           {entries.length === 0 ? (
-            <li className="py-2 text-zinc-500">Tap body parts above to add them here.</li>
+            <li className="rounded-xl border border-dashed border-zinc-600 py-5 text-center text-sm text-zinc-500">Tap body parts above to add them here.</li>
           ) : (
-            entries.map(([partId, v]) => (
-              <li key={partId} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-zinc-300">{getBodyPartLabel(partId)}</span>
-                <span className="flex items-center gap-2">
-                  {v.soreness > 0 && (
-                    <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs text-amber-400">
-                      Soreness {v.soreness}
-                    </span>
-                  )}
-                  {v.pain > 0 && (
-                    <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-xs text-red-400">
-                      Pain {v.pain}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => clearPart(partId)}
-                    className="text-zinc-500 hover:text-red-400"
-                    aria-label={`Clear ${partId}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              </li>
-            ))
+            entries.map(([partId, v]) => {
+              const hasBoth = v.soreness > 0 && v.pain > 0;
+              const leftAccent = hasBoth ? "border-l-amber-400/60" : v.pain > 0 ? "border-l-red-500/70" : "border-l-amber-500/70";
+              return (
+                <li
+                  key={partId}
+                  className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-l-4 ${leftAccent} bg-zinc-800/80 px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md`}
+                >
+                  <span className="font-medium text-zinc-200">{getBodyPartLabel(partId)}</span>
+                  <span className="flex items-center gap-2">
+                    {v.soreness > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/25 px-2 py-1 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                        <Activity className="h-3 w-3 shrink-0" aria-hidden />
+                        {v.soreness}
+                      </span>
+                    )}
+                    {v.pain > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-red-500/25 px-2 py-1 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
+                        <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
+                        {v.pain}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => clearPart(partId)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-600 hover:text-red-400 transition-colors active:scale-95"
+                      aria-label={`Clear ${partId}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </span>
+                </li>
+              );
+            })
           )}
         </ul>
       </div>

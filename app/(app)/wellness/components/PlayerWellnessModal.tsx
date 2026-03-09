@@ -12,9 +12,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
-import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
+import { Gauge, Moon, BatteryLow, Activity, Brain, Smile, Pill } from "lucide-react";
 import { BodyMapViewOnly } from "@/components/BodyMap";
 import { BadgeScore } from "./BadgeScore";
 
@@ -80,26 +80,26 @@ export function PlayerWellnessModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ backgroundColor: "rgba(0,0,0,0.72)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-zinc-600/70 p-8 shadow-2xl ring-1 ring-white/[0.06]"
         style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-          <h2 id="modal-title" className="text-xl font-bold text-white">
+        <div className="flex items-center justify-between border-b border-zinc-600/80 pb-4">
+          <h2 id="modal-title" className="text-xl font-bold tracking-tight text-white">
             {playerName}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors active:scale-95"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -107,12 +107,131 @@ export function PlayerWellnessModal({
             </svg>
           </button>
         </div>
+        <div className="mt-3 flex justify-center">
+          <span className="rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200/95 shadow-sm ring-1 ring-emerald-500/20">
+            Today&apos;s wellness
+          </span>
+        </div>
 
-        {/* 7-day / 28-day averages */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        {latest && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-zinc-400 pl-1 border-l-2 border-zinc-600">Latest values</h3>
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-xl border border-zinc-600/70 bg-zinc-900/40 px-3 py-2.5 sm:grid-cols-3">
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Gauge className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Readiness</span>
+                <BadgeScore value={wellnessAverageFromRow(latest)} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Moon className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Sleep quality</span>
+                <BadgeScore value={latest.sleep_quality} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <BatteryLow className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Fatigue</span>
+                <BadgeScore value={latest.fatigue} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Activity className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Soreness</span>
+                <BadgeScore value={latest.soreness} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Brain className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Stress</span>
+                <BadgeScore value={latest.stress} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Smile className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Mood</span>
+                <BadgeScore value={latest.mood} type="goodHigh" />
+              </div>
+              <div className="flex items-center gap-2 rounded-md py-1 transition-colors hover:bg-zinc-800/40">
+                <Pill className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
+                <span className="min-w-0 truncate text-xs text-zinc-200">Illness</span>
+                {latest.illness === true ? (
+                  <span className="rounded bg-red-500/25 px-1.5 py-0.5 text-xs font-medium text-red-400 ring-1 ring-red-500/30">Yes</span>
+                ) : (
+                  <span className="text-xs text-zinc-400">—</span>
+                )}
+              </div>
+            </div>
+            {latest.body_parts && Object.keys(latest.body_parts).length > 0 && (
+              <div className="mt-4 rounded-xl border border-emerald-500/30 bg-zinc-900/50 px-4 py-4 shadow-md ring-1 ring-emerald-500/10">
+                <h4 className="text-xs font-medium text-zinc-500 pl-1 border-l-2 border-emerald-500/50">Body map (soreness / pain 1–10)</h4>
+                <div className="mt-3">
+                  <BodyMapViewOnly bodyParts={latest.body_parts} />
+                </div>
+                <div className="mt-4 space-y-4">
+                  {/* Soreness – külön blokk */}
+                  {(() => {
+                    const soreEntries = Object.entries(latest.body_parts)
+                      .filter(([, v]) => (v.s ?? 0) > 0)
+                      .sort(([a], [b]) => getBodyPartLabel(a).localeCompare(getBodyPartLabel(b), "en"));
+                    if (soreEntries.length === 0) return null;
+                    return (
+                      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 py-2 px-3">
+                        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-amber-400/90">Soreness</p>
+                        <ul className="space-y-1.5 text-sm">
+                          {soreEntries.map(([partId, v]) => {
+                            const s = v.s ?? 0;
+                            const label = getBodyPartLabel(partId);
+                            return (
+                              <li
+                                key={`s-${partId}`}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-l-amber-500/70 bg-zinc-800/60 px-3 py-2 shadow-sm transition-colors hover:bg-zinc-800/80"
+                              >
+                                <span className="font-medium text-zinc-200">{label}</span>
+                                <span className="rounded-md bg-amber-500/25 px-2 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                                  {s}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
+                  {/* Pain – külön blokk */}
+                  {(() => {
+                    const painEntries = Object.entries(latest.body_parts)
+                      .filter(([, v]) => (v.p ?? 0) > 0)
+                      .sort(([a], [b]) => getBodyPartLabel(a).localeCompare(getBodyPartLabel(b), "en"));
+                    if (painEntries.length === 0) return null;
+                    return (
+                      <div className="rounded-lg border border-red-500/20 bg-red-500/5 py-2 px-3">
+                        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-red-400/90">Pain</p>
+                        <ul className="space-y-1.5 text-sm">
+                          {painEntries.map(([partId, v]) => {
+                            const p = v.p ?? 0;
+                            const label = getBodyPartLabel(partId);
+                            return (
+                              <li
+                                key={`p-${partId}`}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-l-red-500/70 bg-zinc-800/60 px-3 py-2 shadow-sm transition-colors hover:bg-zinc-800/80"
+                              >
+                                <span className="font-medium text-zinc-200">{label}</span>
+                                <span className="rounded-md bg-red-500/25 px-2 py-0.5 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
+                                  {p}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 7-day / 28-day averages – lejjebb, Latest values és body map után */}
+        <div className="mt-6 grid grid-cols-2 gap-4">
           <div
-            className="rounded-lg border border-zinc-700 px-3 py-2.5"
-            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+            className="rounded-xl border border-zinc-600/80 border-l-emerald-500/40 bg-white/[0.04] px-4 py-3.5 shadow-sm ring-1 ring-zinc-500/10"
           >
             <p className="text-xs font-medium text-zinc-500">7-day average</p>
             <p className="mt-1 text-sm text-white">
@@ -129,8 +248,7 @@ export function PlayerWellnessModal({
             </p>
           </div>
           <div
-            className="rounded-lg border border-zinc-700 px-3 py-2.5"
-            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+            className="rounded-xl border border-zinc-600/80 border-l-zinc-500/50 bg-white/[0.04] px-4 py-3.5 shadow-sm ring-1 ring-zinc-500/10"
           >
             <p className="text-xs font-medium text-zinc-500">28-day average</p>
             <p className="mt-1 text-sm text-white">
@@ -148,113 +266,22 @@ export function PlayerWellnessModal({
           </div>
         </div>
 
-        {latest && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-zinc-400">Latest values</h3>
-            <div className="mt-2 flex flex-wrap gap-3">
-              <span className="text-zinc-500">Sleep quality</span>
-              <BadgeScore value={latest.sleep_quality} type="goodHigh" />
-              <span className="text-zinc-500">Fatigue</span>
-              <BadgeScore value={latest.fatigue} type="goodHigh" />
-              <span className="text-zinc-500">Soreness</span>
-              <BadgeScore value={latest.soreness} type="goodHigh" />
-              <span className="text-zinc-500">Stress</span>
-              <BadgeScore value={latest.stress} type="goodHigh" />
-              <span className="text-zinc-500">Mood</span>
-              <BadgeScore value={latest.mood} type="goodHigh" />
-              <span className="text-zinc-500">Illness</span>
-              {latest.illness === true ? (
-                <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-400">Yes</span>
-              ) : (
-                <span className="text-zinc-500">—</span>
-              )}
-            </div>
-            {latest.body_parts && Object.keys(latest.body_parts).length > 0 && (
-              <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/40 px-3 py-2">
-                <h4 className="text-xs font-medium text-zinc-500">Body map (soreness / pain 1–10)</h4>
-                <div className="mt-2">
-                  <BodyMapViewOnly bodyParts={latest.body_parts} />
-                </div>
-                <ul className="mt-3 space-y-1 text-sm text-zinc-300">
-                  {Object.entries(latest.body_parts).map(([partId, v]) => {
-                    const s = v.s ?? 0;
-                    const p = v.p ?? 0;
-                    const label = getBodyPartLabel(partId);
-                    const parts: string[] = [];
-                    if (s > 0) parts.push(`soreness ${s}`);
-                    if (p > 0) parts.push(`pain ${p}`);
-                    return (
-                      <li key={partId}>
-                        {label}: {parts.join(", ")}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-6">
-          <h3 className="text-sm font-medium text-zinc-400">Last 7 entries</h3>
-          {last7.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No entries for this player in loaded data.</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {last7.map((r) => {
-                const w = wellnessAverageFromRow(r);
-                const sleep = r.sleep_duration;
-                const sleepStyle =
-                  sleep != null
-                    ? sleep >= 8
-                      ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
-                      : { backgroundColor: "rgba(239, 68, 68, 0.25)", color: "#f87171" }
-                    : undefined;
-                return (
-                  <li
-                    key={r.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-900/60 px-3 py-2 text-sm"
-                  >
-                    <span className="text-zinc-300">{r.date}<span className="text-zinc-500">{getDateContextLabel(r.date)}</span></span>
-                    <span className="flex items-center gap-1.5 text-zinc-400">
-                      Wellness: {w != null ? w.toFixed(1) : "—"}
-                      {" · "}
-                      Sleep:{" "}
-                      {sleep != null ? (
-                        <span className="inline-flex rounded px-1.5 py-0.5 font-medium tabular-nums" style={sleepStyle}>
-                          {sleep}h
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {last7.length > 0 && sortedByDate.length < 7 && (
-            <p className="mt-2 text-xs text-amber-500/90">
-              Showing {sortedByDate.length} available. View full history for more.
-            </p>
-          )}
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-medium text-zinc-400">Wellness trend</h3>
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="rounded-xl border border-zinc-600/70 bg-zinc-900/30 px-4 py-3 shadow-sm ring-1 ring-zinc-500/10">
+            <h3 className="text-sm font-medium text-zinc-400 pl-1 border-l-2 border-emerald-500/40">Wellness trend</h3>
             <div className="mt-2 h-32">
               {chartWellness.length > 0 && hasEnoughHistory ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartWellness} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                     <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} domain={[0, 10]} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "var(--card-bg)",
-                        border: "1px solid #27272a",
+                        border: "1px solid #3f3f46",
                         borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.2)",
                       }}
                       formatter={(v: number) => [v.toFixed(1), "Wellness"]}
                     />
@@ -268,26 +295,27 @@ export function PlayerWellnessModal({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-lg bg-zinc-900/40 text-sm text-zinc-500">
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-zinc-600/60 bg-zinc-800/40 text-sm text-zinc-500">
                   {chartWellness.length < 2 ? "Need at least 2 entries for trend" : "No data"}
                 </div>
               )}
             </div>
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-zinc-400">Sleep hours trend</h3>
+          <div className="rounded-xl border border-zinc-600/70 bg-zinc-900/30 px-4 py-3 shadow-sm ring-1 ring-zinc-500/10">
+            <h3 className="text-sm font-medium text-zinc-400 pl-1 border-l-2 border-blue-500/40">Sleep hours trend</h3>
             <div className="mt-2 h-32">
               {chartSleep.length > 0 && chartSleep.some((d) => d.hours > 0) && hasEnoughHistory ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartSleep} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                     <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} />
                     <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "var(--card-bg)",
-                        border: "1px solid #27272a",
+                        border: "1px solid #3f3f46",
                         borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.2)",
                       }}
                       formatter={(v: number) => [`${v}h`, "Sleep"]}
                     />
@@ -301,7 +329,7 @@ export function PlayerWellnessModal({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-lg bg-zinc-900/40 text-sm text-zinc-500">
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-zinc-600/60 bg-zinc-800/40 text-sm text-zinc-500">
                   {chartSleep.length < 2 ? "Need at least 2 entries" : "No sleep data"}
                 </div>
               )}
@@ -309,10 +337,10 @@ export function PlayerWellnessModal({
           </div>
         </div>
 
-        <div className="mt-6 border-t border-zinc-800 pt-4">
+        <div className="mt-8 border-t border-zinc-600/80 pt-5">
           <Link
             href={`/players/${userId}`}
-            className="inline-flex items-center rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-600"
+            className="inline-flex items-center rounded-xl border border-zinc-600 bg-zinc-700/80 px-4 py-2 text-sm font-medium text-white shadow-sm ring-1 ring-zinc-500/10 hover:border-zinc-500 hover:bg-zinc-600 hover:shadow hover:ring-zinc-500/20 transition-all"
           >
             View full history
           </Link>
