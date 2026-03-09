@@ -23,6 +23,13 @@ export function ScheduleIcon({ type, className = "" }: { type: ScheduleActivityT
   }
 
   switch (type) {
+    case "arrival":
+      return (
+        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+      );
     case "training":
       return (
         <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>

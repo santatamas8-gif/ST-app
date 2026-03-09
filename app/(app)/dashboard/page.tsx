@@ -220,6 +220,7 @@ export default function DashboardPage() {
   const todayScheduleItems = data.todayScheduleItems ?? [];
 
   const SCHEDULE_ACTIVITY_LABELS: Record<string, string> = {
+    arrival: "Arrival",
     breakfast: "Breakfast",
     lunch: "Lunch",
     dinner: "Dinner",
@@ -239,6 +240,7 @@ export default function DashboardPage() {
     individual: "Individual",
   };
   const SCHEDULE_PILL_COLORS: Record<string, string> = {
+    arrival: "bg-sky-500/40",
     breakfast: "bg-amber-500/40",
     lunch: "bg-amber-500/40",
     dinner: "bg-amber-500/40",

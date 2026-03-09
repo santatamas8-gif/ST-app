@@ -75,6 +75,7 @@ export interface AvailabilityRow {
 }
 
 export type ScheduleActivityType =
+  | "arrival"
   | "breakfast"
   | "lunch"
   | "dinner"

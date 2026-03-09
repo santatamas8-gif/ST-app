@@ -26,6 +26,7 @@ function LocationPinIcon({ className, ...props }: { className?: string } & React
 }
 
 const ACTIVITY_LABELS: Record<ScheduleActivityType, string> = {
+  arrival: "Arrival",
   breakfast: "Breakfast",
   lunch: "Lunch",
   dinner: "Dinner",
@@ -46,6 +47,7 @@ const ACTIVITY_LABELS: Record<ScheduleActivityType, string> = {
 };
 
 const ACTIVITY_TYPES: ScheduleActivityType[] = [
+  "arrival",
   "breakfast",
   "lunch",
   "dinner",
@@ -65,8 +67,9 @@ const ACTIVITY_TYPES: ScheduleActivityType[] = [
   "individual",
 ];
 
-/** First row of Add buttons (meals & core activities). */
+/** First row of Add buttons (arrival, meals & core activities). */
 const ADD_ROW_1: ScheduleActivityType[] = [
+  "arrival",
   "breakfast",
   "lunch",
   "dinner",

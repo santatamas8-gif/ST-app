@@ -539,6 +539,7 @@ export function StaffDashboard({
                   <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
+                      arrival: "Arrival",
                       breakfast: "Breakfast",
                       lunch: "Lunch",
                       dinner: "Dinner",
@@ -682,7 +683,7 @@ export function StaffDashboard({
                   <div className="flex shrink-0 gap-4">
                   {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
-                      breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
+                      arrival: "Arrival", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
                     };
                     const baseLabel = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;

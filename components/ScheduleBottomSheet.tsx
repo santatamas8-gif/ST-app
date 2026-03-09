@@ -6,6 +6,7 @@ import { MATT_CARD_STYLE } from "@/lib/themes";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 
 const SCHEDULE_ACTIVITY_LABELS: Record<string, string> = {
+  arrival: "Arrival",
   breakfast: "Breakfast",
   lunch: "Lunch",
   dinner: "Dinner",
