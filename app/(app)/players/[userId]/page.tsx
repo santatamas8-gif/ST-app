@@ -1,10 +1,7 @@
 import { getAppUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Card } from "@/components/Card";
 import { getPlayerDetail } from "@/lib/playerDetail";
-import { getAvailability } from "@/app/actions/availability";
-import { AvailabilityPerDay } from "./AvailabilityPerDay";
 import { PlayerWellnessTrend } from "./PlayerWellnessTrend";
 
 export default async function PlayerDetailPage({
@@ -22,9 +19,6 @@ export default async function PlayerDetailPage({
     user.role
   );
   if (error || !playerEmail) notFound();
-
-  const { data: availabilityList } = await getAvailability(userId, from!, to!);
-  const availabilityByDate = new Map(availabilityList.map((a) => [a.date, a.status]));
 
   const loadByDate: Record<string, number> = {};
   sessions.forEach((s) => {
@@ -50,19 +44,6 @@ export default async function PlayerDetailPage({
       <p className="opacity-70">Trend (last 28 days): 7-day and 28-day averages and daily bars.</p>
 
       <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
-
-      {(user.role === "admin" || user.role === "staff") && (
-        <Card title="Availability (by day)" className="overflow-visible">
-          <p className="mb-4 text-sm text-zinc-400">
-            Set each day: Available, Injured, or Unavailable.
-          </p>
-          <AvailabilityPerDay
-            userId={userId}
-            dates={dates}
-            initialByDate={Object.fromEntries(availabilityByDate)}
-          />
-        </Card>
-      )}
     </div>
   );
 }
