@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Mail, User, Lock, UserCircle, Calendar, Settings } from "lucide-react";
 import type { ProfileRow } from "./page";
 import { createUser, updateUserRole, updateUserFullName } from "@/app/actions/admin-users";
 import type { UserRole } from "@/lib/types";
@@ -106,7 +107,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
       style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-6xl min-w-0 space-y-6">
-        <div>
+        <div className="border-b border-zinc-800/60 pb-5">
           <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">
             Users
           </h1>
@@ -157,10 +158,10 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
         {/* Success panel */}
         {successResult && (
           <div
-            className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-4"
+            className="rounded-xl border border-[#1eb871]/20 bg-[#1eb871]/10 p-4"
             style={{ borderRadius: CARD_RADIUS }}
           >
-            <p className="font-medium text-emerald-400">User created successfully.</p>
+            <p className="font-medium text-[#1eb871]">User created successfully.</p>
             <p className="mt-1 text-sm text-zinc-300">
               Email: {successResult.email} · Role: {successResult.role}
             </p>
@@ -179,20 +180,20 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
 
         {/* Toolbar: stacked on mobile, row on md+; touch-friendly */}
         <div
-          className="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
-          style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+          className="flex flex-col gap-3 rounded-2xl border border-zinc-800/70 bg-zinc-950/50 p-4 shadow-lg shadow-black/20 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
+          style={{ borderRadius: CARD_RADIUS }}
         >
           <input
             type="search"
             placeholder="Search by name or email"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2.5 text-base text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-h-0 sm:w-56 sm:py-2 sm:text-sm"
+            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/90 px-3 py-2.5 text-base text-white placeholder-zinc-500 focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]/50 sm:min-h-0 sm:w-56 sm:py-2 sm:text-sm"
           />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2.5 text-base text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
+            className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/90 px-3 py-2.5 text-base text-white focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]/50 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
           >
             <option value="all">All roles</option>
             <option value="admin">Admin</option>
@@ -202,7 +203,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="min-h-[44px] w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-base font-medium text-white hover:bg-emerald-500 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
+            className="min-h-[44px] w-full rounded-lg bg-[#1eb871] px-4 py-2.5 text-base font-medium text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110 sm:min-h-0 sm:w-auto sm:py-2 sm:text-sm"
           >
             Create user
           </button>
@@ -226,7 +227,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             filtered.map((u) => (
               <div
                 key={u.id}
-                className="rounded-xl border border-zinc-700/80 p-4"
+                className="rounded-xl border border-zinc-700/80 p-4 shadow-md shadow-black/10"
                 style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
               >
                 <p className="font-medium text-white">{u.full_name || "—"}</p>
@@ -248,7 +249,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     <button
                       type="button"
                       onClick={() => setEditingNameId(u.id)}
-                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-emerald-400 hover:bg-zinc-700"
+                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-[#1eb871] hover:bg-zinc-700"
                     >
                       Edit name
                     </button>
@@ -263,7 +264,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     <button
                       type="button"
                       onClick={() => setEditingId(u.id)}
-                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-emerald-400 hover:bg-zinc-700"
+                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-[#1eb871] hover:bg-zinc-700"
                     >
                       Edit role
                     </button>
@@ -291,7 +292,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
 
         {/* Table: desktop only */}
         <div
-          className="hidden overflow-hidden rounded-xl md:block"
+          className="hidden overflow-hidden rounded-2xl border border-zinc-800/70 shadow-lg shadow-black/20 md:block"
           style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
           {filtered.length === 0 ? (
@@ -303,19 +304,44 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-zinc-900/95">
-                  <tr className="border-b border-zinc-700 text-zinc-400">
-                    <th className="px-4 py-3 font-medium">Full name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Created at</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                <thead className="sticky top-0 z-10 border-b-2 border-zinc-700 bg-zinc-800/95">
+                  <tr>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-white">
+                      <span className="inline-flex items-center gap-2">
+                        <User className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                        Full name
+                      </span>
+                    </th>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-white">
+                      <span className="inline-flex items-center gap-2">
+                        <Mail className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                        Email
+                      </span>
+                    </th>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-white">
+                      <span className="inline-flex items-center gap-2">
+                        <UserCircle className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                        Role
+                      </span>
+                    </th>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-white">
+                      <span className="inline-flex items-center gap-2">
+                        <Calendar className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                        Created at
+                      </span>
+                    </th>
+                    <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-white">
+                      <span className="inline-flex items-center gap-2">
+                        <Settings className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                        Actions
+                      </span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="text-zinc-300">
+                <tbody className="divide-y divide-zinc-800/70 text-zinc-200">
                   {filtered.map((u) => (
-                    <tr key={u.id} className="border-b border-zinc-800 hover:bg-zinc-800/50">
-                      <td className="px-4 py-3">
+                    <tr key={u.id} className="transition-colors hover:bg-zinc-800/50">
+                      <td className="px-4 py-3 align-middle">
                         {editingNameId === u.id ? (
                           <NameEditRow
                             currentName={u.full_name ?? ""}
@@ -328,16 +354,16 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                             <button
                               type="button"
                               onClick={() => setEditingNameId(u.id)}
-                              className="text-emerald-400 hover:underline"
+                              className="text-[#1eb871] hover:underline"
                             >
                               Edit name
                             </button>
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">{u.email}</td>
-                      <td className="px-4 py-3 capitalize">{u.role}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-middle text-zinc-400">{u.email}</td>
+                      <td className="px-4 py-3 align-middle capitalize text-zinc-300">{u.role}</td>
+                      <td className="px-4 py-3 align-middle text-zinc-500">
                         {u.created_at
                           ? new Date(u.created_at).toLocaleString(undefined, {
                               dateStyle: "short",
@@ -345,7 +371,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                             })
                           : "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
                           {editingId === u.id ? (
                             <RoleEditRow
@@ -359,7 +385,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                             <button
                               type="button"
                               onClick={() => setEditingId(u.id)}
-                              className="text-emerald-400 hover:underline"
+                              className="text-[#1eb871] hover:underline"
                             >
                               Edit role
                             </button>
@@ -527,6 +553,7 @@ function CreateUserModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmAdmin, setConfirmAdmin] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -554,30 +581,44 @@ function CreateUserModal({
       aria-labelledby="create-user-title"
     >
       <div
-        className="w-full max-w-md rounded-xl p-6 shadow-xl"
-        style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
+        className="w-full max-w-md rounded-2xl border border-zinc-700/80 p-6 shadow-2xl sm:p-7"
+        style={{
+          backgroundColor: "rgba(18,28,22,0.97)",
+          borderRadius: CARD_RADIUS,
+          boxShadow: "0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(30,184,113,0.08)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-          <h2 id="create-user-title" className="text-xl font-bold text-white">
-            Create user
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-            aria-label="Close"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="relative flex items-center justify-between border-b border-zinc-800/70 pb-4">
+          <div className="flex-1" />
+          <div className="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center pt-0">
+            <p className="text-sm font-semibold tracking-tight text-zinc-100">
+              ST<span className="mx-0.5 inline-block h-0.5 w-2.5 align-middle rounded-full bg-zinc-600/60" aria-hidden />
+              <span className="text-[#1eb871]">AMS</span>
+            </p>
+            <h2 id="create-user-title" className="mt-1 text-base font-medium text-zinc-200">
+              Create user
+            </h2>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+              aria-label="Close"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
-            <label htmlFor="create-full_name" className="block text-sm font-medium text-zinc-300">
-              Full name (required)
+            <label htmlFor="create-full_name" className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+              <User className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span>Full name (required)</span>
             </label>
             <input
               id="create-full_name"
@@ -586,12 +627,13 @@ function CreateUserModal({
               required
               autoComplete="name"
               placeholder="John Doe"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-2 w-full rounded-lg border border-zinc-600 bg-zinc-900/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]"
             />
           </div>
           <div>
-            <label htmlFor="create-email" className="block text-sm font-medium text-zinc-300">
-              Email (required)
+            <label htmlFor="create-email" className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+              <Mail className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span>Email (required)</span>
             </label>
             <input
               id="create-email"
@@ -600,64 +642,78 @@ function CreateUserModal({
               required
               autoComplete="email"
               placeholder="user@example.com"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-2 w-full rounded-lg border border-zinc-600 bg-zinc-900/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]"
             />
           </div>
           <div>
-            <label htmlFor="create-password" className="block text-sm font-medium text-zinc-300">
-              Password (required, min 8 characters)
+            <label htmlFor="create-password" className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+              <Lock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span>Password (required, min 8 characters)</span>
             </label>
-            <input
-              id="create-password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="••••••••"
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
+            <div className="relative mt-2">
+              <input
+                id="create-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-zinc-600 bg-zinc-900/80 py-2 pl-3 pr-10 text-sm text-white placeholder-zinc-500 focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <div>
-            <label htmlFor="create-role" className="block text-sm font-medium text-zinc-300">
-              Role (required)
+            <label htmlFor="create-role" className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+              <UserCircle className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span>Role (required)</span>
             </label>
             <select
               id="create-role"
               name="role"
               required
-              className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-2 w-full rounded-lg border border-zinc-600 bg-zinc-900/80 px-3 py-2 text-sm text-white focus:border-[#1eb871] focus:outline-none focus:ring-1 focus:ring-[#1eb871]"
             >
               <option value="player">Player</option>
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <input
               id="create-confirm-admin"
               type="checkbox"
               checked={confirmAdmin}
               onChange={(e) => setConfirmAdmin(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500"
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-[#1eb871] focus:ring-[#1eb871]"
             />
             <label htmlFor="create-confirm-admin" className="text-sm text-zinc-400">
               I confirm creating an admin account (only when role is Admin)
             </label>
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <div className="flex gap-2 pt-2">
+          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+          <div className="flex gap-3 pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50"
+              style={{ backgroundColor: "#1eb871", boxShadow: "0 10px 30px -10px rgba(30,184,113,0.45)" }}
             >
               {loading ? "Creating…" : "Create user"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-zinc-700 px-4 py-2 font-medium text-zinc-300 hover:bg-zinc-600"
+              className="rounded-lg border border-zinc-600 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
             >
               Cancel
             </button>

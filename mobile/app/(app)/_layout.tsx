@@ -3,7 +3,8 @@ import { Text, View } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AppLayout() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   if (isLoading) {
     return (
@@ -22,6 +23,14 @@ export default function AppLayout() {
       <Tabs.Screen name="index" options={{ title: "Home", tabBarLabel: "Home" }} />
       <Tabs.Screen name="wellness" options={{ title: "Wellness", tabBarLabel: "Wellness" }} />
       <Tabs.Screen name="rpe" options={{ title: "RPE", tabBarLabel: "RPE" }} />
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "Users",
+          tabBarLabel: "Users",
+          tabBarButton: isAdmin ? undefined : () => null,
+        }}
+      />
       <Tabs.Screen name="profil" options={{ title: "Profile", tabBarLabel: "Profile" }} />
     </Tabs>
   );
