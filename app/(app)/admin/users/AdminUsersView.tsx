@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, User, Lock, UserCircle, Calendar, Settings } from "lucide-react";
 import type { ProfileRow } from "./page";
@@ -8,6 +8,17 @@ import { createUser, updateUserRole, updateUserFullName } from "@/app/actions/ad
 import type { UserRole } from "@/lib/types";
 
 const CARD_RADIUS = "12px";
+
+/** Renders date only after mount to avoid server/client locale mismatch (hydration error). */
+function FormattedDate({ dateStr }: { dateStr: string | null }) {
+  const [formatted, setFormatted] = useState<string | null>(null);
+  useEffect(() => {
+    if (!dateStr) return;
+    setFormatted(new Date(dateStr).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }));
+  }, [dateStr]);
+  if (!dateStr) return <>—</>;
+  return <>{formatted ?? "…"}</>;
+}
 
 type RoleFilter = "all" | "admin" | "staff" | "player";
 
@@ -211,7 +222,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
 
         {/* Mobile: card list */}
         <div
-          className="space-y-3 overflow-hidden md:hidden"
+          className="space-y-2 overflow-hidden md:hidden"
           style={{ borderRadius: CARD_RADIUS }}
         >
           {filtered.length === 0 ? (
@@ -227,18 +238,48 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             filtered.map((u) => (
               <div
                 key={u.id}
-                className="rounded-xl border border-zinc-700/80 p-4 shadow-md shadow-black/10"
+                className="rounded-xl border border-zinc-700/80 p-3 shadow-md shadow-black/10"
                 style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
               >
-                <p className="font-medium text-white">{u.full_name || "—"}</p>
-                <p className="mt-0.5 truncate text-sm text-zinc-400">{u.email}</p>
-                <p className="mt-1 text-xs capitalize text-zinc-500">{u.role}</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  {u.created_at
-                    ? new Date(u.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
-                    : "—"}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-700/80 text-zinc-300"
+                    aria-hidden
+                  >
+                    <User className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="font-medium text-sm text-white">{u.full_name || "—"}</p>
+                </div>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-700/80 text-zinc-300"
+                    aria-hidden
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="min-w-0 truncate text-xs text-zinc-400">{u.email}</p>
+                </div>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-700/80 text-zinc-300"
+                    aria-hidden
+                  >
+                    <UserCircle className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="text-xs capitalize text-zinc-300">{u.role}</p>
+                </div>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-700/80 text-zinc-300"
+                    aria-hidden
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="text-xs text-zinc-500">
+                    <FormattedDate dateStr={u.created_at} />
+                  </p>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {editingNameId === u.id ? (
                     <NameEditRow
                       currentName={u.full_name ?? ""}
@@ -249,7 +290,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     <button
                       type="button"
                       onClick={() => setEditingNameId(u.id)}
-                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-[#1eb871] hover:bg-zinc-700"
+                      className="min-h-[36px] rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-1.5 text-xs text-[#1eb871] hover:bg-zinc-700"
                     >
                       Edit name
                     </button>
@@ -264,7 +305,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     <button
                       type="button"
                       onClick={() => setEditingId(u.id)}
-                      className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-[#1eb871] hover:bg-zinc-700"
+                      className="min-h-[36px] rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-1.5 text-xs text-[#1eb871] hover:bg-zinc-700"
                     >
                       Edit role
                     </button>
@@ -273,7 +314,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     type="button"
                     onClick={() => setDeleteTarget(u)}
                     disabled={currentUserId === u.id || !!u.isPrimaryAdmin}
-                    className="min-h-[40px] rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-red-400 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-[36px] rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-1.5 text-xs text-red-400 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                     title={
                       u.isPrimaryAdmin
                         ? "Primary admin cannot be removed"
@@ -350,26 +391,39 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                           />
                         ) : (
                           <span className="flex flex-wrap items-center gap-2">
-                            <span>{u.full_name || "—"}</span>
-                            <button
-                              type="button"
-                              onClick={() => setEditingNameId(u.id)}
-                              className="text-[#1eb871] hover:underline"
+                            <span
+                              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-700/80 text-zinc-300"
+                              aria-hidden
                             >
-                              Edit name
-                            </button>
+                              <User className="h-4 w-4" />
+                            </span>
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span>{u.full_name || "—"}</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingNameId(u.id)}
+                                className="text-[#1eb871] hover:underline"
+                              >
+                                Edit name
+                              </button>
+                            </span>
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 align-middle text-zinc-400">{u.email}</td>
+                      <td className="px-4 py-3 align-middle text-zinc-400">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-700/80 text-zinc-300"
+                            aria-hidden
+                          >
+                            <Mail className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 truncate">{u.email}</span>
+                        </span>
+                      </td>
                       <td className="px-4 py-3 align-middle capitalize text-zinc-300">{u.role}</td>
                       <td className="px-4 py-3 align-middle text-zinc-500">
-                        {u.created_at
-                          ? new Date(u.created_at).toLocaleString(undefined, {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "—"}
+                        <FormattedDate dateStr={u.created_at} />
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
