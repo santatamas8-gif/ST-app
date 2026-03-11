@@ -26,7 +26,7 @@ export function SchedulePageContent({
         </h1>
         <p className={`mt-0.5 text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>{description}</p>
       </div>
-      <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} />
+      <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} isPlayer={isPlayer} />
     </div>
   );
 }

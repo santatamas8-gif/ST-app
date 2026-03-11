@@ -149,6 +149,7 @@ export default function WellnessScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.sectionTitle}>Daily wellness</Text>
+      <Text style={styles.scaleHint}>Scale: 1 = worst, 10 = best (for all scores below)</Text>
       <View style={styles.form}>
         <Text style={styles.sliderLabel}>Bed time</Text>
         <TextInput
@@ -258,6 +259,7 @@ const styles = StyleSheet.create({
   content: { padding: 24, paddingBottom: 48 },
   sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 16 },
   subtitle: { fontSize: 14, color: "#666", marginBottom: 16 },
+  scaleHint: { fontSize: 12, color: "#6b7280", marginBottom: 12 },
   form: { marginBottom: 16 },
   sliderRow: { marginBottom: 16 },
   sliderLabel: { fontSize: 14, marginBottom: 4 },

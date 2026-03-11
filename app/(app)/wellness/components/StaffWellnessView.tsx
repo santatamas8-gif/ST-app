@@ -293,7 +293,7 @@ export function StaffWellnessView({
               <>
                 <p className="text-sm font-semibold text-red-400">At risk</p>
                 <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-                  Risk factors: low sleep quality, high fatigue, high soreness, high stress, low mood, illness.
+                  Risk factors: any score below 5 on sleep quality, fatigue, soreness, stress or mood (scale 1–10, higher = better), or illness.
                 </p>
                 {atRiskList.length === 0 ? (
                   <p className={`mt-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No one</p>

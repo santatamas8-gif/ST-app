@@ -1,7 +1,8 @@
 /**
  * Readiness score 0–100 from wellness components.
- * Uses: sleep quality, soreness (inverted), fatigue (inverted), stress (inverted), mood.
- * Each component is 1–10; we normalize to 0–100 and average, then scale to 0–100.
+ * Uses: sleep quality, soreness, fatigue, stress, mood (all 1–10, higher = better).
+ * Optional: sleep hours → score by 8h = 10.
+ * Each component is 1–10; we average and scale to 0–100.
  */
 export function readinessScore(params: {
   sleepQuality: number | null;
@@ -14,9 +15,9 @@ export function readinessScore(params: {
   const { sleepQuality, soreness, fatigue, stress, mood, sleepHours } = params;
   const values: number[] = [];
   if (sleepQuality != null) values.push(sleepQuality);
-  if (soreness != null) values.push(10 - soreness); // invert: lower soreness = better, same 0–10 scale
-  if (fatigue != null) values.push(10 - fatigue);
-  if (stress != null) values.push(10 - stress);
+  if (soreness != null) values.push(soreness);
+  if (fatigue != null) values.push(fatigue);
+  if (stress != null) values.push(stress);
   if (mood != null) values.push(mood);
   // Optional: factor in sleep hours (e.g. 7h = 10, <6 = penalize)
   if (sleepHours != null && sleepHours > 0) {

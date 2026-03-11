@@ -156,7 +156,7 @@ function buildCalendarGrid(year: number, month: number): (string | null)[][] {
   return grid;
 }
 
-export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolean; isAdmin?: boolean }) {
+export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }: { canEdit: boolean; isAdmin?: boolean; isPlayer?: boolean }) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   const now = new Date();
@@ -393,7 +393,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
 
   return (
     <div className="space-y-4">
-      {!canEdit && (
+      {!canEdit && !isPlayer && (
         <div
           className={`rounded-xl border px-3 py-2.5 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
           style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}

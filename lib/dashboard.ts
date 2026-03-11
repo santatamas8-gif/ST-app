@@ -96,6 +96,22 @@ export async function getDashboardData(
     todayWellness.length > 0
       ? Math.max(...todayWellness.map((r) => r.fatigue ?? 0), 0) || null
       : null;
+  const todayFatigueMin =
+    todayWellness.length > 0
+      ? Math.min(...todayWellness.map((r) => r.fatigue ?? 10))
+      : null;
+  const todaySoreness =
+    todayWellness.length > 0
+      ? Math.min(...todayWellness.map((r) => r.soreness ?? 10))
+      : null;
+  const todayStress =
+    todayWellness.length > 0
+      ? Math.min(...todayWellness.map((r) => r.stress ?? 10))
+      : null;
+  const todayMood =
+    todayWellness.length > 0
+      ? Math.min(...todayWellness.map((r) => r.mood ?? 10))
+      : null;
 
   const last7Days = sessionRows.filter(
     (s) => s.date >= from7 && s.date <= to7
@@ -163,7 +179,10 @@ export async function getDashboardData(
     monotonyValue,
     weeklyLoad,
     previousWeekLoad: previousWeekLoad > 0 ? previousWeekLoad : null,
-    fatigue: todayFatigue,
+    fatigue: todayFatigueMin,
+    soreness: todaySoreness,
+    stress: todayStress,
+    mood: todayMood,
   });
 
   const todaySessionsCount =

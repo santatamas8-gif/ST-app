@@ -98,11 +98,11 @@ export function WellnessForm() {
         )}
 
         <div className="space-y-4">
-          <ScaleInput label="Sleep quality (1–10)" value={sleepQuality} onChange={setSleepQuality} />
-          <ScaleInput label="Muscle soreness" value={soreness} onChange={setSoreness} />
-          <ScaleInput label="Fatigue" value={fatigue} onChange={setFatigue} />
-          <ScaleInput label="Stress" value={stress} onChange={setStress} />
-          <ScaleInput label="Mood" value={mood} onChange={setMood} />
+          <ScaleInput label="Sleep quality" labelHint="1 = worst, 10 = best" value={sleepQuality} onChange={setSleepQuality} />
+          <ScaleInput label="Muscle soreness" labelHint="1 = worst, 10 = best" value={soreness} onChange={setSoreness} />
+          <ScaleInput label="Fatigue" labelHint="1 = worst, 10 = best" value={fatigue} onChange={setFatigue} />
+          <ScaleInput label="Stress" labelHint="1 = worst, 10 = best" value={stress} onChange={setStress} />
+          <ScaleInput label="Mood" labelHint="1 = worst, 10 = best" value={mood} onChange={setMood} />
         </div>
 
         <div>

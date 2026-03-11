@@ -41,9 +41,10 @@ export function WellnessPlayerContent({
           </p>
         </div>
 
+        {/* On mobile (player only): do not show this card – DailyWellnessForm shows "Already submitted today" below to avoid duplicate message */}
         {hasSubmittedToday && (
           <div
-            className={`rounded-xl border px-4 py-3 ${themeId === "neon" ? "neon-card-text border-emerald-500/40" : themeId === "matt" ? "matt-card-text border-white/20" : "border-emerald-800/50 bg-emerald-950/30"}`}
+            className={`hidden rounded-xl border px-4 py-3 md:block ${themeId === "neon" ? "neon-card-text border-emerald-500/40" : themeId === "matt" ? "matt-card-text border-white/20" : "border-emerald-800/50 bg-emerald-950/30"}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }

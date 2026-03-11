@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Activity, Calendar, CalendarCheck, HeartPulse, Pause, Play } from "lucide-react";
+import { Activity, BarChart2, Calendar, CalendarCheck, HeartPulse, Pause, Play, TrendingUp } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
@@ -703,13 +703,16 @@ export default function DashboardPage() {
                 : { backgroundColor: CARD_BG, borderRadius: CARD_RADIUS }
           }
         >
-          <h2 className={`mb-3 border-b pb-2 font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>Trends</h2>
+          <h2 className={`mb-3 flex items-center gap-2 border-b pb-2 font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : ""}`}>
+            <TrendingUp className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+            Trends
+          </h2>
           <TrendCharts chart7={chart7} chart28={chart28} />
         </section>
 
-        {/* Metrics: primary first, then collapsible detailed */}
+        {/* Metrics: primary first, then collapsible detailed – tighter on mobile (player) */}
         <section
-          className={themeId === "neon" ? "rounded-xl p-4 md:p-6 neon-card-text" : themeId === "matt" ? "rounded-xl p-4 md:p-6 matt-card-text" : ""}
+          className={themeId === "neon" ? "rounded-xl p-3 neon-card-text md:p-6" : themeId === "matt" ? "rounded-xl p-3 matt-card-text md:p-6" : ""}
           style={
             themeId === "neon"
               ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -718,16 +721,19 @@ export default function DashboardPage() {
                 : undefined
           }
         >
-          <h2 className={`mb-3 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-b border-white/25 pb-2" : ""}`}>Metrics</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <h2 className={`mb-2 flex items-center gap-2 border-b pb-1.5 text-base font-semibold text-white md:mb-4 md:pb-2 md:text-lg ${isHighContrast ? "border-white/25" : ""}`}>
+            <BarChart2 className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+            Metrics
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
             <MetricCard title="Today wellness" value={metrics.todayWellness ?? "—"} />
             <MetricCard title="Readiness" value={readiness ?? "—"} suffix={readiness != null ? "/100" : ""} variant={readinessVariant} />
           </div>
-          <details className="mt-4">
+          <details className="mt-3 md:mt-4">
             <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-400">
               More metrics
             </summary>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3 md:mt-3 md:gap-4">
               <MetricCard
                 title="Avg sleep (7d)"
                 value={metrics.avgSleepHours != null ? `${formatSleepDuration(metrics.avgSleepHours)} h` : "—"}
