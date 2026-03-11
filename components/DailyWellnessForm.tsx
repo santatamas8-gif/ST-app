@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import { submitDailyWellness } from "@/app/actions/wellness";
-import { sleepDurationHours } from "@/utils/sleep";
+import { sleepDurationHours, formatSleepDuration } from "@/utils/sleep";
 import { ScaleInput } from "@/components/ScaleInput";
 import { BodyMap, type BodyPartsState } from "@/components/BodyMap";
 import { HeartPulse, Moon, Activity, Brain, MoreHorizontal, Pill, Check } from "lucide-react";
@@ -220,7 +220,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             </div>
             {sleepDuration !== null && (
               <p className="text-sm text-zinc-400">
-                Sleep: <span className="font-medium text-white">{sleepDuration.toFixed(1)} h</span>
+                Sleep: <span className="font-medium text-white">{formatSleepDuration(sleepDuration)} h</span>
               </p>
             )}
             <ScaleInput

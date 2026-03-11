@@ -12,6 +12,7 @@ import {
   getMyWellnessEntries,
   getWellnessSummaryForStaff,
   submitDailyWellness,
+  formatSleepDuration,
 } from "@/repositories/wellnessRepository";
 import { useAuth } from "@/context/AuthContext";
 import type { WellnessRow } from "@/models/types";
@@ -129,7 +130,7 @@ export default function WellnessScreen() {
                 <Text style={[styles.tableCell, styles.colDate]}>{r.date}</Text>
                 <Text style={[styles.tableCell, styles.colTime]}>{r.bed_time ?? "—"}</Text>
                 <Text style={[styles.tableCell, styles.colTime]}>{r.wake_time ?? "—"}</Text>
-                <Text style={[styles.tableCell, styles.colNum]}>{r.sleep_duration != null ? `${r.sleep_duration}h` : "—"}</Text>
+                <Text style={[styles.tableCell, styles.colNum]}>{r.sleep_duration != null ? `${formatSleepDuration(r.sleep_duration)}h` : "—"}</Text>
                 <Text style={[styles.tableCell, styles.colNum]}>{r.sleep_quality ?? "—"}</Text>
                 <Text style={[styles.tableCell, styles.colNum]}>{r.fatigue ?? "—"}</Text>
                 <Text style={[styles.tableCell, styles.colNum]}>{r.soreness ?? "—"}</Text>
@@ -166,7 +167,7 @@ export default function WellnessScreen() {
           placeholderTextColor="#999"
         />
         {sleepHours !== null && (
-          <Text style={styles.sleepHours}>Sleep: {sleepHours.toFixed(1)} h</Text>
+          <Text style={styles.sleepHours}>Sleep: {formatSleepDuration(sleepHours)} h</Text>
         )}
         <SliderRow label="Sleep quality (1–10)" value={sleepQuality} onChange={setSleepQuality} />
         <SliderRow label="Fatigue" value={fatigue} onChange={setFatigue} />
@@ -200,7 +201,7 @@ export default function WellnessScreen() {
                 <Text style={styles.date}>{e.date}</Text>
                 <Text style={styles.values}>
                   {e.bed_time ?? "—"} → {e.wake_time ?? "—"}
-                  {e.sleep_duration != null ? ` (${e.sleep_duration}h)` : ""} · quality {e.sleep_quality ?? "—"} · fatigue {e.fatigue ?? "—"} · mood {e.mood ?? "—"}
+                  {e.sleep_duration != null ? ` (${formatSleepDuration(e.sleep_duration)}h)` : ""} · quality {e.sleep_quality ?? "—"} · fatigue {e.fatigue ?? "—"} · mood {e.mood ?? "—"}
                 </Text>
               </View>
             ))

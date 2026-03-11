@@ -4,7 +4,7 @@ import { useState } from "react";
 import { submitWellness } from "@/app/actions/wellness";
 import { Card } from "@/components/Card";
 import { ScaleInput } from "@/components/ScaleInput";
-import { sleepDurationHours } from "@/utils/sleep";
+import { sleepDurationHours, formatSleepDuration } from "@/utils/sleep";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -93,7 +93,7 @@ export function WellnessForm() {
 
         {sleepDuration != null && (
           <p className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300">
-            Sleep duration: <strong className="text-white">{sleepDuration.toFixed(1)} h</strong>
+            Sleep duration: <strong className="text-white">{formatSleepDuration(sleepDuration)} h</strong>
           </p>
         )}
 

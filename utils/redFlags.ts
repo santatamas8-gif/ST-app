@@ -1,3 +1,5 @@
+import { formatSleepDuration } from "@/utils/sleep";
+
 export type RedFlagType =
   | "wellness_low"
   | "sleep_low"
@@ -42,7 +44,7 @@ export function detectRedFlags(params: {
     flags.push({
       type: "sleep_low",
       label: "Sleep under 6 hours",
-      value: `${params.avgSleepHours.toFixed(1)}h`,
+      value: `${formatSleepDuration(params.avgSleepHours)}h`,
     });
   }
 

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
+import { formatSleepDuration } from "@/utils/sleep";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { Gauge, Moon, BatteryLow, Activity, Brain, Smile, Pill } from "lucide-react";
 import { BodyMapViewOnly } from "@/components/BodyMap";
@@ -239,7 +240,7 @@ export function PlayerWellnessModal({
                 <>
                   Wellness: <span className="font-semibold text-emerald-400">{avg7Wellness != null ? avg7Wellness.toFixed(1) : "—"}</span>
                   {avg7Sleep != null && (
-                    <> · Sleep: <span className="font-semibold">{avg7Sleep.toFixed(1)}h</span></>
+                    <> · Sleep: <span className="font-semibold">{formatSleepDuration(avg7Sleep)}h</span></>
                   )}
                 </>
               ) : (
@@ -256,7 +257,7 @@ export function PlayerWellnessModal({
                 <>
                   Wellness: <span className="font-semibold text-emerald-400">{avg28Wellness != null ? avg28Wellness.toFixed(1) : "—"}</span>
                   {avg28Sleep != null && (
-                    <> · Sleep: <span className="font-semibold">{avg28Sleep.toFixed(1)}h</span></>
+                    <> · Sleep: <span className="font-semibold">{formatSleepDuration(avg28Sleep)}h</span></>
                   )}
                 </>
               ) : (

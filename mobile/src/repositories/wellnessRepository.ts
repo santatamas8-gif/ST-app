@@ -149,10 +149,25 @@ export async function getWellnessSummaryForStaff(limit = 100): Promise<{
   return { data: list, emailByUserId, error: undefined };
 }
 
+/** Minutes 0–59; 7.59 then 8.00. */
 function sleepDurationHours(bed: string, wake: string): number | null {
   const b = new Date(`1970-01-01T${bed}`);
   let w = new Date(`1970-01-01T${wake}`);
   if (w <= b) w = new Date(w.getTime() + 24 * 60 * 60 * 1000);
-  const hours = (w.getTime() - b.getTime()) / (60 * 60 * 1000);
-  return Math.round(hours * 100) / 100;
+  const durationMins = (w.getTime() - b.getTime()) / (60 * 1000);
+  const hours = Math.floor(durationMins / 60);
+  const minutes = Math.round(durationMins % 60); // 0–59
+  return hours + minutes / 60;
+}
+
+/** Format sleep duration for display: "7.59" (7h 59min), "8.00" (8h 0min). */
+export function formatSleepDuration(decimalHours: number | null): string {
+  if (decimalHours == null || Number.isNaN(decimalHours)) return "—";
+  const h = Math.floor(decimalHours);
+  let m = Math.round((decimalHours - h) * 60);
+  if (m >= 60) {
+    m = 0;
+    return `${h + 1}.00`;
+  }
+  return `${h}.${String(m).padStart(2, "0")}`;
 }

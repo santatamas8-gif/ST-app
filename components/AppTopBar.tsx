@@ -67,9 +67,7 @@ export function AppTopBar({ unreadChatCount = 0, todoToday }: AppTopBarProps) {
           >
             <Icon className="h-5 w-5" />
             {href === "/chat" && unreadChatCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                {unreadChatCount > 99 ? "99+" : unreadChatCount}
-              </span>
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" title="New messages" aria-label="New messages" />
             )}
             {showTodo && (
               <span

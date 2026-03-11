@@ -190,6 +190,26 @@ export function StaffDashboard({
     return STATUS_OPTIONS.filter((o) => (counts[o.value] ?? 0) > 0).map((o) => ({ label: o.label, count: counts[o.value] ?? 0, badgeClass: o.badgeClass }));
   }, [playersWithStatus, statusOverrides]);
 
+  const playersAvailableCount = useMemo(() => {
+    return playersWithStatus.filter((p) => (statusOverrides[p.id] ?? p.status) === "available").length;
+  }, [playersWithStatus, statusOverrides]);
+
+  const STATUS_ORDER = ["available", "limited", "unavailable", "injured", "rehab"] as const;
+  const playersSortedByStatus = useMemo(() => {
+    return [...playersWithStatus].sort((a, b) => {
+      const statusA = statusOverrides[a.id] ?? a.status;
+      const statusB = statusOverrides[b.id] ?? b.status;
+      const iA = STATUS_ORDER.indexOf(statusA as (typeof STATUS_ORDER)[number]);
+      const iB = STATUS_ORDER.indexOf(statusB as (typeof STATUS_ORDER)[number]);
+      const orderA = iA === -1 ? 999 : iA;
+      const orderB = iB === -1 ? 999 : iB;
+      if (orderA !== orderB) return orderA - orderB;
+      const nameA = (a.full_name && a.full_name.trim()) || a.email;
+      const nameB = (b.full_name && b.full_name.trim()) || b.email;
+      return nameA.localeCompare(nameB);
+    });
+  }, [playersWithStatus, statusOverrides]);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
@@ -735,9 +755,17 @@ export function StaffDashboard({
         {/* PLAYERS – ID cards (desktop) / summary + sheet (mobile) */}
         {playersWithStatus.length > 0 && (
           <div ref={statusDropdownRef}>
-            <h2 className="mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
+            <h2 className="relative mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
               <Users className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
-              Players
+              <span>Players</span>
+              <span
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-gradient-to-r from-emerald-500/10 to-zinc-800/90 px-4 py-2 text-sm font-medium shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-emerald-400/10"
+              >
+                <span className="tabular-nums font-semibold text-emerald-400">{playersAvailableCount}</span>
+                <span className="text-zinc-500">/</span>
+                <span className="tabular-nums text-zinc-300">{playersWithStatus.length}</span>
+                <span className="ml-0.5 text-zinc-500">available</span>
+              </span>
             </h2>
             {statusError && (
               <p className="mb-2 text-sm text-red-400">{statusError}</p>
@@ -773,9 +801,9 @@ export function StaffDashboard({
                 All players
               </button>
             </div>
-            {/* Desktop: full grid (unchanged) */}
+            {/* Desktop: full grid (same order: available, limited, …) */}
             <div className="hidden grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4 md:grid">
-              {playersWithStatus.map((p) => {
+              {playersSortedByStatus.map((p) => {
                 const effectiveStatus = statusOverrides[p.id] ?? p.status;
                 const { pillClass, badgeClass, label, ringClass, tintClass, borderLClass } = getStatusStyle(effectiveStatus);
                 const displayName = (p.full_name && p.full_name.trim()) || p.email;
@@ -1069,7 +1097,7 @@ export function StaffDashboard({
                     }}
                   >
                     <ul className="flex flex-col gap-2">
-                      {playersWithStatus.map((p) => {
+                      {playersSortedByStatus.map((p) => {
                         const effectiveStatus = statusOverrides[p.id] ?? p.status;
                         const { badgeClass, label, borderLClass } = getStatusStyle(effectiveStatus);
                         const displayName = (p.full_name && p.full_name.trim()) || p.email;

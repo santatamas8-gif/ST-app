@@ -38,10 +38,12 @@ export async function getScheduleForMonth(
   return { data: (data ?? []) as ScheduleItemRow[] };
 }
 
-/** Parse and validate 24h HH:MM (00–23 hour, 00–59 minute). Returns "HH:MM" or null. */
+/** Parse and validate 24h HH:MM or HH:MM:SS (00–23 hour, 00–59 minute). Returns "HH:MM" or null. */
 function normalizeTime(s: string | null): string | null {
   if (s == null || s === "") return null;
-  const match = String(s).trim().match(/^(\d{1,2}):(\d{2})$/);
+  const str = String(s).trim();
+  const hhmm = str.length >= 5 ? str.slice(0, 5) : str;
+  const match = hhmm.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return null;
   const h = parseInt(match[1], 10);
   const m = parseInt(match[2], 10);

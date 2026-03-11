@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { X, Pill, Clock, Moon, BatteryLow, Activity, Brain, Smile, Gauge } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow } from "@/utils/wellness";
+import { formatSleepDuration } from "@/utils/sleep";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import { BodyMapViewOnly } from "@/components/BodyMap";
@@ -272,7 +273,7 @@ export function MobileWellnessList({
               const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
               const readiness = wellnessAverageFromRow(r);
               const badge = getStatusBadge(readiness ?? null);
-              const sleepHours = r.sleep_duration != null ? `${r.sleep_duration}h` : "—";
+              const sleepHours = r.sleep_duration != null ? `${formatSleepDuration(r.sleep_duration)}h` : "—";
               return (
                 <li key={r.id}>
                   <button
@@ -362,7 +363,7 @@ export function MobileWellnessList({
                     Readiness {readiness != null ? readiness.toFixed(1) : "—"}
                   </span>
                   <span className={`rounded-xl border-l-2 border-emerald-500/50 px-3 py-2 text-xs font-semibold text-white shadow-sm ${isHighContrast ? "bg-white/15" : "bg-zinc-800/90"}`}>
-                    Sleep {detailRow.sleep_duration != null ? `${detailRow.sleep_duration}h` : "—"}
+                    Sleep {detailRow.sleep_duration != null ? `${formatSleepDuration(detailRow.sleep_duration)}h` : "—"}
                   </span>
                   <span className={`rounded-xl px-3 py-2 text-xs font-semibold ring-1 ring-white/10 shadow-sm ${statusBadge.className}`}>
                     {statusBadge.label}

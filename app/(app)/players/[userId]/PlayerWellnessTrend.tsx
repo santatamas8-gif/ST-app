@@ -17,6 +17,7 @@ import { Clock, Moon, BatteryLow, Activity, Brain, Smile, HeartPulse, Dumbbell }
 import type { WellnessRow } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
+import { formatSleepDuration } from "@/utils/sleep";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 
@@ -82,7 +83,7 @@ function avg(values: (number | null)[]): number | null {
 
 function formatTooltipValue(key: MetricKey, value: number | string): string {
   const n = typeof value === "number" ? value : Number(value);
-  return key === "sleep_duration" ? `${n}h` : String(value);
+  return key === "sleep_duration" ? `${formatSleepDuration(n)}h` : String(value);
 }
 
 interface PlayerWellnessTrendProps {
@@ -198,13 +199,13 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                 <>
                   Wellness: <span className="font-semibold text-emerald-400">{summary7.wellness != null ? summary7.wellness.toFixed(1) : "—"}</span>
                   {" · "}
-                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary7.sleep != null ? `${summary7.sleep.toFixed(1)}h` : "—"}</span>
+                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary7.sleep != null ? `${formatSleepDuration(summary7.sleep)}h` : "—"}</span>
                 </>
               ) : (
                 <>
                   Wellness: <span className="font-semibold text-emerald-400">{summary28.wellness != null ? summary28.wellness.toFixed(1) : "—"}</span>
                   {" · "}
-                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary28.sleep != null ? `${summary28.sleep.toFixed(1)}h` : "—"}</span>
+                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary28.sleep != null ? `${formatSleepDuration(summary28.sleep)}h` : "—"}</span>
                 </>
               )}
             </p>
@@ -296,7 +297,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         strokeDasharray="4 4"
                         strokeOpacity={0.7}
                         label={{
-                          value: `${selectedPeriod === "7" ? "7d" : "28d"} avg ${key === "sleep_duration" ? `${periodAvg.toFixed(1)}h` : periodAvg.toFixed(1)}`,
+                          value: `${selectedPeriod === "7" ? "7d" : "28d"} avg ${key === "sleep_duration" ? `${formatSleepDuration(periodAvg)}h` : periodAvg.toFixed(1)}`,
                           position: "right",
                           fill: "var(--foreground)",
                           fontSize: 13,

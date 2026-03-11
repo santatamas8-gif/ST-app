@@ -363,11 +363,13 @@ export function ScheduleCalendar({ canEdit, isAdmin = false }: { canEdit: boolea
     }
     setCopyLoading(true);
     for (const item of sourceItems) {
+      const startTime = item.start_time != null && String(item.start_time).trim() !== "" ? String(item.start_time).trim().slice(0, 5) : null;
+      const endTime = item.end_time != null && String(item.end_time).trim() !== "" ? String(item.end_time).trim().slice(0, 5) : null;
       const err = await addScheduleItem(
         selectedDate,
         item.activity_type as ScheduleActivityType,
-        item.start_time,
-        item.end_time,
+        startTime,
+        endTime,
         item.notes ?? null,
         item.opponent ?? null,
         item.team_a ?? null,

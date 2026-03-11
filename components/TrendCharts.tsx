@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatSleepDuration } from "@/utils/sleep";
 import {
   LineChart,
   Line,
@@ -112,7 +113,7 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
               <Tooltip
                 contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px" }}
                 labelStyle={{ color: "#a1a1aa" }}
-                formatter={(value: number) => [value?.toFixed?.(1) ?? value ?? "—", tab28 === "load" ? "Load" : tab28 === "wellness" ? "Wellness" : "Sleep (h/night)"]}
+                formatter={(value: number) => [tab28 === "sleep" ? formatSleepDuration(value) : (value?.toFixed?.(1) ?? value ?? "—"), tab28 === "load" ? "Load" : tab28 === "wellness" ? "Wellness" : "Sleep (h/night)"]}
                 labelFormatter={(label) => label}
               />
               {tab28 === "load" && (

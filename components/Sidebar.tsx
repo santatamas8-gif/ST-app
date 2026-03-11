@@ -184,9 +184,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         <span className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400" title="To do today" aria-hidden />
       )}
       {item.href === "/chat" && unreadChatCount > 0 && (
-        <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white" title="Unread messages" aria-label={`${unreadChatCount} unread`}>
-          {unreadChatCount > 99 ? "99+" : unreadChatCount}
-        </span>
+        <span className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-red-500" title="New messages" aria-label="New messages" />
       )}
     </>
   );
@@ -354,9 +352,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           <Link href="/chat" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
             <MessageCircle className="h-5 w-5" />
             {unreadChatCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                {unreadChatCount > 99 ? "99+" : unreadChatCount}
-              </span>
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" title="New messages" aria-label="New messages" />
             )}
           </Link>
           <Link href="/schedule" prefetch={true} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`} title="Schedule" aria-label="Schedule">
@@ -420,9 +416,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           <Link href="/chat" prefetch={true} className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition md:h-10 md:w-10 ${headerIconClass(pathname === "/chat" || pathname.startsWith("/chat/"))}`} title="Chat" aria-label="Chat">
             <MessageCircle className="h-5 w-5" />
             {unreadChatCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                {unreadChatCount > 99 ? "99+" : unreadChatCount}
-              </span>
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" title="New messages" aria-label="New messages" />
             )}
           </Link>
         </div>

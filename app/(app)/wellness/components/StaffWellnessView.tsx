@@ -2,12 +2,13 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Activity, AlertTriangle, UserRound, FileDown } from "lucide-react";
+import { Activity, AlertTriangle, UserRound, FileDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { WellnessRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
+import { formatSleepDuration } from "@/utils/sleep";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
 import { KpiCard } from "./KpiCard";
 import { BadgeScore } from "./BadgeScore";
@@ -76,7 +77,13 @@ function painBadgeStyle(value: number): CSSProperties {
 
 const CARD_RADIUS = "12px";
 
-type SortOption = "newest" | "lowestWellness" | "highestFatigue" | "readinessAsc" | "readinessDesc";
+type SortableColumn = "sleep_duration" | "sleep_quality" | "fatigue" | "soreness" | "stress" | "mood" | "readiness";
+
+function getRowValue(r: WellnessRow, column: SortableColumn): number | null {
+  if (column === "readiness") return wellnessAverageFromRow(r) ?? null;
+  const v = r[column];
+  return typeof v === "number" ? v : null;
+}
 
 /** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
 function isAtRisk(r: WellnessRow): boolean {
@@ -118,7 +125,7 @@ export function StaffWellnessView({
 }: StaffWellnessViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [columnSort, setColumnSort] = useState<{ column: SortableColumn; dir: "asc" | "desc" } | null>(null);
   const [modalUserId, setModalUserId] = useState<string | null>(null);
   const [bodyMapMode, setBodyMapMode] = useState<"soreness" | "pain">("soreness");
   const [popoverCard, setPopoverCard] = useState<"at-risk" | "missing" | null>(null);
@@ -137,32 +144,22 @@ export function StaffWellnessView({
         return name.includes(query) || email.includes(query);
       });
     }
-    if (sortBy === "newest") {
-      rows = [...rows].sort((a, b) => (b.date > a.date ? 1 : -1));
-    } else if (sortBy === "lowestWellness") {
+    if (columnSort) {
+      const { column, dir } = columnSort;
       rows = [...rows].sort((a, b) => {
-        const wa = wellnessAverageFromRow(a) ?? 0;
-        const wb = wellnessAverageFromRow(b) ?? 0;
-        return wa - wb;
-      });
-    } else if (sortBy === "readinessAsc") {
-      rows = [...rows].sort((a, b) => {
-        const ra = wellnessAverageFromRow(a) ?? 0;
-        const rb = wellnessAverageFromRow(b) ?? 0;
-        return ra - rb;
-      });
-    } else if (sortBy === "readinessDesc") {
-      rows = [...rows].sort((a, b) => {
-        const ra = wellnessAverageFromRow(a) ?? 0;
-        const rb = wellnessAverageFromRow(b) ?? 0;
-        return rb - ra;
+        const va = getRowValue(a, column);
+        const vb = getRowValue(b, column);
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        return dir === "asc" ? va - vb : vb - va;
       });
     } else {
-      // highestFatigue = worst first (lowest value = least energy)
-      rows = [...rows].sort((a, b) => (a.fatigue ?? 10) - (b.fatigue ?? 10));
+      // default: newest first (by date)
+      rows = [...rows].sort((a, b) => (b.date > a.date ? 1 : -1));
     }
     return rows;
-  }, [list, selectedDate, searchQuery, sortBy, emailByUserId, displayNameByUserId]);
+  }, [list, selectedDate, searchQuery, columnSort, emailByUserId, displayNameByUserId]);
 
   const summaryForDate = useMemo(() => {
     const rowsForDate = list.filter((r) => r.date === selectedDate);
@@ -373,22 +370,7 @@ export function StaffWellnessView({
                       Ctrl+K
                     </span>
                   </div>
-                  <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
-                    Sort by
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className={`min-h-[36px] shrink-0 rounded-md border px-2.5 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
-                    aria-label="Sort table by"
-                  >
-                    <option value="newest" style={{ backgroundColor: "#fff", color: "#18181b" }}>Newest</option>
-                    <option value="lowestWellness" style={{ backgroundColor: "#fff", color: "#18181b" }}>Lowest wellness</option>
-                    <option value="highestFatigue" style={{ backgroundColor: "#fff", color: "#18181b" }}>Highest fatigue</option>
-                    <option value="readinessAsc" style={{ backgroundColor: "#fff", color: "#18181b" }}>Readiness (low→high)</option>
-                    <option value="readinessDesc" style={{ backgroundColor: "#fff", color: "#18181b" }}>Readiness (high→low)</option>
-                  </select>
-                </div>
+                  </div>
                 <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
                   <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
                     <span className="inline-block h-3 w-5 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
@@ -424,13 +406,29 @@ export function StaffWellnessView({
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
                       <th className="px-4 py-2.5 text-base font-bold">Illness</th>
                       <th className="px-4 py-2.5 text-base font-bold">Bed – Wake</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Sleep (h)</th>
-                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Sleep quality</th>
-                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Fatigue</th>
-                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Soreness</th>
-                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Stress</th>
-                      <th className="min-w-[5rem] px-2 py-2.5 text-center text-base font-bold">Mood</th>
-                      <th className={`min-w-[5rem] border-l px-2 py-2.5 text-center text-base font-bold ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>Readiness</th>
+                      {(["sleep_duration", "sleep_quality", "fatigue", "soreness", "stress", "mood", "readiness"] as const).map((col) => {
+                        const label = col === "sleep_duration" ? "Sleep (h)" : col === "sleep_quality" ? "Sleep quality" : col === "readiness" ? "Readiness" : col.charAt(0).toUpperCase() + col.slice(1);
+                        const isActive = columnSort?.column === col;
+                        const dir = columnSort?.column === col ? columnSort.dir : null;
+                        return (
+                          <th
+                            key={col}
+                            className={`min-w-[5rem] px-2 py-2.5 text-center text-base font-bold ${col === "readiness" ? (isHighContrast ? "border-l border-white/20" : "border-l border-zinc-600") : ""}`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setColumnSort((prev) => (prev?.column === col ? (prev.dir === "asc" ? { column: col, dir: "desc" as const } : { column: col, dir: "asc" as const }) : { column: col, dir: "asc" as const }))}
+                              className="inline-flex items-center justify-center gap-1 rounded hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                              title={`Sort by ${label} (asc/desc)`}
+                            >
+                              <span>{label}</span>
+                              {dir === "asc" && <ArrowUp className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
+                              {dir === "desc" && <ArrowDown className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
+                              {!dir && <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />}
+                            </button>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
@@ -473,7 +471,7 @@ export function StaffWellnessView({
                                       : { backgroundColor: "rgba(220, 38, 38, 0.3)", color: "#fecaca" }
                                 }
                               >
-                                {r.sleep_duration}h
+                                {formatSleepDuration(r.sleep_duration)}h
                               </span>
                             ) : (
                               "—"

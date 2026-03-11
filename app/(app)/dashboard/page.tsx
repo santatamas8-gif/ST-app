@@ -8,6 +8,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { MATT_CARD_STYLE, NEON_CARD_STYLE } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
 import { MetricCard } from "@/components/MetricCard";
+import { formatSleepDuration } from "@/utils/sleep";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
@@ -729,7 +730,7 @@ export default function DashboardPage() {
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <MetricCard
                 title="Avg sleep (7d)"
-                value={metrics.avgSleepHours != null ? `${metrics.avgSleepHours} h` : "—"}
+                value={metrics.avgSleepHours != null ? `${formatSleepDuration(metrics.avgSleepHours)} h` : "—"}
                 subtitle="hours per night"
               />
               <MetricCard title="Monotony" value={metrics.monotony ?? "—"} subtitle="load variation" />
