@@ -11,14 +11,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { SessionRow } from "@/lib/types";
+import { formatDayShort } from "@/lib/formatDate";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 
 const CARD_RADIUS = "12px";
-
-function formatShortDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
-}
 
 interface PlayerLoadModalProps {
   playerName: string;
@@ -37,7 +33,7 @@ export function PlayerLoadModal({
 }: PlayerLoadModalProps) {
   const last7 = sessions.slice(0, 7);
   const dailyLoad = last7.map((s) => ({
-    date: formatShortDate(s.date),
+    date: formatDayShort(s.date),
     load: s.load ?? 0,
   })).reverse();
   const dailyLoadSum = last7.reduce((a, s) => a + (s.load ?? 0), 0);

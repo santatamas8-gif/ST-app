@@ -186,7 +186,11 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
             style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
           >
             {list.length === 0 ? (
-              <p className={`py-8 text-center ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions yet.</p>
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <Activity className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
+                <p className={isHighContrast ? "text-white/80" : "text-zinc-400"}>No sessions yet.</p>
+                <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Log your first session above.</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">

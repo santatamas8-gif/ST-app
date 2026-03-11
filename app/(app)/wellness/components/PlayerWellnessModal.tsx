@@ -15,16 +15,12 @@ import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
+import { formatDayShort } from "@/lib/formatDate";
 import { Gauge, Moon, BatteryLow, Activity, Brain, Smile, Pill } from "lucide-react";
 import { BodyMapViewOnly } from "@/components/BodyMap";
 import { BadgeScore } from "./BadgeScore";
 
 const CARD_RADIUS = "12px";
-
-function formatShortDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
-}
 
 interface PlayerWellnessModalProps {
   playerName: string;
@@ -62,7 +58,7 @@ export function PlayerWellnessModal({
         .slice()
         .reverse()
         .map((r) => ({
-          date: formatShortDate(r.date),
+          date: formatDayShort(r.date),
           wellness: wellnessAverageFromRow(r) ?? 0,
         })),
     [last7]
@@ -73,7 +69,7 @@ export function PlayerWellnessModal({
         .slice()
         .reverse()
         .map((r) => ({
-          date: formatShortDate(r.date),
+          date: formatDayShort(r.date),
           hours: r.sleep_duration ?? 0,
         })),
     [last7]

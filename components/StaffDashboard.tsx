@@ -10,6 +10,7 @@ import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusC
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { updateTeamSettings } from "@/app/actions/teamSettings";
+import { formatDayShort } from "@/lib/formatDate";
 import {
   LineChart,
   Line,
@@ -307,14 +308,14 @@ export function StaffDashboard({
   const chartDataWellness =
     chart7.length > 0
       ? chart7.map((p) => ({
-          date: formatShortDate(p.date),
+          date: formatDayShort(p.date),
           wellness: p.wellness ?? 0,
         }))
       : [];
   const chartDataLoad =
     chart7.length > 0
       ? chart7.map((p) => ({
-          date: formatShortDate(p.date),
+          date: formatDayShort(p.date),
           load: p.load,
         }))
       : [];
@@ -759,7 +760,7 @@ export function StaffDashboard({
               <Users className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
               <span>Players</span>
               <span
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-gradient-to-r from-emerald-500/10 to-zinc-800/90 px-4 py-2 text-sm font-medium shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-emerald-400/10"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full border border-emerald-500/25 bg-gradient-to-r from-emerald-500/10 to-zinc-800/90 px-2.5 py-1 text-xs font-medium shadow-[0_1px_2px_rgba(0,0,0,0.2)] ring-1 ring-emerald-400/10 md:gap-1.5 md:px-4 md:py-2 md:text-sm"
               >
                 <span className="tabular-nums font-semibold text-emerald-400">{playersAvailableCount}</span>
                 <span className="text-zinc-500">/</span>
@@ -1174,8 +1175,15 @@ export function StaffDashboard({
                     const vv = visualViewportBox;
                     const winW = typeof window !== "undefined" ? window.innerWidth : 400;
                     const spaceBelow = vv.offsetTop + vv.height - (dropdownSheetButtonRect.bottom + 4) - 16;
-                    const optionsMaxH = Math.max(120, Math.min(320, spaceBelow));
-                    const optionsTop = Math.max(vv.offsetTop + 8, dropdownSheetButtonRect.bottom + 4);
+                    const spaceAbove = dropdownSheetButtonRect.top - vv.offsetTop - 8 - 16;
+                    const openAbove = spaceBelow < 220 && spaceAbove >= 120;
+                    const optionsMaxH = openAbove
+                      ? Math.max(120, Math.min(200, spaceAbove))
+                      : Math.max(120, Math.min(320, spaceBelow));
+                    const gap = openAbove ? 0 : 2;
+                    const optionsTop = openAbove
+                      ? dropdownSheetButtonRect.top - optionsMaxH - gap
+                      : Math.max(vv.offsetTop + 8, dropdownSheetButtonRect.bottom + gap);
                     return createPortal(
                       <div
                         ref={playersSheetDropdownRef}

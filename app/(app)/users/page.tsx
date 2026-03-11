@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
+import { formatDate } from "@/lib/formatDate";
 import { AddPlayerForm } from "@/components/AddPlayerForm";
 
 export default async function UsersPage() {
@@ -51,9 +52,7 @@ export default async function UsersPage() {
                     <td className="py-3 pr-4">{u.email}</td>
                     <td className="py-3 pr-4 capitalize">{u.role}</td>
                     <td className="py-3">
-                      {u.created_at
-                        ? new Date(u.created_at).toLocaleDateString()
-                        : "—"}
+                      {formatDate(u.created_at)}
                     </td>
                   </tr>
                 ))}

@@ -14,15 +14,11 @@ import {
   AreaChart,
 } from "recharts";
 import type { ChartPoint } from "@/lib/dashboard";
+import { formatMonthDay } from "@/lib/formatDate";
 
 interface TrendChartsProps {
   chart7: ChartPoint[];
   chart28: ChartPoint[];
-}
-
-function formatDate(label: string) {
-  const d = new Date(label);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 type Tab28 = "load" | "wellness" | "sleep";
@@ -32,11 +28,11 @@ export function TrendCharts({ chart7, chart28 }: TrendChartsProps) {
 
   const data7 = chart7.map((p) => ({
     ...p,
-    dateLabel: formatDate(p.date),
+    dateLabel: formatMonthDay(p.date),
   }));
   const data28 = chart28.map((p) => ({
     ...p,
-    dateLabel: formatDate(p.date),
+    dateLabel: formatMonthDay(p.date),
   }));
 
   const chartClass = "rounded-xl border border-zinc-800/90 bg-zinc-900/50 p-3 transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] md:p-4";

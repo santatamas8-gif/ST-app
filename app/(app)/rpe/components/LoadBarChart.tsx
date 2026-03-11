@@ -12,12 +12,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-
-
-function formatShortDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
-}
+import { formatDayShort } from "@/lib/formatDate";
 
 /** Two weeks comparison: 7 days, two bars per day (Week 1 vs Week 2) */
 export interface TwoWeekDataPoint {
@@ -101,7 +96,7 @@ export function TeamLoadBarChart({
   className = "",
 }: TeamLoadBarChartProps) {
   const chartData = data.map((d) => ({
-    date: formatShortDate(d.date),
+    date: formatDayShort(d.date),
     load: d.load,
   }));
   const trendLabel = trend === "up" ? "↑ Rising" : trend === "down" ? "↓ Falling" : "→ Stable";

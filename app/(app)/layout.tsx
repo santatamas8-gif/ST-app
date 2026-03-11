@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAppUser, isAdmin, isImmutableAdminEmail } from "@/lib/auth";
 import { getPlayerCheckInStatus } from "@/lib/checkInStatus";
 import { getUnreadTotal } from "@/app/actions/chat";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -39,9 +40,11 @@ export default async function AppLayout({
     <ThemeProvider>
       <div className="flex min-h-screen flex-col" style={{ backgroundColor: "var(--page-bg)" }}>
         <Sidebar role={user.role} userEmail={user.email} todoToday={todoToday} unreadChatCount={unreadChatCount} canAccessUsers={canAccessUsers}>
-          <Suspense fallback={<div className="p-4 sm:p-6 lg:p-8" />}>
-            <div className="overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</div>
-          </Suspense>
+          <PullToRefresh>
+            <Suspense fallback={<div className="p-4 sm:p-6 lg:p-8" />}>
+              <div className="overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</div>
+            </Suspense>
+          </PullToRefresh>
         </Sidebar>
       </div>
     </ThemeProvider>

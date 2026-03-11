@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { X, Pill, Clock, Moon, BatteryLow, Activity, Brain, Smile, Gauge } from "lucide-react";
+import { X, Pill, Clock, Moon, BatteryLow, Activity, Brain, Smile, Gauge, HeartPulse } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
 import { wellnessAverageFromRow } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
@@ -156,35 +156,42 @@ export function MobileWellnessList({
           ? items.filter((i) => i.type === "missing")
           : items.filter((i) => i.type === "row" && i.status.toLowerCase() === filter);
     return filtered.sort((a, b) => {
-      const statusA = a.type === "row" ? a.status : "Missing";
-      const statusB = b.type === "row" ? b.status : "Missing";
-      return (SORT_ORDER[statusA] ?? 4) - (SORT_ORDER[statusB] ?? 4);
+      const submittedFirst = (a.type === "row" ? 0 : 1) - (b.type === "row" ? 0 : 1);
+      if (submittedFirst !== 0) return submittedFirst;
+      if (a.type === "row" && b.type === "row")
+        return (SORT_ORDER[a.status] ?? 4) - (SORT_ORDER[b.status] ?? 4);
+      return 0;
     });
   }, [rowsForDate, missingUserIds, filter]);
 
   return (
     <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-6 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-7xl min-w-0">
-        {/* Sticky filter/search header */}
-        <div className="sticky top-0 z-10 -mx-3 px-3 py-3 pb-4" style={{ backgroundColor: "var(--page-bg)" }}>
-          <h1 className="text-lg font-bold tracking-tight text-white">Wellness</h1>
-          <p className={`mt-1 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-            Daily submissions. Table and body map by selected date.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              Date
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
-                  isHighContrast
-                    ? "border-white/30 bg-white/10 text-white focus:border-white/60 focus:ring-white/40"
-                    : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-emerald-500"
-                }`}
-              />
-            </label>
+        {/* Sticky filter/search header - mobile only */}
+        <div className="sticky top-0 z-10 -mx-3 px-3 py-3 pb-2" style={{ backgroundColor: "var(--page-bg)" }}>
+          <div
+            className={`flex flex-col items-center rounded-xl border px-4 py-3 text-center shadow-sm ${themeId === "neon" ? "border-emerald-500/30 bg-emerald-950/20 ring-1 ring-emerald-500/20" : isHighContrast ? "border-white/15 bg-white/5" : "border-emerald-500/35 bg-emerald-950/25 ring-1 ring-emerald-500/25"}`}
+          >
+            <h1 className="flex items-center justify-center gap-2 text-lg font-bold tracking-tight text-white">
+              <HeartPulse className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+              Wellness
+            </h1>
+            <span className={`mt-1 text-xs font-medium ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+              Daily check-ins by date
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <span className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Date</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                isHighContrast
+                  ? "border-white/30 bg-white/10 text-white focus:border-white/60 focus:ring-white/40"
+                  : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-emerald-500"
+              }`}
+            />
             <button
               type="button"
               onClick={() => setSelectedDate(todayISO())}
@@ -197,29 +204,34 @@ export function MobileWellnessList({
               Today
             </button>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(["all", "missing", "watch", "critical"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${
-                  filter === key
-                    ? "bg-emerald-600 text-white"
-                    : isHighContrast
-                      ? "bg-white/10 text-white/80 hover:bg-white/20"
-                      : "bg-zinc-700/80 text-zinc-400 hover:bg-zinc-600"
-                }`}
-              >
-                {key}
-              </button>
-            ))}
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            {(["all", "missing", "watch", "critical"] as const).map((key) => {
+              const activeStyles: Record<string, string> = {
+                all: "bg-emerald-600 text-white",
+                watch: "bg-amber-500 text-white",
+                critical: "bg-red-600 text-white",
+                missing: "bg-slate-500 text-white",
+              };
+              const activeStyle = filter === key ? activeStyles[key] : null;
+              const inactiveStyle = isHighContrast ? "bg-white/10 text-white/80 hover:bg-white/20" : "bg-zinc-700/80 text-zinc-400 hover:bg-zinc-600";
+              const btnClass = activeStyle ?? inactiveStyle;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFilter(key)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${btnClass}`}
+                >
+                  {key}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {sortedAndFiltered.length === 0 ? (
           <div
-            className={`mt-4 rounded-xl border px-4 py-8 text-center ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
+            className={`mt-2 rounded-xl border px-4 py-8 text-center ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
             style={
               themeId === "neon"
                 ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS }
@@ -231,7 +243,7 @@ export function MobileWellnessList({
             <p className={isHighContrast ? "text-white/90" : "text-zinc-400"}>No players match the filter for this date.</p>
           </div>
         ) : (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-2 space-y-2">
             {sortedAndFiltered.map((item) => {
               if (item.type === "missing") {
                 const displayName = displayNameByUserId[item.user_id] ?? emailByUserId[item.user_id] ?? item.user_id;
@@ -341,14 +353,14 @@ export function MobileWellnessList({
           <div
             className={`sticky top-0 z-20 flex shrink-0 flex-col border-b px-4 pb-3 pt-2 ${isHighContrast ? "border-white/20" : "border-emerald-500/25"} bg-zinc-900/95 shadow-md`}
           >
-            <div className="flex items-center justify-between">
-              <h2 id="mobile-wellness-detail-title" className="text-xl font-bold tracking-tight text-white drop-shadow-sm">
+            <div className="relative flex items-center justify-center min-h-[52px]">
+              <h2 id="mobile-wellness-detail-title" className="text-xl font-bold tracking-tight text-white drop-shadow-sm text-center">
                 {displayNameByUserId[detailRow.user_id] ?? emailByUserId[detailRow.user_id] ?? detailRow.user_id}
               </h2>
               <button
                 type="button"
                 onClick={() => setDetailRow(null)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 hover:bg-zinc-600 hover:text-white active:scale-95 transition-transform"
+                className="absolute right-0 top-1/2 -translate-y-1/2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700/90 text-zinc-300 hover:bg-zinc-600 hover:text-white active:scale-95 transition-transform"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />

@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import { getDateContextLabel } from "@/lib/dateContext";
+import { formatMonthDay, formatDayShort } from "@/lib/formatDate";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
-import { Calendar, User, X } from "lucide-react";
+import { Activity, Calendar, User, X } from "lucide-react";
 
 const CARD_RADIUS = "12px";
 
@@ -60,9 +61,7 @@ function getWeekDates(startDate: string): string[] {
 }
 
 function formatWeekLabel(startDate: string): string {
-  const [y, m, d] = startDate.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return formatMonthDay(startDate);
 }
 
 /** Spike = (current 7-day load - previous 7-day load) / previous 7-day load. Returns null if prev7 is 0. */
@@ -88,27 +87,55 @@ interface StaffLoadViewProps {
   displayNameByUserId?: Record<string, string>;
 }
 
-/** Build load breakdown string: "90(d) × 7 = 630" or "(60×5 + 30×7) = 510" */
+/** Build load breakdown view: "90(d) × 7 = 630" or "(60×5 + 30×7) = 510".
+ * RPE 1–4 green, 5–7 yellow, 8+ red – only the number is colored.
+ */
 function formatLoadBreakdown(
   sessions: SessionRow[],
   totalLoad: number
-): string {
+): ReactNode {
   if (sessions.length === 0) return "—";
-  const parts = sessions.map((s) => {
+
+  const renderPart = (s: SessionRow): ReactNode => {
     const d = s.duration ?? 0;
     const r = s.rpe ?? null;
-    if (r != null) return `${d}×${r}`;
-    return `${d}(d)`;
-  });
-  if (parts.length === 1) {
+    if (r == null) return `${d}(d)`;
+    return (
+      <>
+        {d}
+        ×
+        <span className={rpeColorClass(r)}>{r}</span>
+      </>
+    );
+  };
+
+  if (sessions.length === 1) {
     const s = sessions[0];
-    if (s.rpe != null) return `${s.duration}(d) × ${s.rpe} = ${totalLoad}`;
+    if (s.rpe != null) {
+      return (
+        <>
+          {s.duration}(d) × <span className={rpeColorClass(s.rpe)}>{s.rpe}</span> = {totalLoad}
+        </>
+      );
+    }
     return `${s.duration}(d) = ${totalLoad}`;
   }
-  return `(${parts.join(" + ")}) = ${totalLoad}`;
+
+  return (
+    <>
+      (
+      {sessions.map((s, idx) => (
+        <span key={idx}>
+          {idx > 0 && " + "}
+          {renderPart(s)}
+        </span>
+      ))}
+      ) = {totalLoad}
+    </>
+  );
 }
 
-/** RPE 1–4 green, 5–7 yellow, 8+ red (only the number is colored) */
+/** RPE 1–4 green, 5–7 yellow, 8+ red (only the number is colored). */
 function rpeColorClass(rpe: number): string {
   if (rpe >= 8) return "text-red-400 font-bold";
   if (rpe >= 5) return "text-amber-400 font-semibold";
@@ -267,17 +294,12 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
     };
   }, [list, last7, prev7, last28, lastN, selectedDate, searchQuery, onlyAtRisk, emailByUserId, displayNameByUserId, periodDays]);
 
-  const formatDayShort = (dateStr: string) => {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
-  };
-
   const { teamCompareData, playerCompareData, allPlayerIds } = useMemo(() => {
     const w1 = getWeekDates(week1Start);
     const w2 = getWeekDates(week2Start);
     const teamCompareData: TwoWeekDataPoint[] = w1.map((date, i) => ({
       day: date,
-      label: formatDayShort(date),
+      label: formatDayShort(date as string),
       loadW1: list.filter((s) => s.date === date).reduce((a, s) => a + (s.load ?? 0), 0),
       loadW2: list.filter((s) => s.date === w2[i]).reduce((a, s) => a + (s.load ?? 0), 0),
     }));
@@ -286,7 +308,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
         ? []
         : w1.map((date, i) => ({
             day: date,
-            label: formatDayShort(date),
+            label: formatDayShort(date as string),
             loadW1: list
               .filter((s) => s.user_id === comparePlayerId && s.date === date)
               .reduce((a, s) => a + (s.load ?? 0), 0),
@@ -332,10 +354,17 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
       style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-7xl min-w-0 space-y-6">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">RPE / Load</h1>
-          <p className={`mt-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-            Load monitoring – daily and weekly load, acute/chronic, risk.
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <Activity className="h-8 w-8 shrink-0 text-emerald-400" aria-hidden />
+            )}
+            <h1 className="text-base font-semibold tracking-tight text-white sm:text-lg md:text-xl lg:text-2xl">
+              RPE / Load
+            </h1>
+          </div>
+          <p className={`text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+            Daily & weekly load, acute/chronic, risk.
           </p>
         </div>
 
@@ -563,77 +592,80 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
         </section>
 
         {/* Daily table */}
-        <section className="space-y-3">
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            Sessions by player – {selectedDate}
+        <section className="space-y-2">
+          <h2 className={`border-b pb-1.5 text-xs font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            Sessions by player – {formatMonthDay(selectedDate)}
           </h2>
           <div
-            className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
+            className={`overflow-hidden rounded-lg ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: "10px", ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
           >
           {sortedTableRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className={isHighContrast ? "text-white/80" : "text-zinc-400"}>No sessions for the selected date.</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <Calendar className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
+              <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions for the selected date.</p>
+              <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Try another date.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/5" : "bg-zinc-900/95"}`}>
-                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
-                    <th className="px-4 py-3 font-medium">Player</th>
-                    <th className="px-4 py-3 font-medium">Date</th>
-                    <th className="px-4 py-3 font-medium">
+              <table className="w-full text-left text-xs">
+                <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
+                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-600 text-zinc-400"}`}>
+                    <th className="px-2.5 py-2 font-medium">Player</th>
+                    <th className="px-2.5 py-2 font-medium">
                       <button
                         type="button"
                         onClick={() =>
-                          setLoadSortOrder((prev) =>
-                            prev == null ? "desc" : prev === "desc" ? "asc" : null
+                          setLoadSortOrder(
+                            loadSortOrder == null ? "asc" : loadSortOrder === "asc" ? "desc" : "asc"
                           )
                         }
                         className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-700/80 hover:text-white"
-                        title="Sort by load (click to cycle: descending → ascending → no sort)"
+                        title="Rendezés: kattintás vált növekvő ↔ csökkenő"
+                        aria-label="Sort by load"
                       >
                         Load
-                        {loadSortOrder === "desc" && <span className="text-emerald-400" aria-hidden>↓</span>}
-                        {loadSortOrder === "asc" && <span className="text-emerald-400" aria-hidden>↑</span>}
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold ${loadSortOrder != null ? "text-emerald-400" : "text-zinc-500"}`}>
+                          {loadSortOrder === "asc" ? "↑" : loadSortOrder === "desc" ? "↓" : "↕"}
+                        </span>
                       </button>
                     </th>
-                    <th className="px-4 py-3 font-medium">Spike</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-2.5 py-2 font-medium">Spike</th>
+                    <th className="px-2.5 py-2 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
-                  {sortedTableRows.map(({ userId, load, spike }) => {
+                  {sortedTableRows.map(({ userId, load, spike }, idx) => {
                     const risk = spikeToRiskLevel(spike);
                     const daySessions = list.filter(
                       (s) => s.user_id === userId && s.date === selectedDate
                     );
                     const loadBreakdown = formatLoadBreakdown(daySessions, load);
                     const displayName = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
+                    const rowBg = idx % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/40") : "";
                     return (
                       <tr
                         key={userId}
-                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800 hover:bg-zinc-800/50"} ${
+                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg} ${
                           risk === "danger" ? "bg-red-500/5" : risk === "warning" ? "bg-amber-500/5" : ""
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           <button
                             type="button"
                             onClick={() => setModalUserId(userId)}
-                            className="min-h-[44px] rounded font-medium text-emerald-400 hover:underline"
+                            className="min-h-[36px] rounded font-medium text-emerald-400 hover:underline text-left"
                           >
                             {displayName}
                           </button>
                         </td>
-                        <td className="px-4 py-3">{selectedDate}<span className={isHighContrast ? "text-white/60" : "text-zinc-500"}>{getDateContextLabel(selectedDate)}</span></td>
-                        <td className="px-4 py-3 tabular-nums">
+                        <td className="px-2.5 py-2 tabular-nums">
                           <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
                         </td>
-                        <td className="px-4 py-3 tabular-nums">
+                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
                           {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           <RiskBadge level={risk} />
                         </td>
                       </tr>
@@ -677,7 +709,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           <div className="shrink-0 px-4 py-3">
             <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-300 shadow-sm ring-1 ring-emerald-500/25">
               <Calendar className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-              {selectedDate}
+              {formatMonthDay(selectedDate)}
             </span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-1">
