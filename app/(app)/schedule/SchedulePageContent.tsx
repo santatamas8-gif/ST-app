@@ -18,7 +18,7 @@ export function SchedulePageContent({
   const description = canEdit ? "Tap a day to add or edit the program." : "Tap a day to see the program.";
 
   return (
-    <div className={isPlayer ? "mx-auto max-w-4xl space-y-4" : ""}>
+    <div className={isPlayer ? "mx-auto max-w-4xl space-y-2" : "space-y-2"}>
       <div>
         <h1 className="flex items-center gap-2 text-base font-bold tracking-tight text-white sm:text-lg lg:text-xl">
           <Calendar className="h-5 w-5 shrink-0 text-emerald-400 sm:h-6 sm:w-6" aria-hidden />

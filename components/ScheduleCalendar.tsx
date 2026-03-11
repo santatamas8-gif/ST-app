@@ -405,28 +405,29 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handlePrevMonth}
-          className={`rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
-        >
-          ← Prev
-        </button>
-        <span className="text-sm font-semibold text-white">{monthLabel}</span>
-        <button
-          type="button"
-          onClick={handleNextMonth}
-          className={`rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
-        >
-          Next →
-        </button>
-      </div>
+      <div className="space-y-1.5">
+        <div className="flex min-h-10 items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
+          >
+            ← Prev
+          </button>
+          <span className="flex-1 shrink-0 text-center text-sm font-semibold text-white">{monthLabel}</span>
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium text-white ${isHighContrast ? "border-white/20 bg-white/10 hover:bg-white/15" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}
+          >
+            Next →
+          </button>
+        </div>
 
-      <div
-        className={`overflow-x-auto rounded-xl border ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
-        style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
-      >
+        <div
+          className={`overflow-x-auto rounded-xl border ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
+          style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
+        >
         <table className="w-full border-collapse text-xs sm:text-sm">
           <thead>
             <tr className={isHighContrast ? "border-b border-white/20" : "border-b border-zinc-700"}>
@@ -483,6 +484,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {loadError && (

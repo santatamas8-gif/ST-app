@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, MousePointerClick } from "lucide-react";
 import { getAppUser } from "@/lib/auth";
 import { formatDate } from "@/lib/formatDate";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
+import { HintStrip } from "@/components/HintStrip";
 
 export default async function PlayersListPage() {
   const user = await getAppUser();
@@ -80,16 +81,15 @@ export default async function PlayersListPage() {
 
   return (
     <div className="min-w-0 -mx-4 overflow-x-hidden space-y-6 px-3 sm:mx-0 sm:px-0">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex shrink-0 items-center justify-center rounded-xl border border-zinc-600/90 bg-zinc-800/50 p-3">
-          <Users className="h-6 w-6 text-emerald-400 sm:h-7 sm:w-7" aria-hidden />
-        </div>
-        <p className="min-w-0 text-sm text-zinc-400">
-          Tap a name for wellness &amp; load.
-        </p>
-      </div>
+      <HintStrip icon={<MousePointerClick className="h-6 w-6" aria-hidden />}>
+        Click a player for 7/28 day averages (wellness &amp; load).
+      </HintStrip>
 
-      <Card title="All players">
+      <Card>
+        <div className="-mx-5 -mt-5 mb-0 flex items-center gap-2 border-b border-zinc-800/80 px-5 py-4">
+          <Users className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+          <h2 className="text-lg font-semibold tracking-tight text-white">All players</h2>
+        </div>
         {error ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <span className="text-red-400" aria-hidden>⚠</span>
