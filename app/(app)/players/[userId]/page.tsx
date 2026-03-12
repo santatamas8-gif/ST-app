@@ -2,7 +2,7 @@ import { getAppUser } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPlayerDetail } from "@/lib/playerDetail";
-import { PlayerWellnessTrend } from "./PlayerWellnessTrend";
+import { PlayerDetailTabs } from "./PlayerDetailTabs";
 
 export default async function PlayerDetailPage({
   params,
@@ -41,9 +41,14 @@ export default async function PlayerDetailPage({
         <Link href="/wellness" className="opacity-80 hover:opacity-100 transition-opacity">Wellness</Link>
       </div>
       <h1 className="text-lg font-bold tracking-tight sm:text-xl lg:text-2xl" style={{ color: "var(--foreground)" }}>{displayName}</h1>
-      <p className="text-xs opacity-70">Pick 7/28 days to see averages. Bars = daily values.</p>
 
-      <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
+      <PlayerDetailTabs
+        wellness={wellness}
+        dates={dates}
+        loadByDate={loadByDate}
+        sessions={sessions}
+        showRpeTab={user.role === "admin" || user.role === "staff"}
+      />
     </div>
   );
 }

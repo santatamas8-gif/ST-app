@@ -53,12 +53,12 @@ export default async function PlayersListPage() {
     injured: "bg-red-500/20 text-red-400",
     rehab: "bg-sky-500/20 text-sky-400",
   };
-  const STATUS_NAME_CLASS: Record<string, string> = {
-    available: "text-emerald-400",
-    limited: "text-amber-400",
-    unavailable: "text-orange-400",
-    injured: "text-red-400",
-    rehab: "text-sky-400",
+  const STATUS_BORDER_COLOR: Record<string, string> = {
+    available: "rgba(16, 185, 129, 0.5)",
+    limited: "rgba(245, 158, 11, 0.5)",
+    unavailable: "rgba(249, 115, 22, 0.5)",
+    injured: "rgba(239, 68, 68, 0.5)",
+    rehab: "rgba(14, 165, 233, 0.5)",
   };
   const getStatusBadge = (status: string) => {
     const s = (status ?? "available").toLowerCase();
@@ -66,9 +66,8 @@ export default async function PlayersListPage() {
     const cls = STATUS_BADGE_CLASS[s] ?? "bg-zinc-600/40 text-zinc-400";
     return { label, className: cls };
   };
-  const getStatusNameClass = (status: string) =>
-    STATUS_NAME_CLASS[(status ?? "available").toLowerCase()] ?? "text-zinc-400";
-
+  const getStatusBorderColor = (status: string) =>
+    STATUS_BORDER_COLOR[(status ?? "available").toLowerCase()] ?? "rgba(82, 82, 91, 0.5)";
   const sortedPlayers = [...(players ?? [])].sort((a, b) => {
     const sa = statusByUserId.get(a.id) ?? "available";
     const sb = statusByUserId.get(b.id) ?? "available";
@@ -108,14 +107,15 @@ export default async function PlayersListPage() {
               {sortedPlayers.map((p) => {
                 const status = statusByUserId.get(p.id) ?? "available";
                 const badge = getStatusBadge(status);
-                const nameClass = getStatusNameClass(status);
+                const borderColor = getStatusBorderColor(status);
                 return (
                   <Link
                     key={p.id}
                     href={`/players/${p.id}`}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-700/80 bg-zinc-800/50 px-4 py-3 text-left font-medium text-white transition-colors hover:border-emerald-500/50 hover:bg-zinc-800/80 active:bg-zinc-700/80"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-700/80 border-l-4 bg-zinc-800/50 px-4 py-3 text-left font-medium text-white transition-colors hover:bg-zinc-800/80 active:bg-zinc-700/80"
+                    style={{ borderLeftColor: borderColor }}
                   >
-                    <span className={nameClass}>{displayName(p)}</span>
+                    <span className="text-white">{displayName(p)}</span>
                     <span className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${badge.className}`}>
                       {badge.label}
                     </span>
@@ -137,13 +137,16 @@ export default async function PlayersListPage() {
                   {sortedPlayers.map((p) => {
                     const status = statusByUserId.get(p.id) ?? "available";
                     const badge = getStatusBadge(status);
-                    const nameClass = getStatusNameClass(status);
+                    const borderColor = getStatusBorderColor(status);
                     return (
                       <tr key={p.id} className="border-b border-zinc-800">
-                        <td className="py-3 pr-4">
+                        <td
+                          className="py-3 pr-4 border-l-4"
+                          style={{ borderLeftColor: borderColor }}
+                        >
                           <Link
                             href={`/players/${p.id}`}
-                            className={`${nameClass} hover:underline`}
+                            className="text-white hover:underline"
                           >
                             {displayName(p)}
                           </Link>

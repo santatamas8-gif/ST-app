@@ -11,8 +11,8 @@ const VIEWBOX = "0 0 595.276 841.89";
 const SVG_FRONT = "/body-map-front.svg";
 const SVG_BACK = "/body-map-back.svg";
 const SKIP_IDS = new Set(["Face and Skin", "Body"]);
-const PART_STROKE = "#a1a1aa";
-const PART_STROKE_WIDTH = 0.8;
+const PART_STROKE = "#b4b4bc";
+const PART_STROKE_WIDTH = 0.95;
 /** Transparent stroke width for larger touch hit area (viewBox units); mobile only */
 const TOUCH_HIT_STROKE = 18;
 const PANEL_BG = "#27272a";
@@ -113,21 +113,29 @@ function BodyFigure({
   defaultZoom?: number;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
   const lastTouchRef = React.useRef<{ x: number; y: number } | null>(null);
   const lastPinchRef = React.useRef<{ distance: number; zoom: number } | null>(null);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length === 2) {
+        e.preventDefault();
         const d = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
         lastPinchRef.current = { distance: d, zoom };
         lastTouchRef.current = null;
       } else if (e.touches.length === 1) {
+        // Mobile only: start pan only when touch begins on the drawn body (path/g), not on the SVG root or frame
+        if (touchFriendly && svgRef.current) {
+          const t = e.target as Node;
+          if (!svgRef.current.contains(t) || t === svgRef.current) return;
+          e.preventDefault();
+        }
         lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         lastPinchRef.current = null;
       }
     },
-    [zoom]
+    [zoom, touchFriendly]
   );
 
   const handleTouchMove = useCallback(
@@ -154,6 +162,31 @@ function BodyFigure({
     lastPinchRef.current = null;
   }, []);
 
+  // Native listener with passive: false so preventDefault() blocks page zoom on pinch (mobile)
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !touchFriendly) return;
+    const preventIfBodyGesture = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        return;
+      }
+      if (e.touches.length === 1 && svgRef.current) {
+        const t = e.target as Node;
+        if (svgRef.current.contains(t) && t !== svgRef.current) e.preventDefault();
+      }
+    };
+    const preventIfPanOrPinch = (e: TouchEvent) => {
+      if (e.touches.length === 2 || lastTouchRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchstart", preventIfBodyGesture, { passive: false, capture: true });
+    el.addEventListener("touchmove", preventIfPanOrPinch, { passive: false, capture: true });
+    return () => {
+      el.removeEventListener("touchstart", preventIfBodyGesture, { capture: true });
+      el.removeEventListener("touchmove", preventIfPanOrPinch, { capture: true });
+    };
+  }, [touchFriendly]);
+
   if (!parsed) {
     return (
       <div
@@ -171,7 +204,7 @@ function BodyFigure({
     <div
       ref={containerRef}
       className={`relative select-none overflow-hidden rounded-xl border border-zinc-600 ${className ?? ""}`}
-      style={{ backgroundColor: PANEL_BG, touchAction: "none" }}
+      style={{ backgroundColor: PANEL_BG, touchAction: touchFriendly ? "none" : undefined }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -183,7 +216,7 @@ function BodyFigure({
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
       >
-      <svg viewBox={viewBox} className="h-full w-full min-h-[260px] min-w-full md:h-auto md:min-h-[400px]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+      <svg ref={svgRef} viewBox={viewBox} className="h-full w-full min-h-[260px] min-w-full md:h-auto md:min-h-[400px]" preserveAspectRatio="xMidYMid meet" aria-hidden>
         {/* Background outline (body silhouette on dark panel) */}
         {background && (
           <path
@@ -413,6 +446,15 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
   const entries = Object.entries(value).filter(
     ([, v]) => (v.soreness ?? 0) > 0 || (v.pain ?? 0) > 0
   );
+  const displayEntries =
+    entries.length === 0
+      ? entries
+      : [...entries].sort((a, b) => {
+          const hasPainA = (a[1].pain ?? 0) > 0;
+          const hasPainB = (b[1].pain ?? 0) > 0;
+          if (hasPainA !== hasPainB) return hasPainB ? 1 : -1;
+          return getBodyPartLabel(a[0]).localeCompare(getBodyPartLabel(b[0]));
+        });
 
   const handleSearchSelect = useCallback(
     (partId: string) => {
@@ -421,6 +463,23 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
     },
     [handlePartClick]
   );
+
+  const selectedListRef = React.useRef<HTMLUListElement>(null);
+  const [showBottomFade, setShowBottomFade] = React.useState(true);
+  const updateBottomFade = useCallback(() => {
+    const el = selectedListRef.current;
+    if (!el || displayEntries.length <= 3) {
+      setShowBottomFade(false);
+      return;
+    }
+    const { scrollTop, clientHeight, scrollHeight } = el;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 8;
+    setShowBottomFade(!atBottom);
+  }, [displayEntries.length]);
+  React.useEffect(() => {
+    const t = requestAnimationFrame(() => updateBottomFade());
+    return () => cancelAnimationFrame(t);
+  }, [displayEntries.length, updateBottomFade]);
 
   return (
     <div className="flex min-h-0 min-w-[260px] flex-1 flex-col overflow-visible space-y-3 w-full md:flex-initial md:overflow-visible">
@@ -531,50 +590,62 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
 
       {/* Külön keret: kijelölt body parts (soreness + pain) – bodymap keret alatt */}
       <div className="mt-4 flex max-h-[38vh] min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border-2 border-emerald-500/25 bg-zinc-800/90 p-3 shadow-inner ring-1 ring-emerald-500/10">
-        <p className="mb-3 flex shrink-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white">
-          <List className="h-4 w-4 shrink-0 text-emerald-400/80" aria-hidden />
+        <p className="mb-2 flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-500/20 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+          <List className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" aria-hidden />
           Selected body parts
         </p>
-        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden text-sm">
-          {entries.length === 0 ? (
-            <li className="rounded-xl border border-dashed border-zinc-600 py-5 text-center text-sm text-zinc-500">Tap body parts above to add them here.</li>
-          ) : (
-            entries.map(([partId, v]) => {
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ul
+            ref={selectedListRef}
+            onScroll={touchFriendly ? updateBottomFade : undefined}
+            className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden text-xs"
+          >
+            {displayEntries.length === 0 ? (
+              <li className="rounded-lg border border-dashed border-zinc-600 py-4 text-center text-xs text-zinc-500">Tap body parts above to add them here.</li>
+            ) : (
+              displayEntries.map(([partId, v]) => {
               const hasBoth = v.soreness > 0 && v.pain > 0;
               const leftAccent = hasBoth ? "border-l-amber-400/60" : v.pain > 0 ? "border-l-red-500/70" : "border-l-amber-500/70";
               return (
                 <li
                   key={partId}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-l-4 ${leftAccent} bg-zinc-800/80 px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md`}
+                  className={`flex flex-wrap items-center justify-between gap-1.5 rounded-lg border-l-4 ${leftAccent} bg-zinc-800/80 px-2.5 py-2 shadow-sm transition-shadow hover:shadow-md`}
                 >
-                  <span className="font-medium text-zinc-200">{getBodyPartLabel(partId)}</span>
+                  <span className="text-xs font-medium text-zinc-200">{getBodyPartLabel(partId)}</span>
                   <span className="flex items-center gap-2">
                     {v.soreness > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/25 px-2 py-1 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
-                        <Activity className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                        <Activity className="h-2.5 w-2.5 shrink-0" aria-hidden />
                         {v.soreness}
                       </span>
                     )}
                     {v.pain > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-red-500/25 px-2 py-1 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
-                        <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="inline-flex items-center gap-0.5 rounded bg-red-500/25 px-1.5 py-0.5 text-[10px] font-semibold text-red-400 ring-1 ring-red-500/30">
+                        <AlertCircle className="h-2.5 w-2.5 shrink-0" aria-hidden />
                         {v.pain}
                       </span>
                     )}
                     <button
                       type="button"
                       onClick={() => clearPart(partId)}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-600 hover:text-red-400 transition-colors active:scale-95"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-600 hover:text-red-400 transition-colors active:scale-95"
                       aria-label={`Clear ${partId}`}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </span>
                 </li>
               );
             })
           )}
-        </ul>
+          </ul>
+          {touchFriendly && displayEntries.length > 3 && showBottomFade && (
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 shrink-0 bg-gradient-to-t from-zinc-800/95 to-transparent"
+              aria-hidden
+            />
+          )}
+        </div>
       </div>
     </div>
   );

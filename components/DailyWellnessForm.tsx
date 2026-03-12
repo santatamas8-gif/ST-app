@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { submitDailyWellness } from "@/app/actions/wellness";
 import { sleepDurationHours, formatSleepDuration } from "@/utils/sleep";
 import { ScaleInput } from "@/components/ScaleInput";
@@ -59,6 +59,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const submittedBlockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -129,9 +130,19 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
     router.refresh(); // refetch page data so chart and list show the new entry
   }
 
+  // After successful submit, scroll to the success block (not down to averages)
+  useEffect(() => {
+    if (!isSuccess) return;
+    const t = requestAnimationFrame(() => {
+      submittedBlockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [isSuccess]);
+
   if (hasSubmittedToday) {
     return (
       <div
+        ref={submittedBlockRef}
         className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-5"
         style={{ borderRadius: 12 }}
       >
@@ -155,6 +166,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
   if (isSuccess) {
     return (
       <div
+        ref={submittedBlockRef}
         className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-6"
         style={{ borderRadius: 12 }}
       >

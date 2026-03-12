@@ -71,6 +71,12 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
     });
     const wellnessScore = averageWellness([row]);
     const reasons: string[] = [];
+    // Pain/illness: still add to atRisk so staff see them, but badge (Critical/Warning) is by average wellness
+    if (row.illness === true) reasons.push("illness");
+    const hasPain =
+      row.body_parts != null &&
+      Object.values(row.body_parts).some((v) => (v.p ?? 0) > 0);
+    if (hasPain) reasons.push("pain");
     if (readiness != null && readiness < READINESS_AT_RISK_BELOW)
       reasons.push(`readiness ${readiness}`);
     if ((row.fatigue ?? 10) < AT_RISK_BELOW)

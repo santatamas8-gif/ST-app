@@ -1602,6 +1602,16 @@ export function StaffDashboard({
                       >
                         {critical ? "Critical" : "Warning"}
                       </span>
+                      {p.reason != null && p.reason.includes("pain") && (
+                        <span className="rounded bg-red-600/30 px-2 py-0.5 text-xs font-semibold text-red-300">
+                          Pain
+                        </span>
+                      )}
+                      {p.reason != null && p.reason.includes("illness") && (
+                        <span className="rounded bg-red-600/30 px-2 py-0.5 text-xs font-semibold text-red-300">
+                          Illness
+                        </span>
+                      )}
                     </div>
                   </li>
                 );

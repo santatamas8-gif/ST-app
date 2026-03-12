@@ -183,19 +183,25 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                     <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
                       My load (7 / 14 / 28 days)
                     </span>
-                    <div className="flex w-fit justify-end flex-nowrap items-center gap-0.5 rounded-lg border border-zinc-700 bg-zinc-800/50 p-1">
+                    <div
+                      className="inline-flex rounded-[14px] border p-0.5 h-10"
+                      style={{
+                        backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                        borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                      }}
+                    >
                       {([7, 14, 28] as const).map((n) => (
                         <button
                           key={n}
                           type="button"
                           onClick={() => setPeriodDays(n)}
-                          className={`h-8 w-9 rounded-md text-sm font-semibold transition shrink-0 ${
+                          className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
                             periodDays === n
-                              ? "bg-emerald-600/30 text-emerald-400"
-                              : "text-zinc-400 hover:bg-zinc-700/80 hover:text-white"
+                              ? "bg-emerald-700/90 text-white"
+                              : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
                           }`}
                         >
-                          {n}d
+                          {n} days
                         </button>
                       ))}
                     </div>

@@ -16,7 +16,7 @@ import type { LucideIcon } from "lucide-react";
 import { Clock, Moon, BatteryLow, Activity, Brain, Smile, HeartPulse, Dumbbell } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
-import { wellnessAverageFromRow, averageWellness, averageSleepHours } from "@/utils/wellness";
+import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
@@ -116,26 +116,23 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
 
   const sortedDatesAsc = useMemo(() => [...dates].reverse(), [dates]);
   const last7Dates = useMemo(() => dates.slice(0, 7), [dates]);
+  const last14Dates = useMemo(() => dates.slice(0, 14), [dates]);
   const last28Dates = useMemo(() => dates.slice(0, 28), [dates]);
   const last7Rows = useMemo(
     () => last7Dates.map((d) => wellnessByDate.get(d)).filter(Boolean) as WellnessRow[],
     [last7Dates, wellnessByDate]
+  );
+  const last14Rows = useMemo(
+    () => last14Dates.map((d) => wellnessByDate.get(d)).filter(Boolean) as WellnessRow[],
+    [last14Dates, wellnessByDate]
   );
   const last28Rows = useMemo(
     () => last28Dates.map((d) => wellnessByDate.get(d)).filter(Boolean) as WellnessRow[],
     [last28Dates, wellnessByDate]
   );
 
-  const summary7 = useMemo(() => ({
-    wellness: averageWellness(last7Rows),
-    sleep: averageSleepHours(last7Rows),
-  }), [last7Rows]);
-  const summary28 = useMemo(() => ({
-    wellness: averageWellness(last28Rows),
-    sleep: averageSleepHours(last28Rows),
-  }), [last28Rows]);
-
-  const [selectedPeriod, setSelectedPeriod] = useState<"7" | "28">("7");
+  const [selectedPeriod, setSelectedPeriod] = useState<"7" | "14" | "28">("7");
+  const isHighContrast = isNeon || isMatt;
 
   const chartData = useMemo(
     () =>
@@ -160,55 +157,43 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
   );
 
   const chartDataByPeriod = useMemo(
-    () => (selectedPeriod === "7" ? chartData.slice(-7) : chartData),
+    () =>
+      selectedPeriod === "7"
+        ? chartData.slice(-7)
+        : selectedPeriod === "14"
+          ? chartData.slice(-14)
+          : chartData,
     [chartData, selectedPeriod]
   );
 
   return (
     <div className="space-y-8">
-      {/* Top: select 7 or 28 – only that average is shown */}
+      {/* Top: select 7 / 14 / 28 – segmented control same style as RPE */}
       <div className={`rounded-xl border p-3 md:p-4 ${cardBorderClass} ${cardTextClass}`} style={cardStyle}>
         <div className="flex flex-col items-center justify-center gap-3">
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setSelectedPeriod("7")}
-              className={`rounded-lg px-5 py-3 text-base font-semibold transition-colors sm:px-6 sm:py-3.5 sm:text-lg ${
-                selectedPeriod === "7"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-              }`}
+          <div className="flex justify-center w-full sm:w-auto">
+            <div
+              className="inline-flex rounded-[14px] border p-0.5 h-10"
+              style={{
+                backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+              }}
             >
-              7 Days
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPeriod("28")}
-              className={`rounded-lg px-5 py-3 text-base font-semibold transition-colors sm:px-6 sm:py-3.5 sm:text-lg ${
-                selectedPeriod === "28"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-              }`}
-            >
-              28 Days
-            </button>
-          </div>
-          <div className="mt-3 rounded-lg border-t pt-3" style={{ borderColor: "var(--card-border)", backgroundColor: "rgba(0,0,0,0.12)" }}>
-            <p className="text-center text-sm sm:text-base" style={{ color: "var(--foreground)" }}>
-              {selectedPeriod === "7" ? (
-                <>
-                  Wellness: <span className="font-semibold text-emerald-400">{summary7.wellness != null ? summary7.wellness.toFixed(1) : "—"}</span>
-                  {" · "}
-                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary7.sleep != null ? `${formatSleepDuration(summary7.sleep)}h` : "—"}</span>
-                </>
-              ) : (
-                <>
-                  Wellness: <span className="font-semibold text-emerald-400">{summary28.wellness != null ? summary28.wellness.toFixed(1) : "—"}</span>
-                  {" · "}
-                  Sleep: <span className="font-semibold" style={{ color: "var(--foreground)" }}>{summary28.sleep != null ? `${formatSleepDuration(summary28.sleep)}h` : "—"}</span>
-                </>
-              )}
-            </p>
+              {([7, 14, 28] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setSelectedPeriod(String(n) as "7" | "14" | "28")}
+                  className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
+                    selectedPeriod === String(n)
+                      ? "bg-emerald-700/90 text-white"
+                      : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
+                  }`}
+                >
+                  {n} days
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -219,18 +204,23 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         const values7 = last7Dates.map((d) =>
           getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
         );
+        const values14 = last14Dates.map((d) =>
+          getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
+        );
         const values28 = last28Dates.map((d) =>
           getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
         );
         const avg7 = key === "wellness" ? averageWellness(last7Rows) : avg(values7);
+        const avg14 = key === "wellness" ? averageWellness(last14Rows) : avg(values14);
         const avg28 = key === "wellness" ? averageWellness(last28Rows) : avg(values28);
         const dataKey = key as keyof (typeof chartData)[0];
-        const periodAvg = selectedPeriod === "7" ? avg7 : avg28;
+        const periodAvg = selectedPeriod === "7" ? avg7 : selectedPeriod === "14" ? avg14 : avg28;
         const hasAny = chartDataByPeriod.some((r) => r[dataKey] != null);
         const is7Day = selectedPeriod === "7";
-        const barSize = is7Day ? 48 : 24;
-        const tickFontSize = is7Day ? 15 : 12;
-        const yAxisWidth = is7Day ? 40 : 32;
+        const is14Day = selectedPeriod === "14";
+        const barSize = is7Day ? 48 : is14Day ? 32 : 24;
+        const tickFontSize = is7Day ? 15 : is14Day ? 13 : 12;
+        const yAxisWidth = is7Day ? 40 : is14Day ? 36 : 32;
         const tickStyle = { fontSize: tickFontSize, fontWeight: 600, fill: tickFill };
 
         return (
@@ -251,12 +241,12 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                 {label}
               </h4>
             </div>
-            <div className={`w-full min-w-0 ${is7Day ? "h-40" : "h-32"}`}>
+            <div className={`w-full min-w-0 ${is7Day ? "h-40" : is14Day ? "h-36" : "h-32"}`}>
               {hasAny ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartDataByPeriod}
-                    margin={{ top: 2, right: 88, left: is7Day ? -4 : -8, bottom: 8 }}
+                    margin={{ top: 2, right: 88, left: is7Day ? -4 : is14Day ? -6 : -8, bottom: 8 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis
@@ -297,7 +287,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         strokeDasharray="4 4"
                         strokeOpacity={0.7}
                         label={{
-                          value: `${selectedPeriod === "7" ? "7d" : "28d"} avg ${key === "sleep_duration" ? `${formatSleepDuration(periodAvg)}h` : periodAvg.toFixed(1)}`,
+                          value: `${selectedPeriod === "7" ? "7d" : selectedPeriod === "14" ? "14d" : "28d"} avg ${key === "sleep_duration" ? `${formatSleepDuration(periodAvg)}h` : periodAvg.toFixed(1)}`,
                           position: "right",
                           fill: "var(--foreground)",
                           fontSize: 13,

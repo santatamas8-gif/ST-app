@@ -11,7 +11,7 @@ import { LoadKpiCard } from "./LoadKpiCard";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
-import { Activity, Calendar, User, X } from "lucide-react";
+import { Activity, BarChart2, Calendar, LayoutDashboard, User, X } from "lucide-react";
 
 const CARD_RADIUS = "12px";
 
@@ -192,6 +192,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
   const [loadSortOrder, setLoadSortOrder] = useState<LoadSortOrder>(null);
   type DailyChartSortOrder = "asc" | "desc";
   const [dailyChartSortOrder, setDailyChartSortOrder] = useState<DailyChartSortOrder>("desc");
+  const [showAtRiskPopover, setShowAtRiskPopover] = useState(false);
 
   const last7 = useMemo(() => getLast7Dates(), []);
   const prev7 = useMemo(() => getPrev7Dates(), []);
@@ -205,6 +206,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
     chronicLoad,
     chronicHasEnoughData,
     atRiskCount,
+    atRiskList,
     teamChartData,
     teamTrend,
     playerChartData,
@@ -236,10 +238,14 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
         list.filter((s) => s.user_id === uid).sort((a, b) => (b.date > a.date ? 1 : -1))
       );
     }
-    let atRiskCount = 0;
-    for (const [, spike] of spikeByUser) {
-      if (spike != null && spike >= 0.3) atRiskCount++;
+    const atRiskList: { userId: string; spike: number }[] = [];
+    for (const [uid, spike] of spikeByUser) {
+      if (spike != null && spike >= 0.3) {
+        atRiskList.push({ userId: uid, spike });
+      }
     }
+    atRiskList.sort((a, b) => b.spike - a.spike);
+    const atRiskCount = atRiskList.length;
 
     const teamChartData = lastN.map((date) => ({
       date,
@@ -285,6 +291,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
       chronicLoad,
       chronicHasEnoughData,
       atRiskCount,
+      atRiskList,
       teamChartData,
       teamTrend: teamTrend as "up" | "down" | "stable",
       playerChartData,
@@ -420,7 +427,10 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
 
         {/* Overview – KPI */}
         <section className="space-y-3">
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Overview</h2>
+          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+            Overview
+          </h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
             <LoadKpiCard
               label="Today's team load"
@@ -435,18 +445,65 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
               status="normal"
               sublabel={!chronicHasEnoughData ? "At least 28 days of data required" : undefined}
             />
-            <LoadKpiCard
-              label="At-risk players"
-              value={atRiskCount}
-              status={atRiskStatus}
-              className={atRiskStatus === "danger" ? "ring-1 ring-inset ring-red-500/40" : atRiskStatus === "warning" ? "ring-1 ring-inset ring-amber-500/40" : ""}
-            />
+            <button
+              type="button"
+              onClick={() => setShowAtRiskPopover((v) => !v)}
+              className="text-left"
+            >
+              <LoadKpiCard
+                label="At-risk players"
+                value={atRiskCount}
+                status={atRiskStatus}
+                className={`cursor-pointer transition hover:opacity-90 ${atRiskStatus === "danger" ? "ring-1 ring-inset ring-red-500/40" : atRiskStatus === "warning" ? "ring-1 ring-inset ring-amber-500/40" : ""}`}
+              />
+            </button>
           </div>
+          {showAtRiskPopover && (
+            <div
+              className={`mt-2 rounded-xl border px-4 py-3 shadow-lg ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-600 bg-zinc-800/90"}`}
+              style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { borderRadius: CARD_RADIUS, backgroundColor: "var(--card-bg)" }}
+            >
+              <p className="text-sm font-semibold text-red-400">At-risk players</p>
+              <p className={`mt-1 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+                Load spike ≥30% (this week vs last week).
+              </p>
+              {atRiskList.length === 0 ? (
+                <p className={`mt-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No players</p>
+              ) : (
+                <ul className={`mt-2 list-inside space-y-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                  {atRiskList.map(({ userId, spike }) => {
+                    const name = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
+                    const pct = Math.round(spike * 100);
+                    const level = spike >= 0.3 ? "danger" : spike >= 0.2 ? "warning" : "normal";
+                    return (
+                      <li key={userId}>
+                        <span className="font-medium">{name}</span>
+                        {" — "}
+                        <span className={level === "danger" ? "text-red-400 font-semibold" : "text-amber-400"}>
+                          +{pct}% load spike
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAtRiskPopover(false)}
+                className={`mt-2 text-xs ${isHighContrast ? "text-white/80 hover:text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+              >
+                Close
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Charts – daily first, then weekly */}
         <section className="space-y-3">
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Charts</h2>
+          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
+            Charts
+          </h2>
           <div className="flex flex-col gap-4">
             <div
               className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
@@ -502,19 +559,25 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
               <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <div />
                 <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Team load (7 / 14 / 28 days)</span>
-                <div className={`flex w-fit justify-end flex-nowrap items-center gap-0.5 rounded-lg p-1 ${isHighContrast ? "border border-white/20 bg-white/5" : "border border-zinc-700 bg-zinc-800/50"}`}>
+                <div
+                  className="inline-flex rounded-[14px] border p-0.5 h-10"
+                  style={{
+                    backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                    borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                  }}
+                >
                   {([7, 14, 28] as const).map((n) => (
                     <button
                       key={n}
                       type="button"
                       onClick={() => setPeriodDays(n)}
-                      className={`h-8 w-9 rounded-md text-sm font-semibold transition shrink-0 ${
+                      className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
                         periodDays === n
-                          ? "bg-emerald-600/30 text-emerald-400"
-                          : "text-zinc-400 hover:bg-zinc-700/80 hover:text-white"
+                          ? "bg-emerald-700/90 text-white"
+                          : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
                       }`}
                     >
-                      {n}d
+                      {n} days
                     </button>
                   ))}
                 </div>

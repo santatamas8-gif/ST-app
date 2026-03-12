@@ -85,14 +85,14 @@ function getRowValue(r: WellnessRow, column: SortableColumn): number | null {
   return typeof v === "number" ? v : null;
 }
 
-/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
+/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. Pain or illness always critical. */
+/** Band (Critical/Watch/Good) by metrics only; pain/illness shown as separate badge. */
 function isAtRisk(r: WellnessRow): boolean {
   if (r.sleep_quality != null && r.sleep_quality < 5) return true;
   if (r.mood != null && r.mood < 5) return true;
   if (r.fatigue != null && r.fatigue < 5) return true;
   if (r.soreness != null && r.soreness < 5) return true;
   if (r.stress != null && r.stress < 5) return true;
-  if (r.illness === true) return true;
   return false;
 }
 
@@ -225,20 +225,9 @@ export function StaffWellnessView({
           <KpiCard
             label={<span className="inline-flex items-center gap-1.5"><span aria-hidden className="text-emerald-400">✓</span> Submitted</span>}
             value={
-              summaryForDate.total != null ? (
-                <>
-                  <span>{summaryForDate.submitted} / {summaryForDate.total}</span>
-                  <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
-                    <span
-                      className="block h-full rounded-full bg-emerald-500"
-                      style={{ width: `${summaryForDate.total > 0 ? (100 * summaryForDate.submitted) / summaryForDate.total : 0}%` }}
-                      aria-hidden
-                    />
-                  </span>
-                </>
-              ) : (
-                `${summaryForDate.submitted} submissions`
-              )
+              summaryForDate.total != null
+                ? `${summaryForDate.submitted} / ${summaryForDate.total}`
+                : `${summaryForDate.submitted} submissions`
             }
             sublabel={summaryForDate.total != null ? `of ${summaryForDate.total} players` : undefined}
           />
@@ -293,7 +282,7 @@ export function StaffWellnessView({
               <>
                 <p className="text-sm font-semibold text-red-400">At risk</p>
                 <p className={`mt-0.5 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-                  Risk factors: any score below 5 on sleep quality, fatigue, soreness, stress or mood (scale 1–10, higher = better), or illness.
+                  Risk factors: any score below 5 on sleep quality, fatigue, soreness, stress or mood (scale 1–10, higher = better), or illness, or pain on body map.
                 </p>
                 {atRiskList.length === 0 ? (
                   <p className={`mt-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No one</p>
@@ -438,14 +427,26 @@ export function StaffWellnessView({
                       return (
                         <RiskRowHighlight key={r.id} isAtRisk={atRisk} rowIndex={index}>
                           <td className="px-4 py-2">
-                            <button
-                              type="button"
-                              onClick={() => setModalUserId(r.user_id)}
-                              className="min-h-[40px] rounded font-medium text-emerald-400 hover:underline"
-                            >
-                              {displayName}
-                            </button>
-                            {atRisk && <RiskBadge />}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setModalUserId(r.user_id)}
+                                className="min-h-[40px] rounded font-medium text-emerald-400 hover:underline"
+                              >
+                                {displayName}
+                              </button>
+                              {atRisk && <RiskBadge />}
+                              {r.illness === true && (
+                                <span className="rounded bg-red-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300" title="Illness reported">
+                                  Illness
+                                </span>
+                              )}
+                              {r.body_parts != null && Object.values(r.body_parts).some((v) => (v.p ?? 0) > 0) && (
+                                <span className="rounded bg-red-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300" title="Pain on body map">
+                                  Pain
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-2">
                             {r.illness === true ? (

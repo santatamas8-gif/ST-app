@@ -26,15 +26,29 @@ function timeToHHmm(s: string | null | undefined): string | null {
 
 type FilterChip = "all" | "missing" | "watch" | "critical";
 
-/** Bands: 1–4 = Critical, 5–7 = Watch, 8+ = Good. High risk = only Critical zone (1–4). */
-function getStatusBadge(readiness: number | null): { label: string; className: string } {
-  if (readiness == null) return { label: "—", className: "bg-zinc-600/60 text-zinc-400" };
-  if (readiness <= 4) return { label: "Critical", className: "bg-red-500/50 text-red-300 ring-1 ring-red-400/30" };
-  if (readiness <= 7) return { label: "Watch", className: "bg-yellow-500/60 text-yellow-400 ring-1 ring-yellow-400/40" };
+/** Bands: 1–4 = Critical, 5–7 = Watch, 8+ = Good. Pain/illness = Critical. */
+function getStatusBadge(
+  statusOrReadiness: "Good" | "Watch" | "Critical" | number | null
+): { label: string; className: string } {
+  const status: "Good" | "Watch" | "Critical" =
+    typeof statusOrReadiness === "string"
+      ? statusOrReadiness
+      : statusOrReadiness == null
+        ? "Good"
+        : statusOrReadiness <= 4
+          ? "Critical"
+          : statusOrReadiness <= 7
+            ? "Watch"
+            : "Good";
+  if (status === "Critical")
+    return { label: "Critical", className: "bg-red-500/50 text-red-300 ring-1 ring-red-400/30" };
+  if (status === "Watch")
+    return { label: "Watch", className: "bg-yellow-500/60 text-yellow-400 ring-1 ring-yellow-400/40" };
   return { label: "Good", className: "bg-emerald-500/50 text-emerald-400 ring-1 ring-emerald-400/30" };
 }
 
-function getStatusLabel(readiness: number | null): "Good" | "Watch" | "Critical" {
+/** Band by average (readiness) only; pain/illness shown as separate chip. */
+function getStatusLabel(row: WellnessRow, readiness: number | null): "Good" | "Watch" | "Critical" {
   if (readiness == null) return "Good";
   if (readiness <= 4) return "Critical";
   if (readiness <= 7) return "Watch";
@@ -43,10 +57,15 @@ function getStatusLabel(readiness: number | null): "Good" | "Watch" | "Critical"
 
 const SORT_ORDER: Record<string, number> = { Critical: 0, Watch: 1, Missing: 2, Good: 3 };
 
-/** High risk = Critical zone only (1–4). All metrics: higher = better, no inversion. */
+/** High risk = Critical zone only (1–4). Pain/illness always listed. */
 function getTopIssues(row: WellnessRow): string[] {
   const issues: string[] = [];
   if (row.illness === true) issues.push("Illness");
+  if (
+    row.body_parts &&
+    Object.values(row.body_parts).some((v) => (v.p ?? 0) > 0)
+  )
+    issues.push("Pain");
   if (row.sleep_quality != null && row.sleep_quality < 5) issues.push("Sleep low");
   if (row.sleep_duration != null && row.sleep_duration < 8) issues.push("Sleep short");
   if (row.fatigue != null && row.fatigue < 5) issues.push("Fatigue low");
@@ -144,7 +163,7 @@ export function MobileWellnessList({
     const items: Item[] = [];
     rowsForDate.forEach((r) => {
       const readiness = wellnessAverageFromRow(r);
-      items.push({ type: "row", row: r, status: getStatusLabel(readiness ?? null) });
+      items.push({ type: "row", row: r, status: getStatusLabel(r, readiness ?? null) });
     });
     missingUserIds.forEach((user_id) => {
       items.push({ type: "missing", user_id });
@@ -262,8 +281,6 @@ export function MobileWellnessList({
                       <span className={`min-w-0 flex-1 truncate font-medium ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                         {displayName}
                       </span>
-                      <span className={`shrink-0 tabular-nums ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>—</span>
-                      <span className={`shrink-0 tabular-nums ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>—</span>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isHighContrast ? "bg-white/15 text-white/70" : "bg-zinc-600/60 text-zinc-400"}`}>
                         Missing
                       </span>
@@ -284,7 +301,8 @@ export function MobileWellnessList({
               const r = item.row;
               const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
               const readiness = wellnessAverageFromRow(r);
-              const badge = getStatusBadge(readiness ?? null);
+              const status = getStatusLabel(r, readiness ?? null);
+              const badge = getStatusBadge(status);
               const sleepHours = r.sleep_duration != null ? `${formatSleepDuration(r.sleep_duration)}h` : "—";
               return (
                 <li key={r.id}>
@@ -314,6 +332,16 @@ export function MobileWellnessList({
                     >
                       {badge.label}
                     </span>
+                    {getTopIssues(r)
+                      .filter((issue) => issue === "Pain" || issue === "Illness")
+                      .map((issue) => (
+                        <span
+                          key={issue}
+                          className="shrink-0 rounded bg-red-600/30 px-1.5 py-0.5 text-[10px] font-semibold text-red-300"
+                        >
+                          {issue}
+                        </span>
+                      ))}
                   </button>
                 </li>
               );
@@ -368,7 +396,8 @@ export function MobileWellnessList({
             </div>
             {(() => {
               const readiness = wellnessAverageFromRow(detailRow);
-              const statusBadge = getStatusBadge(readiness ?? null);
+              const status = getStatusLabel(detailRow, readiness ?? null);
+              const statusBadge = getStatusBadge(status);
               return (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className={`rounded-xl border-l-2 border-emerald-500/50 px-3 py-2 text-xs font-semibold text-white shadow-sm ${isHighContrast ? "bg-white/15" : "bg-zinc-800/90"}`}>
@@ -385,16 +414,37 @@ export function MobileWellnessList({
             })()}
           </div>
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+96px)]">
-            {getTopIssues(detailRow).length > 0 && (
-              <div className="mb-4 rounded-xl border border-amber-500/30 border-l-4 border-l-amber-500/60 bg-amber-500/10 px-4 py-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-400/90">Top issues</p>
-                <ul className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-amber-200/90">
-                  {getTopIssues(detailRow).map((issue) => (
-                    <li key={issue}>{issue}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {getTopIssues(detailRow).length > 0 && (() => {
+              const issues = getTopIssues(detailRow);
+              const hasPainOrIllness = issues.some((i) => i === "Pain" || i === "Illness");
+              const isRed = hasPainOrIllness;
+              return (
+                <div
+                  className={`mb-4 rounded-xl border px-4 py-3 shadow-sm ${
+                    isRed
+                      ? "border-red-500/30 border-l-4 border-l-red-500/60 bg-red-500/10"
+                      : "border-amber-500/30 border-l-4 border-l-amber-500/60 bg-amber-500/10"
+                  }`}
+                >
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-wide ${
+                      isRed ? "text-red-400/90" : "text-amber-400/90"
+                    }`}
+                  >
+                    Top issues
+                  </p>
+                  <ul
+                    className={`mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-sm ${
+                      isRed ? "text-red-200/90" : "text-amber-200/90"
+                    }`}
+                  >
+                    {issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
             <div className="mb-4 rounded-xl border border-emerald-500/25 bg-zinc-800/50 px-4 py-3.5 shadow-sm ring-1 ring-emerald-500/5">
               <dl className={`divide-y divide-zinc-700/50 text-sm ${isHighContrast ? "text-white/90" : ""}`}>
               <div className="flex justify-between gap-3 items-center py-3.5 first:pt-0">
@@ -593,34 +643,42 @@ export function MobileWellnessList({
                   />
                 </div>
                 <ul className="mt-3 space-y-2 text-sm">
-                  {Object.entries(detailRow.body_parts).map(([partId, v]) => {
-                    const s = v.s ?? 0;
-                    const p = v.p ?? 0;
-                    const label = getBodyPartLabel(partId);
-                    if (s === 0 && p === 0) return null;
-                    const hasBoth = s > 0 && p > 0;
-                    const leftAccent = hasBoth ? "border-l-amber-400/60" : p > 0 ? "border-l-red-500/70" : "border-l-amber-500/70";
-                    return (
-                      <li
-                        key={partId}
-                        className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-l-4 ${leftAccent} bg-zinc-800/80 px-3 py-2.5 shadow-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}
-                      >
-                        <span className="font-medium">{label}</span>
-                        <span className="flex items-center gap-2">
-                          {s > 0 && (
-                            <span className="rounded-md bg-amber-500/25 px-2 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
-                              Soreness {s}
-                            </span>
-                          )}
-                          {p > 0 && (
-                            <span className="rounded-md bg-red-500/25 px-2 py-0.5 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
-                              Pain {p}
-                            </span>
-                          )}
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {Object.entries(detailRow.body_parts)
+                    .filter(([, v]) => (v.s ?? 0) > 0 || (v.p ?? 0) > 0)
+                    .sort(([, a], [, b]) => {
+                      const ap = a.p ?? 0;
+                      const bp = b.p ?? 0;
+                      if (ap > 0 && bp === 0) return -1;
+                      if (ap === 0 && bp > 0) return 1;
+                      return 0;
+                    })
+                    .map(([partId, v]) => {
+                      const s = v.s ?? 0;
+                      const p = v.p ?? 0;
+                      const label = getBodyPartLabel(partId);
+                      const hasBoth = s > 0 && p > 0;
+                      const leftAccent = hasBoth ? "border-l-amber-400/60" : p > 0 ? "border-l-red-500/70" : "border-l-amber-500/70";
+                      return (
+                        <li
+                          key={partId}
+                          className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border-l-4 ${leftAccent} bg-zinc-800/80 px-3 py-2.5 shadow-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}
+                        >
+                          <span className="font-medium">{label}</span>
+                          <span className="flex items-center gap-2">
+                            {p > 0 && (
+                              <span className="rounded-md bg-red-500/25 px-2 py-0.5 text-xs font-semibold text-red-400 ring-1 ring-red-500/30">
+                                Pain {p}
+                              </span>
+                            )}
+                            {s > 0 && (
+                              <span className="rounded-md bg-amber-500/25 px-2 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-amber-500/30">
+                                Soreness {s}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                 </ul>
               </div>
             )}

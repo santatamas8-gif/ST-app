@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Activity } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
@@ -50,6 +50,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittedBlockRef = useRef<HTMLDivElement>(null);
 
   const durationNum = duration ? parseInt(duration, 10) : 0;
   const load = durationNum > 0 && rpe >= 1 ? sessionLoad(durationNum, rpe) : null;
@@ -80,9 +81,19 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
     router.refresh();
   }
 
+  // After successful submit, scroll to the success block (not down to session list)
+  useEffect(() => {
+    if (!success) return;
+    const t = requestAnimationFrame(() => {
+      submittedBlockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [success]);
+
   if (success) {
     return (
       <div
+        ref={submittedBlockRef}
         className={`rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-emerald-500/40" : themeId === "matt" ? "matt-card-text border-white/20" : "border-emerald-800/50"}`}
         style={{
           borderRadius: CARD_RADIUS,
