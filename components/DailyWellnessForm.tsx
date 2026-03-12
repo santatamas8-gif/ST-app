@@ -300,9 +300,12 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             Other
           </h3>
           <div className="rounded-xl border p-3 md:p-4" style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}>
-            <p className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-              <Pill className="h-5 w-5 text-amber-500/90" aria-hidden />
-              Illness today (e.g. cold, fever, stomach)
+            <p className="mb-1 flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+              <Pill className="h-5 w-5 shrink-0 text-amber-500/90" aria-hidden />
+              <span>Illness today</span>
+            </p>
+            <p className="mb-2 pl-7 text-xs font-normal opacity-90" style={{ color: "var(--foreground)" }}>
+              (e.g. cold, fever, stomach)
             </p>
             <div className="flex gap-2" role="group" aria-label="Illness today">
               <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Activity, BarChart2, Clock3, LayoutDashboard } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
@@ -55,6 +55,20 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   const [periodDays, setPeriodDays] = useState<PlayerPeriodDays>(7);
+  const [recentScrollAtEnd, setRecentScrollAtEnd] = useState(true);
+  const recentScrollRef = useRef<HTMLDivElement>(null);
+
+  const recentSessionsLast12 = useMemo(() => list.slice(0, 12), [list]);
+
+  useEffect(() => {
+    setRecentScrollAtEnd(recentSessionsLast12.length <= 5);
+  }, [recentSessionsLast12.length]);
+
+  const onRecentScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+    setRecentScrollAtEnd(atEnd);
+  }, []);
 
   const lastN = useMemo(() => getLastNDates(periodDays), [periodDays]);
   const prevN = useMemo(() => getPrevNDates(periodDays), [periodDays]);
@@ -216,65 +230,85 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
               </div>
             </section>
 
-            {/* Recent sessions table */}
+            {/* Recent sessions table – last 12 sessions, max 5 visible, scroll + fade */}
             <section className="space-y-4">
               <h2 className={`flex items-center gap-2 border-b pb-3 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
                 <Clock3 className="h-4 w-4 text-emerald-400" aria-hidden />
                 <span>Recent sessions</span>
               </h2>
+              <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Last 12 sessions · scroll for more</p>
               <div
-                className={`overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+                className={`relative overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
                 style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
               >
-                {list.length === 0 ? (
+                {recentSessionsLast12.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 py-8 text-center">
                     <Activity className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
                     <p className={isHighContrast ? "text-white/80" : "text-zinc-400"}>No sessions yet.</p>
                     <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Log your first session above.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className={isHighContrast ? "bg-white/5" : "bg-zinc-900/95"}>
-                        <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
-                          <th className="px-4 py-3 font-medium">Date</th>
-                          <th className="px-4 py-3 font-medium">Duration (min)</th>
-                          <th className="px-4 py-3 font-medium">RPE</th>
-                          <th className="px-4 py-3 font-medium">Load</th>
-                        </tr>
-                      </thead>
-                      <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
-                        {list.slice(0, 7).map((r, index) => {
-                          const isFirst = index === 0;
-                          return (
-                            <tr
-                              key={r.id}
-                              className={`border-b ${isHighContrast ? "border-white/10" : "border-zinc-800"} ${
-                                isFirst ? (isHighContrast ? "bg-white/5" : "bg-zinc-900/40") : isHighContrast ? "hover:bg-white/5" : "hover:bg-zinc-900/30"
-                              }`}
-                            >
-                              <td className="px-4 py-3 text-sm">{formatMonthDay(r.date)}</td>
-                              <td className="px-4 py-3 tabular-nums text-sm">{r.duration}</td>
-                              <td className="px-4 py-3">
-                                {r.rpe == null ? (
-                                  <span className={isHighContrast ? "text-white/60" : "text-zinc-400"}>—</span>
-                                ) : (
-                                  <span
-                                    className={`inline-flex min-w-[2rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${rpeBadgeClass(
-                                      r.rpe
-                                    )}`}
-                                  >
-                                    {r.rpe}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-sm tabular-nums">{r.load ?? "—"}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <>
+                    <div
+                      ref={recentScrollRef}
+                      onScroll={onRecentScroll}
+                      className="overflow-x-auto overflow-y-auto"
+                      style={{ maxHeight: 280 }}
+                    >
+                      <table className="w-full text-left text-sm">
+                        <thead
+                          className={`sticky top-0 z-20 border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}
+                          style={{ backgroundColor: "var(--card-bg)" }}
+                        >
+                          <tr>
+                            <th className="px-4 py-3 font-medium">Date</th>
+                            <th className="px-4 py-3 font-medium">Duration (min)</th>
+                            <th className="px-4 py-3 font-medium">RPE</th>
+                            <th className="px-4 py-3 font-medium">Load</th>
+                          </tr>
+                        </thead>
+                        <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
+                          {recentSessionsLast12.map((r, index) => {
+                            const isFirst = index === 0;
+                            return (
+                              <tr
+                                key={r.id}
+                                className={`border-b ${isHighContrast ? "border-white/10" : "border-zinc-800"} ${
+                                  isFirst ? (isHighContrast ? "bg-white/5" : "bg-zinc-900/40") : isHighContrast ? "hover:bg-white/5" : "hover:bg-zinc-900/30"
+                                }`}
+                              >
+                                <td className="px-4 py-3 text-sm">{formatMonthDay(r.date)}</td>
+                                <td className="px-4 py-3 tabular-nums text-sm">{r.duration}</td>
+                                <td className="px-4 py-3">
+                                  {r.rpe == null ? (
+                                    <span className={isHighContrast ? "text-white/60" : "text-zinc-400"}>—</span>
+                                  ) : (
+                                    <span
+                                      className={`inline-flex min-w-[2rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${rpeBadgeClass(
+                                        r.rpe
+                                      )}`}
+                                    >
+                                      {r.rpe}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm tabular-nums">{r.load ?? "—"}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {recentSessionsLast12.length > 5 && !recentScrollAtEnd && (
+                      <div
+                        className="pointer-events-none absolute bottom-0 left-0 right-0 h-12"
+                        style={{
+                          background: "linear-gradient(to top, var(--card-bg) 0%, var(--card-bg) 35%, transparent 100%)",
+                        }}
+                        aria-hidden
+                      />
+                    )}
+                  </>
                 )}
               </div>
             </section>

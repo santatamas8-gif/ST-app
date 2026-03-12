@@ -199,52 +199,70 @@ export function MobileWellnessList({
               Daily check-ins by date
             </span>
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-            <span className={`text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Date</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
-                isHighContrast
-                  ? "border-white/30 bg-white/10 text-white focus:border-white/60 focus:ring-white/40"
-                  : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-emerald-500"
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => setSelectedDate(todayISO())}
-              className={`min-h-[36px] shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium ${
-                isHighContrast
-                  ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20"
-                  : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700/80"
-              }`}
+          <div className="mt-2 flex justify-center w-full">
+            <div
+              className="inline-flex w-full max-w-md items-center gap-2 rounded-[14px] border p-2"
+              style={{
+                backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                borderColor: isHighContrast ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+              }}
             >
-              Today
-            </button>
+              <span className={`shrink-0 text-sm font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>Date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className={`min-h-[36px] flex-1 min-w-0 rounded-lg border px-2 py-1.5 text-sm focus:outline-none focus:ring-1 ${
+                  isHighContrast
+                    ? "border-white/20 bg-white/5 text-white focus:border-white/40 focus:ring-white/20"
+                    : "border-white/10 bg-white/5 text-white focus:border-white/20 focus:ring-white/10"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setSelectedDate(todayISO())}
+                className={`min-h-[36px] shrink-0 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                  isHighContrast
+                    ? "border-white/20 bg-white/5 text-white/90 hover:bg-white/15"
+                    : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+                }`}
+              >
+                Today
+              </button>
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap justify-center gap-2">
-            {(["all", "missing", "watch", "critical"] as const).map((key) => {
-              const activeStyles: Record<string, string> = {
-                all: "bg-emerald-600 text-white",
-                watch: "bg-amber-500 text-white",
-                critical: "bg-red-600 text-white",
-                missing: "bg-slate-500 text-white",
-              };
-              const activeStyle = filter === key ? activeStyles[key] : null;
-              const inactiveStyle = isHighContrast ? "bg-white/10 text-white/80 hover:bg-white/20" : "bg-zinc-700/80 text-zinc-400 hover:bg-zinc-600";
-              const btnClass = activeStyle ?? inactiveStyle;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setFilter(key)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${btnClass}`}
-                >
-                  {key}
-                </button>
-              );
-            })}
+          <div className="mt-2 flex justify-center w-full">
+            <div
+              className="inline-flex w-full max-w-md rounded-[14px] border p-0.5 h-10"
+              style={{
+                backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+              }}
+            >
+              {(["all", "missing", "watch", "critical"] as const).map((key) => {
+                const isActive = filter === key;
+                const activeBg =
+                  key === "all"
+                    ? "bg-emerald-600/90"
+                    : key === "missing"
+                      ? "bg-zinc-500/70"
+                      : key === "watch"
+                        ? "bg-yellow-500/90"
+                        : "bg-red-600/90";
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key)}
+                    className={`min-w-0 flex-1 rounded-[10px] text-xs font-medium capitalize transition-all duration-200 ${
+                      isActive ? `${activeBg} text-white` : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
+                    }`}
+                  >
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -284,16 +302,6 @@ export function MobileWellnessList({
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isHighContrast ? "bg-white/15 text-white/70" : "bg-zinc-600/60 text-zinc-400"}`}>
                         Missing
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyReminder(displayName);
-                        }}
-                        className="shrink-0 rounded-lg bg-emerald-600/80 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
-                      >
-                        Remind
-                      </button>
                     </div>
                   </li>
                 );

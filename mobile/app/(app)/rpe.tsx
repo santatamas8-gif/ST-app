@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import {
   getMySessions,
@@ -32,10 +34,17 @@ export default function RpeScreen() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [emailByUserId, setEmailByUserId] = useState<Record<string, string>>({});
+  const [recentScrollAtEnd, setRecentScrollAtEnd] = useState(true);
+
+  const recentSessionsLast12 = useMemo(() => sessions.slice(0, 12), [sessions]);
+
+  useEffect(() => {
+    setRecentScrollAtEnd(recentSessionsLast12.length <= 5);
+  }, [recentSessionsLast12.length]);
 
   useEffect(() => {
     if (isPlayer) {
-      getMySessions(14).then(({ data, error: err }) => {
+      getMySessions(50).then(({ data, error: err }) => {
         setSessionsLoading(false);
         if (err) setError(err);
         else if (data) setSessions(data);
@@ -69,7 +78,7 @@ export default function RpeScreen() {
       setError(result.error);
       return;
     }
-    const { data } = await getMySessions(14);
+    const { data } = await getMySessions(50);
     if (data) setSessions(data);
     setDuration("");
     setRpe("");
@@ -163,21 +172,38 @@ export default function RpeScreen() {
       </TouchableOpacity>
 
       <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Recent sessions</Text>
+      <Text style={styles.recentSubtitle}>Last 12 sessions · scroll for more</Text>
       {sessionsLoading ? (
         <ActivityIndicator style={{ marginVertical: 16 }} />
       ) : (
-        <View style={styles.list}>
-          {sessions.length === 0 ? (
-            <Text style={styles.empty}>No entries yet.</Text>
-          ) : (
-            sessions.map((s) => (
-              <View key={s.id} style={styles.row}>
-                <Text style={styles.date}>{s.date}</Text>
-                <Text style={styles.values}>
-                  {s.duration} perc · RPE {s.rpe ?? "—"} · Load {s.load ?? "—"}
-                </Text>
-              </View>
-            ))
+        <View style={styles.recentListWrap}>
+          <ScrollView
+            style={styles.recentScroll}
+            contentContainerStyle={styles.recentScrollContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled
+            onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+              const atEnd = contentOffset.y + layoutMeasurement.height >= contentSize.height - 8;
+              setRecentScrollAtEnd(atEnd);
+            }}
+            scrollEventThrottle={80}
+          >
+            {recentSessionsLast12.length === 0 ? (
+              <Text style={styles.empty}>No entries yet.</Text>
+            ) : (
+              recentSessionsLast12.map((s) => (
+                <View key={s.id} style={styles.row}>
+                  <Text style={styles.date}>{s.date}</Text>
+                  <Text style={styles.values}>
+                    {s.duration} perc · RPE {s.rpe ?? "—"} · Load {s.load ?? "—"}
+                  </Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+          {recentSessionsLast12.length > 5 && !recentScrollAtEnd && (
+            <View style={styles.recentFade} pointerEvents="none" />
           )}
         </View>
       )}
@@ -212,6 +238,18 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   list: { marginTop: 8 },
+  recentSubtitle: { fontSize: 13, color: "#666", marginBottom: 8 },
+  recentListWrap: { position: "relative", maxHeight: 280, marginTop: 8 },
+  recentScroll: { flex: 1, maxHeight: 280 },
+  recentScrollContent: { paddingBottom: 8 },
+  recentFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 32,
+    backgroundColor: "rgba(0,0,0,0.12)",
+  },
   row: {
     backgroundColor: "#fff",
     padding: 12,
@@ -220,7 +258,7 @@ const styles = StyleSheet.create({
   },
   date: { fontWeight: "600", marginBottom: 4 },
   values: { fontSize: 14, color: "#666" },
-  empty: { color: "#666", fontStyle: "italic" },
+  empty: { color: "#666", fontStyle: "italic", paddingVertical: 12 },
   table: { marginTop: 8 },
   tableRowHeader: {
     flexDirection: "row",

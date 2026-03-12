@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "@/components/ThemeProvider";
+import { TrendingUp } from "lucide-react";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import { DailyWellnessForm } from "@/components/DailyWellnessForm";
 import { PlayerWellnessTrend } from "../../players/[userId]/PlayerWellnessTrend";
@@ -64,7 +65,10 @@ export function WellnessPlayerContent({
 
       {/* Averages section: full width like staff view so chart cards are not narrow */}
       <div className="mx-auto w-full space-y-6 pt-2">
-        <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>Your 7-day & 28-day averages</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+          <TrendingUp className="h-5 w-5 shrink-0 text-white" aria-hidden />
+          Your trends & averages
+        </h2>
         {list.length === 0 ? (
           <p
             className={`mx-auto max-w-2xl rounded-xl border p-6 ${themeId === "neon" ? "neon-card-text border-white/20 text-white/90" : themeId === "matt" ? "matt-card-text border-white/20 text-white/90" : "border-zinc-700 bg-zinc-900/50 text-zinc-400"}`}

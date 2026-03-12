@@ -300,6 +300,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                       currentRole={u.role as UserRole}
                       onSave={(newRole) => handleRoleChange(u.id, newRole)}
                       onCancel={() => setEditingId(null)}
+                      lockToAdmin={currentUserId === u.id && u.role === "admin"}
                     />
                   ) : !(u.isPrimaryAdmin && u.role === "admin") ? (
                     <button
@@ -432,6 +433,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                               currentRole={u.role as UserRole}
                               onSave={(newRole) => handleRoleChange(u.id, newRole)}
                               onCancel={() => setEditingId(null)}
+                              lockToAdmin={currentUserId === u.id && u.role === "admin"}
                             />
                           ) : u.isPrimaryAdmin && u.role === "admin" ? (
                             <span className="text-xs text-zinc-500" title="Primary admin cannot be demoted">—</span>
@@ -494,10 +496,12 @@ function RoleEditRow({
   currentRole,
   onSave,
   onCancel,
+  lockToAdmin = false,
 }: {
   currentRole: UserRole;
   onSave: (role: UserRole) => Promise<{ error?: string }>;
   onCancel: () => void;
+  lockToAdmin?: boolean;
 }) {
   const [role, setRole] = useState<UserRole>(currentRole);
   const [loading, setLoading] = useState(false);
@@ -520,12 +524,21 @@ function RoleEditRow({
       <select
         value={role}
         onChange={(e) => setRole(e.target.value as UserRole)}
-        className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-white text-sm"
+        disabled={lockToAdmin}
+        className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-white text-sm disabled:cursor-not-allowed disabled:opacity-70"
+        title={lockToAdmin ? "You cannot demote yourself" : undefined}
       >
         <option value="admin">Admin</option>
-        <option value="staff">Staff</option>
-        <option value="player">Player</option>
+        {!lockToAdmin && (
+          <>
+            <option value="staff">Staff</option>
+            <option value="player">Player</option>
+          </>
+        )}
       </select>
+      {lockToAdmin && (
+        <span className="text-xs text-zinc-500">You cannot demote yourself</span>
+      )}
       <button
         type="button"
         onClick={handleSave}

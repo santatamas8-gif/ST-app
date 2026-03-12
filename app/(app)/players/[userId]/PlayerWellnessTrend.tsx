@@ -198,8 +198,8 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         </div>
       </div>
 
-      {/* Per-metric: 7/28 avg + bar chart; mobile: 1 col, sm+: 2 cols */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
+      {/* Per-metric: 7/28 avg + bar chart; 1 col by default, 2 cols only on large screens for more width */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
       {METRICS.map(({ key, label, max = 10, Icon }) => {
         const values7 = last7Dates.map((d) =>
           getMetricValue(wellnessByDate.get(d), key, loadByDate, d)
@@ -218,19 +218,20 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         const hasAny = chartDataByPeriod.some((r) => r[dataKey] != null);
         const is7Day = selectedPeriod === "7";
         const is14Day = selectedPeriod === "14";
-        const barSize = is7Day ? 48 : is14Day ? 32 : 24;
+        const barSize = is7Day ? 60 : is14Day ? 48 : 40;
         const tickFontSize = is7Day ? 15 : is14Day ? 13 : 12;
-        const yAxisWidth = is7Day ? 40 : is14Day ? 36 : 32;
+        const yAxisWidth = is7Day ? 34 : is14Day ? 30 : 28;
+        const chartRightMargin = is7Day ? 56 : is14Day ? 64 : 68;
         const tickStyle = { fontSize: tickFontSize, fontWeight: 600, fill: tickFill };
 
         return (
           <div
             key={key}
-            className={`min-w-0 rounded-xl border p-3 md:p-4 ${cardBorderClass} ${cardTextClass}`}
+            className={`min-w-0 overflow-visible rounded-xl border p-3 md:p-4 ${cardBorderClass} ${cardTextClass}`}
             style={cardStyle}
           >
-            <div className="mb-2">
-              <h4 className="flex items-center gap-2.5 font-medium" style={{ color: "var(--foreground)" }}>
+            <div className="mb-2 min-w-0">
+              <h4 className="flex items-center gap-2.5 font-medium overflow-visible" style={{ color: "var(--foreground)" }}>
                 <span
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1 ring-black/10"
                   style={{ backgroundColor: "var(--card-border)", color: "var(--foreground)" }}
@@ -238,15 +239,15 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                 >
                   <Icon className="h-6 w-6" strokeWidth={2} />
                 </span>
-                {label}
+                <span className="min-w-0 break-words">{label}</span>
               </h4>
             </div>
-            <div className={`w-full min-w-0 ${is7Day ? "h-40" : is14Day ? "h-36" : "h-32"}`}>
+            <div className={`w-full min-w-0 ${is7Day ? "h-44" : is14Day ? "h-40" : "h-36"}`}>
               {hasAny ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartDataByPeriod}
-                    margin={{ top: 2, right: 88, left: is7Day ? -4 : is14Day ? -6 : -8, bottom: 8 }}
+                    margin={{ top: 2, right: chartRightMargin, left: 0, bottom: 8 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis
@@ -287,11 +288,11 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                         strokeDasharray="4 4"
                         strokeOpacity={0.7}
                         label={{
-                          value: `${selectedPeriod === "7" ? "7d" : selectedPeriod === "14" ? "14d" : "28d"} avg ${key === "sleep_duration" ? `${formatSleepDuration(periodAvg)}h` : periodAvg.toFixed(1)}`,
+                          value: `avg ${key === "sleep_duration" ? `${formatSleepDuration(periodAvg)}h` : periodAvg.toFixed(1)}`,
                           position: "right",
                           fill: "var(--foreground)",
-                          fontSize: 13,
-                          fontWeight: 700,
+                          fontSize: 11,
+                          fontWeight: 600,
                         }}
                       />
                     )}

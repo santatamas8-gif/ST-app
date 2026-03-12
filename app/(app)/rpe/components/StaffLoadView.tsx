@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
@@ -155,6 +155,8 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
   const [showAllPlayersSheet, setShowAllPlayersSheet] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const sessionsTableScrollRef = useRef<HTMLDivElement>(null);
+  const [sessionsTableShowFade, setSessionsTableShowFade] = useState(false);
   useSearchShortcut(searchInputRef);
 
   useEffect(() => {
@@ -349,6 +351,17 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
     );
   }, [tableRows, dailyChartSortOrder]);
 
+  const updateSessionsTableFade = useCallback(() => {
+    const el = sessionsTableScrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 2;
+    setSessionsTableShowFade(!atBottom);
+  }, []);
+
+  useEffect(() => {
+    updateSessionsTableFade();
+  }, [sortedTableRows, updateSessionsTableFade]);
+
   const modalUser = modalUserId
     ? displayNameByUserId[modalUserId] ?? emailByUserId[modalUserId] ?? modalUserId
     : null;
@@ -398,32 +411,89 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
               Today
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <input
-                ref={searchInputRef}
-                type="search"
-                placeholder="Search players"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-h-[40px] w-36 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-16 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-44"
-                aria-label="Search players"
-              />
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
-                / or Ctrl+K
-              </span>
+          {!isMobile && (
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  placeholder="Search players"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="min-h-[40px] w-36 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-16 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-44"
+                  aria-label="Search players"
+                />
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+                  / or Ctrl+K
+                </span>
+              </div>
+              <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                <input
+                  type="checkbox"
+                  checked={onlyAtRisk}
+                  onChange={(e) => setOnlyAtRisk(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500"
+                />
+                Only at-risk
+              </label>
             </div>
-            <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-              <input
-                type="checkbox"
-                checked={onlyAtRisk}
-                onChange={(e) => setOnlyAtRisk(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500"
-              />
-              Only at-risk
-            </label>
-          </div>
+          )}
         </div>
+
+        {/* Charts – Today's load by player only */}
+        <section className="space-y-3">
+          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
+            Charts
+          </h2>
+          <div
+            className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
+          >
+            <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div />
+              <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Today&apos;s load (by player)</span>
+              <div className="flex justify-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDailyChartSortOrder("asc")}
+                  className={`rounded px-2 py-1 text-xs font-medium transition ${
+                    dailyChartSortOrder === "asc"
+                      ? "bg-emerald-600/30 text-emerald-400"
+                      : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
+                  }`}
+                  title="Ascending (low to high)"
+                >
+                  ↑ Asc
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDailyChartSortOrder("desc")}
+                  className={`rounded px-2 py-1 text-xs font-medium transition ${
+                    dailyChartSortOrder === "desc"
+                      ? "bg-emerald-600/30 text-emerald-400"
+                      : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
+                  }`}
+                  title="Descending (high to low)"
+                >
+                  ↓ Desc
+                </button>
+              </div>
+            </div>
+            <PlayerLoadBarChart data={isMobile ? sortedPlayerChartData.slice(0, 10) : sortedPlayerChartData} />
+            {isMobile && sortedPlayerChartData.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllPlayersSheet(true)}
+                className="mt-3 w-full rounded-lg border border-zinc-600 bg-zinc-800/80 py-2.5 text-sm font-medium text-emerald-400 hover:bg-zinc-700/80"
+              >
+                {sortedPlayerChartData.length > 10
+                  ? `View all (${sortedPlayerChartData.length}) players`
+                  : "View list"}
+              </button>
+            )}
+          </div>
+        </section>
 
         {/* Overview – KPI */}
         <section className="space-y-3">
@@ -498,92 +568,41 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           )}
         </section>
 
-        {/* Charts – daily first, then weekly */}
-        <section className="space-y-3">
-          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
-            Charts
-          </h2>
-          <div className="flex flex-col gap-4">
+        {/* Team load */}
+        <section className="space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+            <h2 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+              <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
+              Team load
+            </h2>
             <div
-              className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-              style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-            >
-              <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <div />
-                <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Today&apos;s load (by player)</span>
-                <div className="flex justify-end gap-1">
+              className="inline-flex rounded-[14px] border p-0.5 h-10"
+                style={{
+                  backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                  borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                }}
+              >
+                {([7, 14, 28] as const).map((n) => (
                   <button
+                    key={n}
                     type="button"
-                    onClick={() => setDailyChartSortOrder("asc")}
-                    className={`rounded px-2 py-1 text-xs font-medium transition ${
-                      dailyChartSortOrder === "asc"
-                        ? "bg-emerald-600/30 text-emerald-400"
-                        : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
+                    onClick={() => setPeriodDays(n)}
+                    className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
+                      periodDays === n
+                        ? "bg-emerald-700/90 text-white"
+                        : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
                     }`}
-                    title="Ascending (low to high)"
                   >
-                    ↑ Asc
+                    {n} days
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setDailyChartSortOrder("desc")}
-                    className={`rounded px-2 py-1 text-xs font-medium transition ${
-                      dailyChartSortOrder === "desc"
-                        ? "bg-emerald-600/30 text-emerald-400"
-                        : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
-                    }`}
-                    title="Descending (high to low)"
-                  >
-                    ↓ Desc
-                  </button>
-                </div>
+                ))}
               </div>
-              <PlayerLoadBarChart data={isMobile ? sortedPlayerChartData.slice(0, 10) : sortedPlayerChartData} />
-              {isMobile && sortedPlayerChartData.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllPlayersSheet(true)}
-                  className="mt-3 w-full rounded-lg border border-zinc-600 bg-zinc-800/80 py-2.5 text-sm font-medium text-emerald-400 hover:bg-zinc-700/80"
-                >
-                  {sortedPlayerChartData.length > 10
-                    ? `View all (${sortedPlayerChartData.length}) players`
-                    : "View list"}
-                </button>
-              )}
-            </div>
-            <div
-              className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-              style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-            >
-              <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <div />
-                <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Team load (7 / 14 / 28 days)</span>
-                <div
-                  className="inline-flex rounded-[14px] border p-0.5 h-10"
-                  style={{
-                    backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
-                    borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {([7, 14, 28] as const).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setPeriodDays(n)}
-                      className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
-                        periodDays === n
-                          ? "bg-emerald-700/90 text-white"
-                          : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
-                      }`}
-                    >
-                      {n} days
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <TeamLoadBarChart data={teamChartData} trend={teamTrend} periodDays={periodDays} />
-            </div>
+          </div>
+          <div
+            className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
+          >
+            <TeamLoadBarChart data={teamChartData} trend={teamTrend} periodDays={periodDays} />
           </div>
         </section>
 
@@ -593,31 +612,33 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
         >
           <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Compare two weeks</h2>
-          <div className="flex flex-wrap items-center gap-3 gap-y-2">
-            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="w-16 shrink-0">Week 1</span>
-              <input
-                type="date"
-                value={week1Start}
-                onChange={(e) => setWeek1Start(e.target.value)}
-                className="h-9 w-36 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
-            </label>
-            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="w-16 shrink-0">Week 2</span>
-              <input
-                type="date"
-                value={week2Start}
-                onChange={(e) => setWeek2Start(e.target.value)}
-                className="h-9 w-36 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
-            </label>
-            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="shrink-0">Player</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3 gap-y-2">
+              <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+                <span className="w-16 shrink-0">Week 1</span>
+                <input
+                  type="date"
+                  value={week1Start}
+                  onChange={(e) => setWeek1Start(e.target.value)}
+                  className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </label>
+              <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+                <span className="w-16 shrink-0">Week 2</span>
+                <input
+                  type="date"
+                  value={week2Start}
+                  onChange={(e) => setWeek2Start(e.target.value)}
+                  className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </label>
+            </div>
+            <label className={`flex items-center gap-1.5 text-xs ml-0 sm:ml-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+              <span className="w-16 shrink-0">Player</span>
               <select
                 value={comparePlayerId ?? ""}
                 onChange={(e) => setComparePlayerId(e.target.value || null)}
-                className="h-9 min-w-[140px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">Team only</option>
                 {allPlayerIds.map((uid) => (
@@ -670,9 +691,15 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
               <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Try another date.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
+            <div className="relative" style={{ maxHeight: "400px" }}>
+              <div
+                ref={sessionsTableScrollRef}
+                onScroll={updateSessionsTableFade}
+                className="overflow-y-auto overflow-x-auto"
+                style={{ maxHeight: "400px" }}
+              >
+                <table className="w-full text-left text-xs">
+                  <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
                   <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-600 text-zinc-400"}`}>
                     <th className="px-2.5 py-2 font-medium">Player</th>
                     <th className="px-2.5 py-2 font-medium">
@@ -736,6 +763,15 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                   })}
                 </tbody>
               </table>
+              </div>
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 transition-opacity duration-200"
+                style={{
+                  background: "linear-gradient(to top, rgba(13,17,23,0.95), transparent)",
+                  opacity: sessionsTableShowFade ? 1 : 0,
+                }}
+                aria-hidden
+              />
             </div>
           )}
           </div>

@@ -64,7 +64,21 @@ export function ScaleInput({
     <div className="min-w-0 overflow-visible">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={name} className="block min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-zinc-200">{label}</span>
+          <span className="block text-sm font-semibold text-zinc-200">
+            {label.includes(" (") ? (() => {
+              const parenStart = label.indexOf(" (");
+              const parenContent = label.slice(parenStart + 2).replace(/\)\s*$/, "");
+              if (parenContent === "fatigue" || parenContent === "soreness") return label;
+              return (
+                <>
+                  {label.slice(0, parenStart)}
+                  <span className="text-xs font-normal opacity-90">{label.slice(parenStart)}</span>
+                </>
+              );
+            })() : (
+              label
+            )}
+          </span>
           {labelHint != null && !showEndLabels && (
             <span className="mt-0.5 block text-xs text-zinc-500" aria-hidden>
               {labelHint}
