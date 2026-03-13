@@ -119,7 +119,6 @@ export default function DashboardPage() {
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
   const scheduleScrollAnimFrameRef = useRef<number | null>(null);
   const scheduleScrollActiveRef = useRef(false);
-  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const todayScheduleItemsForEffect = data?.todayScheduleItems ?? [];
@@ -141,10 +140,10 @@ export default function DashboardPage() {
       if (container && firstPart) {
         const threshold = firstPart.offsetWidth;
         if (threshold > 0) {
-          scheduleScrollOffsetRef.current += step;
-          const max = threshold;
-          const offset = scheduleScrollOffsetRef.current % max;
-          container.scrollLeft = offset;
+          container.scrollLeft += step;
+          if (container.scrollLeft >= threshold) {
+            container.scrollLeft -= threshold;
+          }
         }
       }
       scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
@@ -394,6 +393,7 @@ export default function DashboardPage() {
                   className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}
                 >
                   <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
+                    <div className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
@@ -515,7 +515,7 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
-                  </div>
+                    </div>
                   <div className="flex shrink-0 w-36 items-center justify-center gap-2 py-2" aria-hidden>
                     <span
                       className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50"
@@ -532,6 +532,7 @@ export default function DashboardPage() {
                     >
                       <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
                     </div>
+                  </div>
                   </div>
                   <div className="flex shrink-0 gap-3">
                   {todayScheduleItems.map((item, idx) => {

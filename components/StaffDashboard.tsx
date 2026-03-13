@@ -155,7 +155,6 @@ export function StaffDashboard({
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
   const scheduleScrollAnimFrameRef = useRef<number | null>(null);
   const scheduleScrollActiveRef = useRef(false);
-  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
   const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
@@ -283,10 +282,10 @@ export function StaffDashboard({
       if (container && firstPart) {
         const threshold = firstPart.offsetWidth;
         if (threshold > 0) {
-          scheduleScrollOffsetRef.current += step;
-          const max = threshold;
-          const offset = scheduleScrollOffsetRef.current % max;
-          container.scrollLeft = offset;
+          container.scrollLeft += step;
+          if (container.scrollLeft >= threshold) {
+            container.scrollLeft -= threshold;
+          }
         }
       }
       scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
