@@ -2,11 +2,14 @@
 
 import type { ScheduleActivityType } from "@/lib/types";
 
-const SIZE = 20;
+const SIZE = 24;
+const SIZE_MEDIA = 30;
 const CLASS = "shrink-0 text-zinc-400";
 
 /** Meals (breakfast, lunch, dinner) share one icon; every other type has its own. */
-export function ScheduleIcon({ type, className = "" }: { type: ScheduleActivityType | string; className?: string }) {
+export function ScheduleIcon({ type, className = "", size: sizeProp }: { type: ScheduleActivityType | string; className?: string; size?: number }) {
+  const s = sizeProp ?? SIZE;
+  const sMedia = sizeProp != null ? Math.round((SIZE_MEDIA / SIZE) * sizeProp) : SIZE_MEDIA;
   const c = `${CLASS} ${className}`.trim();
 
   const mealTypes = ["breakfast", "lunch", "dinner"];
@@ -14,149 +17,81 @@ export function ScheduleIcon({ type, className = "" }: { type: ScheduleActivityT
 
   if (isMeal) {
     return (
-      <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-        <circle cx="12" cy="13" r="5" />
-        <circle cx="12" cy="13" r="3.5" strokeOpacity={0.5} />
-        <path d="M9 7.5q3-2.5 6 0M10 6.5q2-1.5 4 0M14 6.5q2-1.5 4 0" strokeOpacity={0.8} />
-      </svg>
+      <img src="/icons/meals-plate.svg" width={s} height={s} alt="" className={c} aria-hidden />
     );
   }
 
   switch (type) {
     case "arrival":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 6v6l4 2" />
-        </svg>
+        <img
+          src="/icons/clock-arrival.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+        />
       );
     case "training":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <rect x="2" y="4" width="20" height="16" rx="1.5" />
-          <path d="M12 4v16" />
-          <circle cx="12" cy="12" r="2.5" />
-          <path d="M4 8h2M4 16h2M18 8h2M18 16h2" strokeWidth="1.5" strokeOpacity={0.6} />
-        </svg>
+        <img src="/icons/training-soccer.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "gym":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <circle cx="7" cy="12" r="3" />
-          <circle cx="7" cy="12" r="1.5" strokeOpacity={0.5} />
-          <path d="M10 12h4" />
-          <circle cx="17" cy="12" r="3" />
-          <circle cx="17" cy="12" r="1.5" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/gym-dumbbell.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "recovery":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <rect x="2" y="6" width="20" height="12" rx="1.5" />
-          <path d="M2 10h20" />
-          <path d="M6 10v4M10 10v4M14 10v4M18 10v4" />
-          <path d="M2 14h20" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/recovery-swim.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "pre_activation":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <circle cx="12" cy="5.5" r="2.5" />
-          <path d="M12 8v7" />
-          <path d="M12 8 6 2M12 8l6-6" />
-          <path d="M12 15l-2.5 4M12 15l2.5 4" />
-        </svg>
+        <img src="/icons/pre-activation-yoga.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "video_analysis":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="m22 8-6 4 6 4V8Z" />
-          <rect width="14" height="11" x="2" y="6.5" rx="1.5" />
-          <path d="M5 9.5h4M5 12h6M5 14.5h4" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/video-analysis-cinema.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "meeting":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="3.5" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          <path d="M4 14h16" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/meeting-interview.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "traveling":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <rect x="2" y="6" width="20" height="10" rx="1.5" />
-          <path d="M6 6V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-          <path d="M8 9.5v3M12 9.5v3M16 9.5v3" strokeOpacity={0.5} />
-          <path d="M6 16h12" />
-          <circle cx="7" cy="17" r="1.5" />
-          <circle cx="17" cy="17" r="1.5" />
-        </svg>
-      );
-    case "physio":
-      return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-          <path d="M12 8v4M10 10h4" />
-          <path d="M12 11l-1 1.5 1 1.5 1-1.5z" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/traveling-bus.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "medical":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${c} text-red-400`} aria-hidden>
-          <path d="M12 4v16M4 12h16" />
-          <rect x="10" y="10" width="4" height="4" rx="0.5" strokeOpacity={0.4} />
-        </svg>
+        <img src="/icons/medical-doctor.svg" width={s} height={s} alt="" className={c} aria-hidden />
+      );
+    case "physio":
+      return (
+        <img src="/icons/physio-doctor.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "media":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-          <circle cx="12" cy="12.5" r="2.5" />
-          <circle cx="12" cy="12.5" r="1" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/camera-media.svg" width={sMedia} height={sMedia} alt="" className={c} aria-hidden />
       );
     case "rest_off":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-          <path d="M8 5l1 1M16 5l-1 1M12 2v2" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/rest-off-sleep.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "match":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 4 A8 8 0 0 1 12 20 M12 4 A8 8 0 0 0 12 20" />
-          <path d="M4 12 A8 8 0 0 1 20 12 M4 12 A8 8 0 0 0 20 12" />
-          <path d="M7 7 A8 8 0 0 1 17 17 M17 7 A8 8 0 0 1 7 17" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/match-stadium.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "team_building":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="3.5" />
-          <path d="M22 21v-2a4 4 0 0 0-4-4h-1.5" />
-          <path d="M16 3.13a4 4 0 0 1 2.16 5.3" />
-          <path d="M12 11v6M9 14h6" />
-          <path d="M9 11v1M15 11v1" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/team-building-group.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     case "individual":
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="3.5" />
-          <path d="M10 12h4M11 15h2" strokeOpacity={0.5} />
-        </svg>
+        <img src="/icons/individual-player.svg" width={s} height={s} alt="" className={c} aria-hidden />
       );
     default:
       return (
-        <svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={c} aria-hidden>
           <rect width="18" height="18" x="3" y="4" rx="1.5" />
           <path d="M16 2v4M8 2v4" />
           <path d="M3 10h18" />

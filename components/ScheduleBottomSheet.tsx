@@ -85,34 +85,33 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
 
   return (
     <>
-      {/* Backdrop – only visible on mobile; no scroll/touch through */}
+      {/* Backdrop – fully opaque, covers entire viewport so content underneath is not visible */}
       <div
-        className="fixed inset-0 z-40 overflow-hidden md:hidden"
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.98) 50%, black 100%)", touchAction: "none" }}
+        className="fixed inset-0 z-[200] min-h-screen min-h-dvh bg-black overflow-hidden"
+        style={{ touchAction: "none" }}
         aria-hidden
         onTouchMove={(e) => e.preventDefault()}
         onClick={onClose}
       />
-      {/* Sheet panel – fixed height from bottom so nothing shows under the list */}
+      {/* Sheet panel – white border frame; clearly lighter than backdrop */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-t border-zinc-700/80 shadow-2xl md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[201] flex min-h-[85vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-2 border-white/30 shadow-2xl sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:min-h-0 sm:max-h-[min(560px,88vh)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
         style={{
-          height: "calc(85vh + env(safe-area-inset-bottom, 0px))",
-          minHeight: "85vh",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px -12px rgba(0,0,0,0.5)",
           ...(themeId === "neon"
-            ? { background: "linear-gradient(135deg, #041311, #020617)", borderColor: "rgba(255,255,255,0.08)" }
+            ? { background: "linear-gradient(135deg, #0c1f1d 0%, #07201a 50%, #041311 100%)" }
             : themeId === "matt"
-              ? { ...MATT_CARD_STYLE, borderColor: "rgba(255,255,255,0.2)" }
-              : { backgroundColor: "var(--card-bg)" }),
+              ? MATT_CARD_STYLE
+              : { backgroundColor: "#18181b" }),
         }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="schedule-sheet-title"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b-2 border-white/30 bg-white/[0.06] px-4 py-3">
           <h2 id="schedule-sheet-title" className="flex items-center gap-2 text-lg font-semibold text-white">
-            <Calendar className="h-5 w-5 shrink-0 text-white/90" aria-hidden />
+            <Calendar className="h-6 w-6 shrink-0 text-white/90 sm:h-7 sm:w-7" aria-hidden />
             Today&apos;s Schedule
           </h2>
           <button
@@ -121,19 +120,20 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6 sm:h-7 sm:w-7" />
           </button>
         </div>
         <div
-          className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8"
+          className="flex-1 overflow-y-auto overscroll-contain border-t border-white/25 p-4 pb-8 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400"
           style={{
             paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
             minHeight: 0,
+            scrollbarColor: "#71717a transparent",
             ...(themeId === "neon"
-              ? { background: "linear-gradient(135deg, #041311, #020617)" }
+              ? { background: "linear-gradient(135deg, #0c1f1d 0%, #07201a 50%, #041311 100%)" }
               : themeId === "matt"
                 ? MATT_CARD_STYLE
-                : { backgroundColor: "var(--card-bg)" }),
+                : { backgroundColor: "#18181b" }),
           }}
         >
           {items.length === 0 ? (
@@ -151,7 +151,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                 const timeStr =
                   item.start_time != null
                     ? item.end_time != null
-                      ? `${item.start_time}–${item.end_time}`
+                      ? `${item.start_time} – ${item.end_time}`
                       : item.start_time
                     : "—";
                 const notes = item.notes?.trim();
@@ -167,21 +167,23 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                             ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
                             : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
                           boxShadow: isMatch
-                            ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
-                            : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+                            ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08), 0 4px 12px rgba(0,0,0,0.25)"
+                            : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
                         }}
                       >
                         <div className="schedule-card-text space-y-1 px-4 py-3">
-                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>
-                            {timeStr}
+                          <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>
+                            {item.start_time}
+                            {item.end_time != null ? <span className="inline-block px-1.5">–</span> : null}
+                            {item.end_time != null ? item.end_time : null}
                           </p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">
-                            {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                            {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" />}
                             <span>{label}</span>
                           </p>
                           {notes ? (
-                            <p className="flex items-center gap-1.5 text-xs text-white/90">
-                              <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                            <p className="flex items-center gap-2 text-[11px] text-white/60">
+                              <LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
                               {notes}
                             </p>
                           ) : null}
@@ -201,10 +203,10 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                                 backgroundImage:
                                   "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)",
                                 boxShadow:
-                                  "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+                                  "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
                                 borderRadius: 12,
                               }
-                            : { ...MATT_CARD_STYLE, borderRadius: 12 }
+                            : { ...MATT_CARD_STYLE, borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.25)" }
                         }
                       >
                         <div className="matt-card-text space-y-1 px-4 py-3">
@@ -212,12 +214,12 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                             {timeStr}
                           </p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">
-                            {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                            {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" />}
                             <span>{label}</span>
                           </p>
                           {notes ? (
-                            <p className="flex items-center gap-1.5 text-xs text-white/90">
-                              <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />
+                            <p className="flex items-center gap-2 text-[11px] text-white/60">
+                              <LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
                               {notes}
                             </p>
                           ) : null}
@@ -229,7 +231,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                 return (
                   <li key={`${item.id}-${idx}`}>
                     <div
-                      className={`w-full rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${
+                      className={`w-full rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] shadow-lg shadow-black/20 ${
                         isMatch
                           ? "border-l-[6px] border-l-amber-500/70 bg-amber-500/10"
                           : "border-l-4 border-l-emerald-500/60 bg-zinc-800/80"
@@ -246,12 +248,12 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                             isMatch ? "text-sm" : "text-xs"
                           }`}
                         >
-                          {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}
+                          {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0" />}
                           <span>{label}</span>
                         </p>
                         {notes ? (
-                          <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
-                            <LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                          <p className="mt-1 flex items-center gap-2 text-[11px] text-zinc-600">
+                            <LocationPinIcon className="h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
                             {notes}
                           </p>
                         ) : null}

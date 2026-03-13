@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- From camera-svgrepo-com.svg; camera icon for media -->
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img">
+  <rect x="128" y="320" width="640" height="416" rx="64" fill="#111827" />
+  <path
+    d="M512.16 629.3h-62.7c-42.36 0-81.36-31.88-81.36-74.23v-62.7c0-15.33-7.8-30.99-23.13-30.99H177.78c-15.33 0-31.86 15.66-31.86 30.99V715.3c0 15.33 16.54 24.59 31.86 24.59h334.38c15.33 0 25.9-9.26 25.9-24.59v-55.73c0-15.32-10.57-30.26-25.9-30.26Z"
+    fill="#374151"
+  />
+  <rect x="616" y="368" width="96" height="80" rx="16" fill="#4b5563" />
+  <circle cx="470.36" cy="534.17" r="112" fill="#111827" />
+  <circle cx="470.36" cy="534.17" r="72" fill="#e5e7eb" />
+  <circle cx="470.36" cy="534.17" r="28" fill="#111827" />
+  <rect x="208" y="272" width="176" height="80" rx="16" fill="#111827" />
+  <rect x="752" y="384" width="160" height="256" rx="24" fill="#111827" />
+</svg>
+

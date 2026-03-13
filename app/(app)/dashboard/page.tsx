@@ -117,24 +117,46 @@ export default function DashboardPage() {
   const scheduleScrollRef = useRef<HTMLDivElement>(null);
   const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
+  const scheduleScrollAnimFrameRef = useRef<number | null>(null);
+  const scheduleScrollActiveRef = useRef(false);
+  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const todayScheduleItemsForEffect = data?.todayScheduleItems ?? [];
+  const scheduleEffectDeps = [scheduleAutoPaused] as const;
   useEffect(() => {
-    if (todayScheduleItemsForEffect.length === 0 || scheduleAutoPaused) return;
-    const el = scheduleScrollRef.current;
-    if (!el) return;
-    const step = 1;
-    const interval = setInterval(() => {
-      if (!scheduleScrollRef.current || !scheduleFirstPartRef.current) return;
-      const el_ = scheduleScrollRef.current;
-      const threshold = scheduleFirstPartRef.current.offsetWidth;
-      if (threshold <= 0) return;
-      el_.scrollLeft += step;
-      if (el_.scrollLeft >= threshold) el_.scrollLeft -= threshold;
-    }, 50);
-    return () => clearInterval(interval);
-  }, [todayScheduleItemsForEffect.length, scheduleAutoPaused]);
+    scheduleScrollActiveRef.current = !scheduleAutoPaused;
+    if (scheduleAutoPaused) {
+      if (scheduleScrollAnimFrameRef.current != null) {
+        cancelAnimationFrame(scheduleScrollAnimFrameRef.current);
+        scheduleScrollAnimFrameRef.current = null;
+      }
+      return;
+    }
+    const step = 0.5;
+    const tick = () => {
+      if (!scheduleScrollActiveRef.current) return;
+      const container = scheduleScrollRef.current;
+      const firstPart = scheduleFirstPartRef.current;
+      if (container && firstPart) {
+        const threshold = firstPart.offsetWidth;
+        if (threshold > 0) {
+          scheduleScrollOffsetRef.current += step;
+          const max = threshold;
+          const offset = scheduleScrollOffsetRef.current % max;
+          container.scrollLeft = offset;
+        }
+      }
+      scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
+    };
+    scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (scheduleScrollAnimFrameRef.current != null) {
+        cancelAnimationFrame(scheduleScrollAnimFrameRef.current);
+        scheduleScrollAnimFrameRef.current = null;
+      }
+    };
+  }, scheduleEffectDeps);
 
   if (loading) {
     return (
@@ -362,7 +384,7 @@ export default function DashboardPage() {
             ) : (
               <div
                 ref={scheduleScrollRef}
-                className="schedule-strip-scroll cursor-pointer p-4 overflow-x-auto md:cursor-default"
+                className="schedule-strip-scroll cursor-pointer px-6 py-4 overflow-x-auto md:cursor-default sm:px-8"
                 role={isMobile ? "button" : undefined}
                 tabIndex={isMobile ? 0 : undefined}
                 onClick={() => isMobile && setScheduleSheetOpen(true)}
@@ -382,7 +404,7 @@ export default function DashboardPage() {
                     const timeStr =
                       item.start_time != null
                         ? item.end_time != null
-                          ? `${item.start_time}–${item.end_time}`
+                          ? `${item.start_time} – ${item.end_time}`
                           : item.start_time
                       : "—";
                     const notes = item.notes?.trim();
@@ -403,9 +425,11 @@ export default function DashboardPage() {
                         >
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
-                              className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
+                              className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}
                             >
-                              {timeStr}
+                              {item.start_time}
+                              {item.end_time != null ? <span className="inline-block px-1">–</span> : null}
+                              {item.end_time != null ? item.end_time : null}
                             </p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">
                               {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
@@ -492,8 +516,22 @@ export default function DashboardPage() {
                     );
                   })}
                   </div>
-                  <div className="flex shrink-0 w-36 items-center justify-center" aria-hidden>
-                    <div className="h-14 w-px bg-white/25" />
+                  <div className="flex shrink-0 w-36 items-center justify-center gap-2 py-2" aria-hidden>
+                    <span
+                      className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50"
+                      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}
+                    >
+                      TODAY
+                    </span>
+                    <div
+                      className="relative h-20 w-px shrink-0"
+                      style={{
+                        background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)",
+                        boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)",
+                      }}
+                    >
+                      <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-3">
                   {todayScheduleItems.map((item, idx) => {

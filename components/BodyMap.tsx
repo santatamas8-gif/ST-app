@@ -364,6 +364,11 @@ export function BodyMap({ value, onChange, singleView = false, touchFriendly = f
   const [zoom, setZoom] = useState(defaultZoom);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  useEffect(() => {
+    setZoom(defaultZoom);
+    setPan({ x: 0, y: 0 });
+  }, [defaultZoom]);
+
   const handleZoomPanChange = useCallback((newZoom: number, newPan: { x: number; y: number }) => {
     setZoom(newZoom);
     setPan(newPan);

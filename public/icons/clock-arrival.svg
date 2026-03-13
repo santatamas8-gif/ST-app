@@ -1,0 +1,16 @@
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 21.714C17.365 21.714 21.714 17.365 21.714 12C21.714 6.635 17.365 2.286 12 2.286C6.635 2.286 2.286 6.635 2.286 12C2.286 17.365 6.635 21.714 12 21.714Z" fill="url(#clock_arrival_paint0_linear)"/>
+<path d="M12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20Z" fill="url(#clock_arrival_paint3_linear)"/>
+<path d="M12 19.7314C16.2699 19.7314 19.7314 16.2699 19.7314 12C19.7314 7.73003 16.2699 4.26855 12 4.26855C7.73003 4.26855 4.26855 7.73003 4.26855 12C4.26855 16.2699 7.73003 19.7314 12 19.7314Z" fill="url(#clock_arrival_paint4_linear)"/>
+<circle cx="12" cy="12" r="9" stroke="#0f172a" stroke-width="1"/>
+<path d="M12 7v5l3.5 2" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+<circle cx="12" cy="12" r="1.2" fill="#0f172a"/>
+<defs>
+<linearGradient id="clock_arrival_paint0_linear" x1="14.2358" y1="17.472" x2="7.72154" y2="1.52911" gradientUnits="userSpaceOnUse"><stop stop-color="#8EA5A8"/><stop offset="1" stop-color="#CFDCDE"/></linearGradient>
+<linearGradient id="clock_arrival_paint3_linear" x1="18.2788" y1="41.7497" x2="11.0781" y2="7.632" gradientUnits="userSpaceOnUse"><stop stop-color="white"/><stop offset="1" stop-color="#A9BCBE"/></linearGradient>
+<linearGradient id="clock_arrival_paint4_linear" x1="11.1178" y1="10.4067" x2="18.7749" y2="24.2353" gradientUnits="userSpaceOnUse"><stop stop-color="white"/><stop offset="1" stop-color="#CFDCDE"/></linearGradient>
+<linearGradient id="clock_arrival_paint8_linear" x1="13.5305" y1="17.6598" x2="10.4694" y2="12.8359" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9214"/><stop offset="1" stop-color="#FF9D00"/></linearGradient>
+<linearGradient id="clock_arrival_paint9_linear" x1="12" y1="10.5143" x2="12" y2="12.3933" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9D00"/><stop offset="1" stop-color="#A3541E"/></linearGradient>
+<linearGradient id="clock_arrival_paint10_linear" x1="12.8367" y1="13.3186" x2="11.4163" y2="11.0801" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9214"/><stop offset="1" stop-color="#FF9D00"/></linearGradient>
+</defs>
+</svg>

@@ -14,7 +14,7 @@ import {
 import type { ScheduleActivityType } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
-import { Trash2 } from "lucide-react";
+import { Trash2, X, Clock, MapPin, CalendarDays, Plus } from "lucide-react";
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return (
@@ -94,6 +94,12 @@ const ADD_ROW_2: ScheduleActivityType[] = [
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function formatSheetDate(dateISO: string, todayISO: string): string {
+  if (dateISO === todayISO) return "Today";
+  const d = new Date(dateISO + "T12:00:00");
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
 /** Left border: only match is highlighted (amber), rest neutral. */
 function scheduleRowLeftBorder(activityType: string): string {
   if (activityType === "match") return "border-l-4 border-l-amber-500/80";
@@ -168,6 +174,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
   const [loadError, setLoadError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addingType, setAddingType] = useState<ScheduleActivityType | null>(null);
+  const [sheetSelectedTypes, setSheetSelectedTypes] = useState<ScheduleActivityType[]>([]);
   const [addStart, setAddStart] = useState("");
   const [addEnd, setAddEnd] = useState("");
   const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
@@ -190,6 +197,32 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
   useEffect(() => {
     setCopyError(null);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (addingType == null) return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAddingType(null);
+        setSheetSelectedTypes([]);
+        setAddStart("");
+        setAddEnd("");
+        setAddNotes("");
+        setAddTeamA("");
+        setAddTeamB("");
+        setTimeSaveError(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [addingType]);
 
   useEffect(() => {
     setLoading(true);
@@ -274,6 +307,61 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
     setAddNotes("");
     setAddTeamA("");
     setAddTeamB("");
+    setAddingType(null);
+    setSheetSelectedTypes([]);
+  }
+
+  async function handleAddMultiple(
+    types: ScheduleActivityType[],
+    startTime: string | null,
+    endTime: string | null,
+    notes: string | null,
+    team_a?: string | null,
+    team_b?: string | null
+  ) {
+    if (!selectedDate || !canEdit || types.length === 0) return;
+    setTimeSaveError(null);
+    if (startTime != null || endTime != null) {
+      const errMsg = validateTimeRange(startTime ?? "", endTime ?? "");
+      if (errMsg) {
+        setTimeSaveError(errMsg);
+        return;
+      }
+    }
+    setAddLoading(true);
+    for (const activity_type of types) {
+      const err = await addScheduleItem(
+        selectedDate,
+        activity_type,
+        startTime ?? null,
+        endTime ?? null,
+        notes ?? null,
+        undefined,
+        activity_type === "match" ? team_a ?? null : undefined,
+        activity_type === "match" ? team_b ?? null : undefined
+      );
+      if (err?.error) {
+        setTimeSaveError(err.error);
+        setAddLoading(false);
+        return;
+      }
+    }
+    const { data } = await getScheduleForMonth(from, to);
+    setScheduleItems(data ?? []);
+    setAddLoading(false);
+    setAddStart("");
+    setAddEnd("");
+    setAddNotes("");
+    setAddTeamA("");
+    setAddTeamB("");
+    setSheetSelectedTypes([]);
+    // Sheet stays open so user can add next activity(ies) without reopening
+  }
+
+  function selectSingleSheetType(type: ScheduleActivityType) {
+    setSheetSelectedTypes((prev) =>
+      prev.length === 1 && prev[0] === type ? [] : [type]
+    );
   }
 
   async function handleSaveNotes(id: string, notes: string) {
@@ -535,7 +623,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
               const timeStr =
                 start != null
                   ? end != null
-                    ? `${start}–${end}`
+                    ? `${start} – ${end}`
                     : start
                   : null;
               const isEditing = editingTimeId === item.id;
@@ -595,8 +683,14 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         {item.notes.trim()}
                       </p>
                     ) : null}
-                    <p className={`text-[10px] sm:text-xs tabular-nums ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
-                      {timeStr != null ? timeStr : isAdmin && !isEditing ? (
+                    <p className={`text-[10px] sm:text-xs tabular-nums tracking-[0.03em] ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                      {timeStr != null ? (
+                        <>
+                          {start}
+                          {end != null ? <span className="inline-block px-1.5">–</span> : null}
+                          {end != null ? end : null}
+                        </>
+                      ) : isAdmin && !isEditing ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -707,130 +801,233 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
           </ul>
           {canEdit && (
             <div className="mt-4 rounded-lg border border-zinc-700/80 bg-zinc-800/60 px-4 py-3">
-              {addingType == null ? (
-                <div className="flex flex-col gap-3">
-                  <span className="text-sm font-medium text-zinc-300">Add:</span>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meals & training</span>
-                    <div className="flex flex-wrap gap-2">
-                      {ADD_ROW_1.map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
-                          disabled={addLoading}
-                          className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
-                        >
-                          {ACTIVITY_LABELS[type]}
-                          <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1.5 border-t border-zinc-700/80 pt-3">
-                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Other</span>
-                    <div className="flex flex-wrap gap-2">
-                      {ADD_ROW_2.map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => (isAdmin ? setAddingType(type) : handleAdd(type))}
-                          disabled={addLoading}
-                          className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
-                        >
-                          {ACTIVITY_LABELS[type]}
-                          <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
-                        </button>
-                      ))}
-                    </div>
+              <div className="flex flex-col gap-3">
+                <span className="text-sm font-medium text-zinc-300">Add:</span>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meals & training</span>
+                  <div className="flex flex-wrap gap-2">
+                    {ADD_ROW_1.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => (isAdmin ? (setAddingType(type), setSheetSelectedTypes([type])) : handleAdd(type))}
+                        disabled={addLoading}
+                        className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
+                      >
+                        {ACTIVITY_LABELS[type]}
+                        <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                      </button>
+                    ))}
                   </div>
                 </div>
-              ) : isAdmin && addingType != null ? (
-                <div className="flex flex-col gap-3 rounded-lg bg-zinc-800/80 px-3 py-3 min-w-0" lang="en-GB">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-zinc-300 truncate">{ACTIVITY_LABELS[addingType]}</span>
-                    <button
-                      type="button"
-                      onClick={() => { setAddingType(null); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); }}
-                      className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200"
-                    >
-                      Cancel
-                    </button>
+                <div className="flex flex-col gap-1.5 border-t border-zinc-700/80 pt-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Other</span>
+                  <div className="flex flex-wrap gap-2">
+                    {ADD_ROW_2.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => (isAdmin ? (setAddingType(type), setSheetSelectedTypes([type])) : handleAdd(type))}
+                        disabled={addLoading}
+                        className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
+                      >
+                        {ACTIVITY_LABELS[type]}
+                        <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-900/80 px-2 py-1.5">
-                    <label className="flex flex-col gap-0.5">
-                      <span className="text-xs text-zinc-500">Start</span>
-                      <input
-                        type="time"
-                        step="60"
-                        value={addStart}
-                        onChange={(e) => setAddStart(e.target.value)}
-                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none min-w-0"
-                        aria-label="Start time (24h)"
-                        title="24h, e.g. 09:00"
-                      />
-                    </label>
-                    <span className="text-zinc-600">–</span>
-                    <label className="flex flex-col gap-0.5">
-                      <span className="text-xs text-zinc-500">End</span>
-                      <input
-                        type="time"
-                        step="60"
-                        value={addEnd}
-                        onChange={(e) => setAddEnd(e.target.value)}
-                        className="rounded border-0 bg-transparent px-1 py-0.5 text-sm text-white focus:outline-none min-w-0"
-                        aria-label="End time (24h)"
-                        title="24h, e.g. 14:30"
-                      />
-                    </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add program sheet – opens when admin selects an activity type */}
+          {addingType != null && isAdmin && selectedDate && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black touch-none overflow-hidden"
+                aria-hidden
+                onClick={() => { setAddingType(null); setSheetSelectedTypes([]); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); setTimeSaveError(null); }}
+              />
+              <div
+                className={`fixed left-0 right-0 z-50 flex flex-col overflow-hidden rounded-t-2xl border-2 shadow-2xl top-4 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:right-auto sm:max-h-[min(900px,94vh)] sm:w-full sm:max-w-7xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl ${themeId === "neon" ? "border-emerald-500/40 neon-card-text" : themeId === "matt" ? "border-white/25 matt-card-text" : "border-white/30"}`}
+                style={{
+                  paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                  borderRadius: 12,
+                  ...(themeId === "neon"
+                    ? NEON_CARD_STYLE
+                    : themeId === "matt"
+                      ? MATT_CARD_STYLE
+                      : { backgroundColor: "var(--card-bg)" }),
+                }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="add-program-sheet-title"
+              >
+                <div className={`flex items-center justify-between border-b px-4 py-2.5 shrink-0 ${themeId === "neon" ? "border-emerald-500/30 bg-white/[0.04]" : themeId === "matt" ? "border-white/20 bg-white/[0.06]" : "border-white/10 bg-zinc-900/40"}`}>
+                  <h2 id="add-program-sheet-title" className="text-xl font-semibold text-white">
+                    Program · {formatSheetDate(selectedDate, todayISO)}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingType(null); setSheetSelectedTypes([]); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); setTimeSaveError(null); }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                    aria-label="Close"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div
+                  className="flex-1 overflow-y-auto pt-2.5 px-4 space-y-4 min-h-0"
+                  style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))" }}
+                  lang="en-GB"
+                >
+                  {timeSaveError && <p className="text-sm text-red-400">{timeSaveError}</p>}
+
+                  <div>
+                    <p className="mb-2 flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-white">
+                      <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                      Activities
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">Meals & training</span>
+                        <div className="flex flex-wrap gap-2">
+                          {ADD_ROW_1.map((type) => {
+                            const selected = sheetSelectedTypes.includes(type);
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => selectSingleSheetType(type)}
+                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-base transition ${
+                                  selected
+                                    ? "border-emerald-500/70 bg-emerald-500/25 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                                    : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
+                                }`}
+                              >
+                                <ScheduleIcon type={type} className="h-5 w-5 shrink-0" />
+                                {ACTIVITY_LABELS[type]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">Other</span>
+                        <div className="flex flex-wrap gap-2">
+                          {ADD_ROW_2.map((type) => {
+                            const selected = sheetSelectedTypes.includes(type);
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => selectSingleSheetType(type)}
+                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-base transition ${
+                                  selected
+                                    ? "border-emerald-500/70 bg-emerald-500/25 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                                    : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
+                                }`}
+                              >
+                                <ScheduleIcon type={type} className="h-5 w-5 shrink-0" />
+                                {ACTIVITY_LABELS[type]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  {addingType === "match" && (
+
+                  <div className="flex flex-col gap-1.5">
+                    <p className="flex items-center gap-2 text-sm font-medium text-white">
+                      <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                      Time
+                    </p>
+                    <div className="flex flex-wrap items-end gap-3 rounded-xl border-2 border-white/25 bg-zinc-900/60 px-4 py-3.5 shadow-inner">
+                      <label className="flex flex-col gap-1.5">
+                        <span className="text-sm text-zinc-500">Start</span>
+                        <input
+                          type="time"
+                          step="60"
+                          value={addStart}
+                          onChange={(e) => setAddStart(e.target.value)}
+                          className="min-w-[9rem] rounded-lg border border-white/20 bg-zinc-900 px-3.5 py-3 text-base text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          aria-label="Start time (24h)"
+                          title="24h, e.g. 09:00"
+                        />
+                      </label>
+                      <span className="text-zinc-500 pb-3">–</span>
+                      <label className="flex flex-col gap-1.5">
+                        <span className="text-sm text-zinc-500">End</span>
+                        <input
+                          type="time"
+                          step="60"
+                          value={addEnd}
+                          onChange={(e) => setAddEnd(e.target.value)}
+                          className="min-w-[9rem] rounded-lg border border-white/20 bg-zinc-900 px-3.5 py-3 text-base text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          aria-label="End time (24h)"
+                          title="24h, e.g. 14:30"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {sheetSelectedTypes.includes("match") && (
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-xs text-zinc-500">Teams</span>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="text-sm text-zinc-500">Teams (for Match)</span>
+                      <div className="flex flex-wrap items-center gap-2.5 min-w-0">
                         <input
                           type="text"
                           value={addTeamA}
                           onChange={(e) => setAddTeamA(e.target.value)}
                           placeholder="Team A"
                           maxLength={100}
-                          className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500 sm:max-w-[10rem]"
+                          className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-base text-white placeholder-zinc-500 sm:max-w-[12rem]"
                         />
-                        <span className="text-zinc-500 text-sm shrink-0">vs.</span>
+                        <span className="text-zinc-500 text-base shrink-0">vs.</span>
                         <input
                           type="text"
                           value={addTeamB}
                           onChange={(e) => setAddTeamB(e.target.value)}
                           placeholder="Team B"
                           maxLength={100}
-                          className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500 sm:max-w-[10rem]"
+                          className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-900 px-3 py-2 text-base text-white placeholder-zinc-500 sm:max-w-[12rem]"
                         />
                       </div>
                     </div>
                   )}
+
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs text-zinc-500">Notes (optional)</span>
-                    <input
-                      type="text"
-                      value={addNotes}
-                      onChange={(e) => setAddNotes(e.target.value)}
-                      placeholder="e.g. location"
-                      maxLength={100}
-                      className="w-full min-w-0 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-white placeholder-zinc-500"
-                      aria-label="Notes (max 100)"
-                    />
+                    <p className="flex items-center gap-2 text-sm font-medium text-white">
+                      <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+                      Notes (optional)
+                    </p>
+                    <div className="rounded-xl border-2 border-white/25 bg-zinc-900/60 px-3.5 py-2.5 shadow-inner">
+                      <input
+                        type="text"
+                        value={addNotes}
+                        onChange={(e) => setAddNotes(e.target.value)}
+                        placeholder="e.g. location"
+                        maxLength={100}
+                        className="w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-1 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-0"
+                        aria-label="Notes (max 100)"
+                      />
+                    </div>
                   </div>
+
                   <button
                     type="button"
-                    onClick={() => handleAdd(addingType, addStart || null, addEnd || null, addNotes.trim() || null, addingType === "match" ? addTeamA.trim() || null : undefined, addingType === "match" ? addTeamB.trim() || null : undefined)}
-                    disabled={addLoading}
-                    className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                    onClick={() => handleAddMultiple(sheetSelectedTypes, addStart || null, addEnd || null, addNotes.trim() || null, sheetSelectedTypes.includes("match") ? addTeamA.trim() || null : undefined, sheetSelectedTypes.includes("match") ? addTeamB.trim() || null : undefined)}
+                    disabled={addLoading || sheetSelectedTypes.length === 0}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3.5 text-base font-medium text-white shadow-md hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Add
+                    <Plus className="h-5 w-5 shrink-0" aria-hidden />
+                    {addLoading ? "Adding…" : "Add"}
                   </button>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            </>
           )}
         </div>
       )}

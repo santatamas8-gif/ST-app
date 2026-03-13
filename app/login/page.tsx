@@ -63,13 +63,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page-bg relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-10 min-[480px]:py-14">
-      {/* Header */}
-      <header className="relative z-10 mb-10 text-center">
+    <div className="login-page-bg relative flex min-h-screen flex-col items-center justify-start overflow-hidden px-4 pt-6 pb-10 min-[480px]:pt-8 min-[480px]:pb-14">
+      {/* Header – closer lines, block moved higher */}
+      <header className="relative z-10 mb-8 mt-0 text-center">
         <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           ST<span className="mx-1 inline-block h-1 w-3 align-middle bg-zinc-600/60" aria-hidden /><span className="text-[#1eb871]">AMS</span>
         </h1>
-        <p className="mt-3 text-lg font-normal text-zinc-400">
+        <p className="mt-1 text-lg font-normal text-zinc-400">
           Athlete Monitoring System
         </p>
       </header>

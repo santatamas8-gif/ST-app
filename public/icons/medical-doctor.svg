@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified from medical-history-doctor-svgrepo-com.svg (SVG Repo, CC0) -->
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img">
+  <circle cx="256" cy="256" r="248" fill="#0f7986" />
+  <rect x="168" y="144" width="176" height="224" rx="24" fill="#ffffff" />
+  <rect x="192" y="176" width="64" height="48" rx="8" fill="#e5e7eb" />
+  <rect x="256" y="176" width="64" height="48" rx="8" fill="#e5e7eb" />
+  <path
+    d="M256 272a56 56 0 1 0-56-56a56 56 0 0 0 56 56z"
+    fill="#ff5b62"
+  />
+  <path
+    d="M248 208h16v24h24v16h-24v24h-16v-24h-24v-16h24z"
+    fill="#ffffff"
+  />
+  <rect x="184" y="304" width="144" height="24" rx="8" fill="#15bdb2" />
+  <rect x="184" y="344" width="64" height="24" rx="8" fill="#d9dada" />
+  <rect x="264" y="344" width="64" height="24" rx="8" fill="#d9dada" />
+</svg>
+
