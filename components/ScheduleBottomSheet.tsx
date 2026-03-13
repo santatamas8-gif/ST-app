@@ -98,7 +98,6 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
         className="fixed bottom-0 left-0 right-0 z-[201] flex min-h-[85vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-2 border-white/30 shadow-2xl sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:min-h-0 sm:max-h-[min(560px,88vh)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px -12px rgba(0,0,0,0.5)",
           ...(themeId === "neon"
             ? { background: "linear-gradient(135deg, #0c1f1d 0%, #07201a 50%, #041311 100%)" }
             : themeId === "matt"
