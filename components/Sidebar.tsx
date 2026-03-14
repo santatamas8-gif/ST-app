@@ -15,10 +15,8 @@ const HEADER_ONLY_HREFS = ["/chat", "/schedule"];
 
 const THEME_SWATCH: Record<ThemeId, string> = {
   dark: "#0f1216",
-  light: "#f4f4f5",
   red: "#1f1315",
   blue: "#0f172a",
-  green: "#0f2621",
   neon: "#022c22",
   matt: "#0a0a0c",
 };
@@ -79,7 +77,6 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
     return () => document.removeEventListener("click", close);
   }, [themePopoverOpen]);
 
-  const isLight = themeId === "light";
   const isNeon = themeId === "neon";
   const isMatt = themeId === "matt";
   const activeNavClass =
@@ -87,19 +84,15 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
       ? "bg-emerald-500/15 text-emerald-400 border-l-2 border-emerald-400 pl-2.5 shadow-[0_0_8px_rgba(0,0,0,0.2),0_0_3px_rgba(16,185,129,0.015)]"
       : isMatt
         ? "bg-white/15 text-white border-l-2 border-white/70 pl-2.5 shadow-[0_0_20px_rgba(0,0,0,0.4)]"
-        : isLight
-          ? "bg-emerald-600/25 text-emerald-700"
-          : "bg-emerald-600/20 text-emerald-400";
+        : "bg-emerald-600/20 text-emerald-400";
   const inactiveNavClass =
     isNeon
       ? "text-white/80 hover:bg-emerald-500/10 hover:text-emerald-200"
       : isMatt
         ? "text-white/85 hover:bg-white/8 hover:text-white"
-        : isLight
-          ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
-          : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
-  const sidebarMutedClass = isNeon || isMatt ? "text-white/60" : isLight ? "text-zinc-500" : "text-zinc-500";
-  const sidebarLabelClass = isNeon || isMatt ? "text-white/80" : isLight ? "text-zinc-600" : "text-zinc-400";
+        : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+  const sidebarMutedClass = isNeon || isMatt ? "text-white/60" : "text-zinc-500";
+  const sidebarLabelClass = isNeon || isMatt ? "text-white/80" : "text-zinc-400";
   const sidebarBorderClass = isNeon ? "border-emerald-500/10" : isMatt ? "border-white/28" : "border-zinc-800";
   const sidebarBgStyle =
     isNeon
@@ -125,8 +118,8 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           ? "bg-white/20 text-white shadow-[0_0_12px_rgba(0,0,0,0.3)]"
           : "text-white/85 hover:bg-white/8 hover:text-white"
         : active
-          ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
-          : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+          ? "bg-emerald-600/25 text-emerald-400"
+          : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
   const signOutHoverClass =
     isNeon ? "hover:bg-emerald-500/10 hover:text-white" : isMatt ? "hover:bg-white/8 hover:text-white" : "hover:bg-zinc-800 hover:text-white";
 
@@ -203,7 +196,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
         aria-label="Navigation menu"
       >
         <div className={`flex h-14 items-center justify-between border-b px-4 ${sidebarBorderClass}`}>
-          <span className={`text-lg font-bold tracking-tight ${isNeon ? "text-emerald-400/90" : isLight ? "text-zinc-900" : "text-white"}`}>Menu</span>
+          <span className={`text-lg font-bold tracking-tight ${isNeon ? "text-emerald-400/90" : "text-white"}`}>Menu</span>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(false)}
@@ -287,7 +280,7 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
                 onClick={() => setThemeId(t.id)}
                 title={t.name}
                 className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                  themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"
+                  themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : "border-zinc-600 hover:border-zinc-500"
                 }`}
                 style={{ backgroundColor: THEME_SWATCH[t.id] }}
                 aria-label={t.name}
@@ -363,9 +356,9 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
               <Palette className="h-5 w-5" />
             </button>
             {themePopoverOpen && (
-              <div className={`absolute right-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl ${isLight ? "border-zinc-300 bg-white" : "border-zinc-700 bg-zinc-900"}`} style={{ borderRadius: "10px" }}>
+              <div className={`absolute right-0 top-full z-50 mt-1 flex flex-wrap gap-2 rounded-lg border p-2 shadow-xl border-zinc-700 bg-zinc-900`} style={{ borderRadius: "10px" }}>
                 {THEMES.map((t) => (
-                  <button key={t.id} type="button" onClick={() => { setThemeId(t.id); setThemePopoverOpen(false); }} title={t.name} className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : isLight ? "border-zinc-300 hover:border-zinc-400" : "border-zinc-600 hover:border-zinc-500"}`} style={{ backgroundColor: THEME_SWATCH[t.id] }} aria-label={t.name} />
+                  <button key={t.id} type="button" onClick={() => { setThemeId(t.id); setThemePopoverOpen(false); }} title={t.name} className={`h-8 w-8 rounded-lg border-2 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 ${themeId === t.id ? "border-emerald-500 ring-2 ring-emerald-500/30" : "border-zinc-600 hover:border-zinc-500"}`} style={{ backgroundColor: THEME_SWATCH[t.id] }} aria-label={t.name} />
                 ))}
               </div>
             )}

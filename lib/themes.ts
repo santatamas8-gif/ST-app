@@ -1,4 +1,4 @@
-export type ThemeId = "dark" | "light" | "red" | "blue" | "green" | "neon" | "matt";
+export type ThemeId = "dark" | "red" | "blue" | "neon" | "matt";
 
 export const THEMES: {
   id: ThemeId;
@@ -6,7 +6,7 @@ export const THEMES: {
   pageBg: string;
   cardBg: string;
   cardBorder: string;
-  /** Text color – light on dark themes, dark on light theme */
+  /** Text color – light on dark themes */
   foreground: string;
 }[] = [
   /* Default theme for all roles (player, admin, staff) on desktop and mobile. Users can change via Theme in sidebar. */
@@ -17,14 +17,6 @@ export const THEMES: {
     cardBg: "#181d24",
     cardBorder: "#2d3239",
     foreground: "#fafafa",
-  },
-  {
-    id: "light",
-    name: "Light",
-    pageBg: "#f4f4f5",
-    cardBg: "#ffffff",
-    cardBorder: "#e4e4e7",
-    foreground: "#18181b",
   },
   {
     id: "red",
@@ -41,14 +33,6 @@ export const THEMES: {
     cardBg: "#1e293b",
     cardBorder: "#334155",
     foreground: "#f8fafc",
-  },
-  {
-    id: "green",
-    name: "Green",
-    pageBg: "#0f2621",
-    cardBg: "#174236",
-    cardBorder: "#1e4d42",
-    foreground: "#f0fdf4",
   },
   {
     id: "neon",

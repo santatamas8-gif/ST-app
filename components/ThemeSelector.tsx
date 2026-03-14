@@ -6,10 +6,8 @@ import { THEMES, type ThemeId } from "@/lib/themes";
 
 const SWATCH: Record<ThemeId, string> = {
   dark: "#0f1216",
-  light: "#f4f4f5",
   red: "#1f1315",
   blue: "#0f172a",
-  green: "#0f2621",
   neon: "#022c22",
   matt: "#0a0a0c",
 };
@@ -17,11 +15,7 @@ const SWATCH: Record<ThemeId, string> = {
 export function ThemeSelector() {
   const { themeId, setThemeId } = useTheme();
   const [open, setOpen] = useState(false);
-  const isLight = themeId === "light";
-  const themeLabelClass =
-    isLight
-      ? "text-zinc-600 hover:text-zinc-800"
-      : "text-zinc-500 hover:text-zinc-400";
+  const themeLabelClass = "text-zinc-500 hover:text-zinc-400";
 
   return (
     <div

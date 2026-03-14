@@ -36,6 +36,17 @@
   fill: rgba(255, 255, 255, 0.88) !important;
 }
 
+/* Today's Schedule: CSS-only ticker – pixel-based; translateZ(0) keeps compositor layer across loop */
+@keyframes schedule-ticker-scroll {
+  0% { transform: translateX(0) translateZ(0); }
+  100% { transform: translateX(calc(-1 * var(--ticker-segment-width, 600px))) translateZ(0); }
+}
+/* Reduce jitter at loop reset: own compositor layer, no subpixel jump */
+.schedule-ticker-track {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 /* Today's Schedule strip: hide scrollbar completely (no manual scroll) */
 .schedule-strip-scroll {
   scrollbar-width: none !important;

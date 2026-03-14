@@ -20,7 +20,6 @@ interface AppTopBarProps {
 export function AppTopBar({ unreadChatCount = 0, todoToday }: AppTopBarProps) {
   const pathname = usePathname();
   const { themeId } = useTheme();
-  const isLight = themeId === "light";
   const isNeon = themeId === "neon";
   const isMatt = themeId === "matt";
 
@@ -34,8 +33,8 @@ export function AppTopBar({ unreadChatCount = 0, todoToday }: AppTopBarProps) {
           ? "bg-white/20 text-white shadow-[0_0_12px_rgba(0,0,0,0.3)]"
           : "text-white/85 hover:bg-white/8 hover:text-white"
         : active
-          ? isLight ? "bg-emerald-600/25 text-emerald-600" : "bg-emerald-600/25 text-emerald-400"
-          : isLight ? "text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900" : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
+          ? "bg-emerald-600/25 text-emerald-400"
+          : "text-zinc-400 hover:bg-zinc-800 hover:text-white";
 
   const needsTodo = (href: string) => {
     if (!todoToday) return false;

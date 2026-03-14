@@ -150,12 +150,9 @@ export function StaffDashboard({
   const [teamLogoInput, setTeamLogoInput] = useState("");
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamSaveError, setTeamSaveError] = useState<string | null>(null);
-  const scheduleScrollRef = useRef<HTMLDivElement>(null);
   const scheduleFirstPartRef = useRef<HTMLDivElement>(null);
+  const [scheduleSegmentWidth, setScheduleSegmentWidth] = useState(0);
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
-  const scheduleScrollAnimFrameRef = useRef<number | null>(null);
-  const scheduleScrollActiveRef = useRef(false);
-  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
   const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
@@ -267,42 +264,25 @@ export function StaffDashboard({
   }, [dropdownOpenId]);
 
   useEffect(() => {
-    scheduleScrollActiveRef.current = !scheduleAutoPaused;
-    if (scheduleAutoPaused) {
-      if (scheduleScrollAnimFrameRef.current != null) {
-        cancelAnimationFrame(scheduleScrollAnimFrameRef.current);
-        scheduleScrollAnimFrameRef.current = null;
-      }
-      return;
-    }
-    const speedPxPerSecond = 30;
-    let lastTime: number | null = null;
-    const tick = (now: number) => {
-      if (!scheduleScrollActiveRef.current) return;
-      const container = scheduleScrollRef.current;
-      const firstPart = scheduleFirstPartRef.current;
-      if (container && firstPart) {
-        const threshold = firstPart.offsetWidth;
-        if (threshold > 0) {
-          const prev = lastTime ?? now;
-          lastTime = now;
-          const deltaMs = Math.min(now - prev, 100);
-          scheduleScrollOffsetRef.current += (speedPxPerSecond / 1000) * deltaMs;
-          const max = threshold;
-          const offset = scheduleScrollOffsetRef.current % max;
-          container.scrollLeft = offset;
-        }
-      }
-      scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
+    const el = scheduleFirstPartRef.current;
+    if (!el) return;
+    let ro: ResizeObserver | null = null;
+    const updateWidth = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w <= 0) return;
+      const rounded = Math.round(w);
+      setScheduleSegmentWidth((prev) => (prev !== rounded ? rounded : prev));
     };
-    scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
+    const rafId = requestAnimationFrame(() => {
+      updateWidth();
+      ro = new ResizeObserver(updateWidth);
+      ro.observe(el);
+    });
     return () => {
-      if (scheduleScrollAnimFrameRef.current != null) {
-        cancelAnimationFrame(scheduleScrollAnimFrameRef.current);
-        scheduleScrollAnimFrameRef.current = null;
-      }
+      cancelAnimationFrame(rafId);
+      ro?.disconnect();
     };
-  }, [scheduleAutoPaused]);
+  }, [todayScheduleItems]);
 
   const totalPlayers = metrics.totalPlayers ?? 0;
   const submitted = metrics.todayWellnessCount ?? 0;
@@ -551,7 +531,7 @@ export function StaffDashboard({
           </div>
         </div>
 
-        {/* Today's Schedule – horizontal timeline strip with auto-scroll */}
+        {/* Today's Schedule – horizontal timeline strip */}
         <section>
           <h2 className="mb-4 flex flex-wrap items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             <Calendar className="h-6 w-6 shrink-0 text-zinc-400 sm:h-7 sm:w-7" aria-hidden />
@@ -569,22 +549,45 @@ export function StaffDashboard({
           </h2>
           <div
             className="overflow-hidden rounded-xl border"
-            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, borderColor: "var(--card-border)" }}
+            style={{ backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS, borderColor: "var(--card-border)", contain: "layout paint" }}
           >
             {todayScheduleItems.length === 0 ? (
               <p className="rounded-lg bg-zinc-800/50 px-5 py-6 text-center text-zinc-400">No schedule items today.</p>
             ) : (
               <div
-                ref={scheduleScrollRef}
-                className="schedule-strip-scroll cursor-pointer px-6 py-4 overflow-x-auto sm:px-8"
+                className="schedule-strip-scroll cursor-pointer overflow-hidden px-6 py-4 sm:px-8"
+                style={{ contain: "layout paint" }}
                 role="button"
                 tabIndex={0}
                 onClick={() => setScheduleSheetOpen(true)}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
               >
-                <div className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
+                <div
+                  className="schedule-ticker-track flex min-w-min flex-row"
+                  style={{
+                    ["--ticker-segment-width" as string]: scheduleSegmentWidth > 0 ? `${scheduleSegmentWidth}px` : "600px",
+                    animationName: "schedule-ticker-scroll",
+                    animationDuration: scheduleSegmentWidth > 0 ? `${scheduleSegmentWidth / 21}s` : "5s",
+                    animationTimingFunction: "linear",
+                    animationIterationCount: "infinite",
+                    animationPlayState: scheduleAutoPaused ? "paused" : "running",
+                    willChange: "transform",
+                    backfaceVisibility: "hidden",
+                  }}
+                >
                   <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
-                  {todayScheduleItems.map((item, idx) => {
+                    <div className="flex shrink-0 items-center justify-center px-8 py-2 sm:px-10" aria-hidden>
+                      <div
+                        className="relative h-20 w-px shrink-0"
+                        style={{
+                          background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)",
+                          boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)",
+                        }}
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
+                      </div>
+                    </div>
+                    {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
                       arrival: "Arrival",
                       breakfast: "Breakfast",
@@ -721,25 +724,21 @@ export function StaffDashboard({
                       </div>
                     );
                   })}
-                  <div className="flex shrink-0 w-36 items-center justify-center gap-2 py-2" aria-hidden>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}>TODAY</span>
-                    <div className="relative h-20 w-px shrink-0" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)", boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)" }}>
-                      <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
+                  </div>
+                  <div className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`} aria-hidden>
+                    <div className="flex shrink-0 items-center justify-center px-8 py-2 sm:px-10">
+                      <div className="relative h-20 w-px shrink-0" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)", boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)" }}>
+                        <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
+                      </div>
                     </div>
-                  </div>
-                  </div>
-                  <div className="flex shrink-0 gap-4">
-                  {todayScheduleItems.map((item, idx) => {
-                    const SCHEDULE_LABELS_DUP: Record<string, string> = {
-                      arrival: "Arrival", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
-                    };
-                    const baseLabel = SCHEDULE_LABELS_DUP[item.activity_type] ?? item.activity_type;
-                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;
-                    const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time} – ${item.end_time}` : item.start_time) : "—";
-                    const notes = item.notes?.trim();
-                    const isMatch = item.activity_type === "match";
-                    if (themeId === "neon") {
-                      return (
+                    {todayScheduleItems.map((item, idx) => {
+                      const SCHEDULE_LABELS_DUP: Record<string, string> = { arrival: "Arrival", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual" };
+                      const baseLabel = SCHEDULE_LABELS_DUP[item.activity_type] ?? item.activity_type;
+                      const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;
+                      const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time} – ${item.end_time}` : item.start_time) : "—";
+                      const notes = item.notes?.trim();
+                      const isMatch = item.activity_type === "match";
+                      if (themeId === "neon") return (
                         <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
                             <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{item.start_time}{item.end_time != null ? <span className="inline-block px-1.5">–</span> : null}{item.end_time != null ? item.end_time : null}</p>
@@ -748,9 +747,7 @@ export function StaffDashboard({
                           </div>
                         </div>
                       );
-                    }
-                    if (themeId === "matt") {
-                      return (
+                      if (themeId === "matt") return (
                         <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
                           <div className="matt-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
                             <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
@@ -759,17 +756,16 @@ export function StaffDashboard({
                           </div>
                         </div>
                       );
-                    }
-                    return (
-                      <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 sm:w-40"}`}>
-                        <div className="min-w-0 flex-1 px-3 py-2.5">
-                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
-                          <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}><ScheduleIcon type={item.activity_type} size={28} className="shrink-0" /><span>{label}</span></p>
-                          {notes ? <p className="mt-1 flex items-center gap-2 text-[11px] text-zinc-600"><LocationPinIcon className="h-4 w-4 shrink-0 text-zinc-600" aria-hidden />{notes}</p> : null}
+                      return (
+                        <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 sm:w-40"}`}>
+                          <div className="min-w-0 flex-1 px-3 py-2.5">
+                            <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
+                            <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}><ScheduleIcon type={item.activity_type} size={28} className="shrink-0" /><span>{label}</span></p>
+                            {notes ? <p className="mt-1 flex items-center gap-2 text-[11px] text-zinc-600"><LocationPinIcon className="h-4 w-4 shrink-0 text-zinc-600" aria-hidden />{notes}</p> : null}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -819,15 +815,11 @@ export function StaffDashboard({
                     ? "border border-emerald-500/30 bg-emerald-500/10 text-white hover:bg-emerald-500/15"
                     : themeId === "matt"
                       ? "border border-white/20 bg-white/5 text-white hover:bg-white/10"
-                      : themeId === "green"
-                        ? "border border-emerald-500/40 bg-emerald-500/10 text-white hover:bg-emerald-500/20"
-                        : themeId === "red"
+                      : themeId === "red"
                           ? "border border-red-500/30 bg-red-500/10 text-white hover:bg-red-500/15"
                           : themeId === "blue"
                             ? "border border-blue-500/30 bg-blue-500/10 text-white hover:bg-blue-500/15"
-                            : themeId === "light"
-                              ? "border border-zinc-400 bg-zinc-200/90 text-zinc-900 hover:bg-zinc-300"
-                              : "border border-zinc-600 bg-zinc-800/80 text-white hover:bg-zinc-700"
+                            : "border border-zinc-600 bg-zinc-800/80 text-white hover:bg-zinc-700"
                 }`}
               >
                 All players

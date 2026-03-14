@@ -1,8 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Calendar } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { ScheduleCalendar } from "@/components/ScheduleCalendar";
+
+const ScheduleCalendar = dynamic(
+  () => import("@/components/ScheduleCalendar").then((m) => ({ default: m.ScheduleCalendar })),
+  { ssr: true }
+);
 
 export function SchedulePageContent({
   canEdit,
@@ -26,7 +31,9 @@ export function SchedulePageContent({
         </h1>
         <p className={`mt-0.5 text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>{description}</p>
       </div>
-      <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} isPlayer={isPlayer} />
+      <div style={{ contain: "layout paint" }}>
+        <ScheduleCalendar canEdit={canEdit} isAdmin={isAdmin} isPlayer={isPlayer} />
+      </div>
     </div>
   );
 }
