@@ -155,6 +155,7 @@ export function StaffDashboard({
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
   const scheduleScrollAnimFrameRef = useRef<number | null>(null);
   const scheduleScrollActiveRef = useRef(false);
+  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
   const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
@@ -274,18 +275,22 @@ export function StaffDashboard({
       }
       return;
     }
-    const step = 0.5;
-    const tick = () => {
+    const speedPxPerSecond = 30;
+    let lastTime: number | null = null;
+    const tick = (now: number) => {
       if (!scheduleScrollActiveRef.current) return;
       const container = scheduleScrollRef.current;
       const firstPart = scheduleFirstPartRef.current;
       if (container && firstPart) {
         const threshold = firstPart.offsetWidth;
         if (threshold > 0) {
-          container.scrollLeft += step;
-          if (container.scrollLeft >= threshold) {
-            container.scrollLeft -= threshold;
-          }
+          const prev = lastTime ?? now;
+          lastTime = now;
+          const deltaMs = Math.min(now - prev, 100);
+          scheduleScrollOffsetRef.current += (speedPxPerSecond / 1000) * deltaMs;
+          const max = threshold;
+          const offset = scheduleScrollOffsetRef.current % max;
+          container.scrollLeft = offset;
         }
       }
       scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
@@ -546,7 +551,7 @@ export function StaffDashboard({
           </div>
         </div>
 
-        {/* Today's Schedule – horizontal timeline strip */}
+        {/* Today's Schedule – horizontal timeline strip with auto-scroll */}
         <section>
           <h2 className="mb-4 flex flex-wrap items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white">
             <Calendar className="h-6 w-6 shrink-0 text-zinc-400 sm:h-7 sm:w-7" aria-hidden />
@@ -577,9 +582,7 @@ export function StaffDashboard({
                 onClick={() => setScheduleSheetOpen(true)}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
               >
-                <div
-                  className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}
-                >
+                <div className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
                   <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3 sm:gap-4"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const SCHEDULE_LABELS: Record<string, string> = {
@@ -719,53 +722,46 @@ export function StaffDashboard({
                     );
                   })}
                   <div className="flex shrink-0 w-36 items-center justify-center gap-2 py-2" aria-hidden>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50"
-                      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}
-                    >
-                      TODAY
-                    </span>
-                    <div
-                      className="relative h-20 w-px shrink-0"
-                      style={{
-                        background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)",
-                        boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)",
-                      }}
-                    >
+                    <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}>TODAY</span>
+                    <div className="relative h-20 w-px shrink-0" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)", boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)" }}>
                       <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
                     </div>
                   </div>
                   </div>
                   <div className="flex shrink-0 gap-4">
                   {todayScheduleItems.map((item, idx) => {
-                    const SCHEDULE_LABELS: Record<string, string> = {
+                    const SCHEDULE_LABELS_DUP: Record<string, string> = {
                       arrival: "Arrival", breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", training: "Training", gym: "Gym", recovery: "Recovery", pre_activation: "Pre-activation", video_analysis: "Video analysis", meeting: "Meeting", traveling: "Traveling", physio: "Physio", medical: "Medical", media: "Media", rest_off: "Rest/Off", match: "Match", team_building: "Team building", individual: "Individual",
                     };
-                    const baseLabel = SCHEDULE_LABELS[item.activity_type] ?? item.activity_type;
+                    const baseLabel = SCHEDULE_LABELS_DUP[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;
-                    const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time}–${item.end_time}` : item.start_time) : "—";
+                    const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time} – ${item.end_time}` : item.start_time) : "—";
                     const notes = item.notes?.trim();
                     const isMatch = item.activity_type === "match";
-                    if (themeId === "neon") return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
-                        <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
-                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
-                          <p className="flex items-center gap-2 text-sm font-medium text-white"><ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" /><span>{label}</span></p>
-                          {notes ? <p className="flex items-center gap-2 text-[11px] text-white/60"><LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />{notes}</p> : null}
+                    if (themeId === "neon") {
+                      return (
+                        <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
+                          <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
+                            <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{item.start_time}{item.end_time != null ? <span className="inline-block px-1.5">–</span> : null}{item.end_time != null ? item.end_time : null}</p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white"><ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" /><span>{label}</span></p>
+                            {notes ? <p className="flex items-center gap-2 text-[11px] text-white/60"><LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />{notes}</p> : null}
+                          </div>
                         </div>
-                      </div>
-                    );
-                    if (themeId === "matt") return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
-                        <div className="matt-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
-                          <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
-                          <p className="flex items-center gap-2 text-sm font-medium text-white"><ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" /><span>{label}</span></p>
-                          {notes ? <p className="flex items-center gap-2 text-[11px] text-white/60"><LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />{notes}</p> : null}
+                      );
+                    }
+                    if (themeId === "matt") {
+                      return (
+                        <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1 px-3 py-2.5 sm:space-y-1.5">
+                            <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white"><ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" /><span>{label}</span></p>
+                            {notes ? <p className="flex items-center gap-2 text-[11px] text-white/60"><LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />{notes}</p> : null}
+                          </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    }
                     return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
+                      <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 sm:w-40"}`}>
                         <div className="min-w-0 flex-1 px-3 py-2.5">
                           <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}><ScheduleIcon type={item.activity_type} size={28} className="shrink-0" /><span>{label}</span></p>

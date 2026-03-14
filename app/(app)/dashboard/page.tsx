@@ -119,6 +119,7 @@ export default function DashboardPage() {
   const [scheduleAutoPaused, setScheduleAutoPaused] = useState(false);
   const scheduleScrollAnimFrameRef = useRef<number | null>(null);
   const scheduleScrollActiveRef = useRef(false);
+  const scheduleScrollOffsetRef = useRef(0);
   const [scheduleSheetOpen, setScheduleSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const todayScheduleItemsForEffect = data?.todayScheduleItems ?? [];
@@ -132,18 +133,22 @@ export default function DashboardPage() {
       }
       return;
     }
-    const step = 0.5;
-    const tick = () => {
+    const speedPxPerSecond = 30;
+    let lastTime: number | null = null;
+    const tick = (now: number) => {
       if (!scheduleScrollActiveRef.current) return;
       const container = scheduleScrollRef.current;
       const firstPart = scheduleFirstPartRef.current;
       if (container && firstPart) {
         const threshold = firstPart.offsetWidth;
         if (threshold > 0) {
-          container.scrollLeft += step;
-          if (container.scrollLeft >= threshold) {
-            container.scrollLeft -= threshold;
-          }
+          const prev = lastTime ?? now;
+          lastTime = now;
+          const deltaMs = Math.min(now - prev, 100);
+          scheduleScrollOffsetRef.current += (speedPxPerSecond / 1000) * deltaMs;
+          const max = threshold;
+          const offset = scheduleScrollOffsetRef.current % max;
+          container.scrollLeft = offset;
         }
       }
       scheduleScrollAnimFrameRef.current = requestAnimationFrame(tick);
@@ -352,7 +357,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Today's Schedule – horizontal timeline strip */}
+        {/* Today's Schedule – horizontal timeline strip with auto-scroll */}
         <section>
           <h2 className={`mb-3 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>
             <Calendar className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
@@ -364,7 +369,7 @@ export default function DashboardPage() {
                 className={`ml-auto flex items-center justify-center rounded-lg p-1.5 transition-colors ${isHighContrast ? "text-white/90 hover:bg-white/10" : "text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"}`}
                 aria-label={scheduleAutoPaused ? "Start auto-scroll" : "Stop auto-scroll"}
               >
-                {scheduleAutoPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                {scheduleAutoPaused ? <Play className="h-5 w-5 sm:h-6 sm:w-6" /> : <Pause className="h-5 w-5 sm:h-6 sm:w-6" />}
               </button>
             )}
           </h2>
@@ -389,11 +394,8 @@ export default function DashboardPage() {
                 onClick={() => isMobile && setScheduleSheetOpen(true)}
                 onKeyDown={(e) => isMobile && (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
               >
-                <div
-                  className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}
-                >
+                <div className={`flex min-w-min flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
                   <div ref={scheduleFirstPartRef} className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
-                    <div className={`flex shrink-0 flex-row ${isHighContrast ? "gap-3 sm:gap-5" : "gap-3"}`}>
                   {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
                     const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
@@ -515,21 +517,9 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
-                    </div>
                   <div className="flex shrink-0 w-36 items-center justify-center gap-2 py-2" aria-hidden>
-                    <span
-                      className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50"
-                      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}
-                    >
-                      TODAY
-                    </span>
-                    <div
-                      className="relative h-20 w-px shrink-0"
-                      style={{
-                        background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)",
-                        boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)",
-                      }}
-                    >
+                    <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/50" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}>TODAY</span>
+                    <div className="relative h-20 w-px shrink-0" style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(16,185,129,0.45) 35%, rgba(16,185,129,0.45) 65%, rgba(255,255,255,0.55) 100%)", boxShadow: "0 0 12px rgba(16,185,129,0.4), 0 0 6px rgba(16,185,129,0.3)" }}>
                       <span className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/50" aria-hidden />
                     </div>
                   </div>
@@ -537,35 +527,15 @@ export default function DashboardPage() {
                   <div className="flex shrink-0 gap-3">
                   {todayScheduleItems.map((item, idx) => {
                     const baseLabel = SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type;
-                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim()
-                      ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
-                      : item.activity_type === "match" && item.opponent?.trim()
-                        ? `${SCHEDULE_ACTIVITY_LABELS[item.activity_type] ?? item.activity_type} vs. ${item.opponent.trim()}`
-                        : baseLabel;
-                    const timeStr =
-                      item.start_time != null
-                        ? item.end_time != null
-                          ? `${item.start_time}–${item.end_time}`
-                          : item.start_time
-                        : "—";
+                    const label = item.activity_type === "match" && item.team_a?.trim() && item.team_b?.trim() ? `${item.team_a.trim()} vs. ${item.team_b.trim()}` : item.activity_type === "match" && item.opponent?.trim() ? `${baseLabel} vs. ${item.opponent.trim()}` : baseLabel;
+                    const timeStr = item.start_time != null ? (item.end_time != null ? `${item.start_time} – ${item.end_time}` : item.start_time) : "—";
                     const notes = item.notes?.trim();
                     const isMatch = item.activity_type === "match";
                     if (themeId === "neon") {
                       return (
-                        <div
-                          key={`${item.id}-dup-${idx}`}
-                          className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
-                          style={{
-                            backgroundImage: isMatch
-                              ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
-                              : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
-                            boxShadow: isMatch
-                              ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
-                              : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
-                          }}
-                        >
+                        <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
-                            <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
+                            <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{item.start_time}{item.end_time != null ? <span className="inline-block px-1">–</span> : null}{item.end_time != null ? item.end_time : null}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                           </div>
@@ -574,8 +544,8 @@ export default function DashboardPage() {
                     }
                     if (themeId === "matt") {
                       return (
-                        <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent transition-all duration-200 hover:translate-y-[-1px] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
-                        <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
+                        <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
+                          <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
                             {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
@@ -584,7 +554,7 @@ export default function DashboardPage() {
                       );
                     }
                     return (
-                      <div key={`${item.id}-dup-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 hover:border-l-amber-500/90 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 hover:border-l-emerald-500/90 sm:w-40"}`}>
+                      <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 sm:w-40"}`}>
                         <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                           <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
                           <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
