@@ -9,6 +9,7 @@ import { formatMonthDay } from "@/lib/formatDate";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { TeamLoadBarChart } from "./LoadBarChart";
 import { RpeForm } from "@/components/RpeForm";
+import { useIsMobile } from "@/components/ScheduleBottomSheet";
 
 const CARD_RADIUS = "12px";
 
@@ -53,6 +54,7 @@ export type PlayerPeriodDays = 7 | 14 | 28;
 
 export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps) {
   const { themeId } = useTheme();
+  const isMobile = useIsMobile();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   const [periodDays, setPeriodDays] = useState<PlayerPeriodDays>(7);
   const [recentScrollAtEnd, setRecentScrollAtEnd] = useState(true);
@@ -192,13 +194,12 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                   className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
                   style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
                 >
-                  <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <div />
-                    <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
-                      My load (7 / 14 / 28 days)
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className={`text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+                      My load
                     </span>
                     <div
-                      className="inline-flex rounded-[14px] border p-0.5 h-10"
+                      className={`inline-flex shrink-0 border p-0.5 ${isMobile ? "h-9 rounded-[11px]" : "h-10 rounded-[14px]"}`}
                       style={{
                         backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
                         borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
@@ -209,7 +210,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                           key={n}
                           type="button"
                           onClick={() => setPeriodDays(n)}
-                          className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
+                          className={`flex-1 font-medium transition-all duration-200 ${isMobile ? "min-w-[60px] rounded-[9px] text-xs" : "min-w-[76px] rounded-[10px] text-sm"} ${
                             periodDays === n
                               ? "bg-emerald-700/90 text-white"
                               : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
@@ -224,7 +225,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                     data={myLoadChartData}
                     trend={trend}
                     periodDays={periodDays}
-                    titleOverride={`Last ${periodDays} days – My load`}
+                    titleOverride={isMobile ? `Last ${periodDays} days` : `Last ${periodDays} days – My load`}
                   />
                 </div>
               </div>

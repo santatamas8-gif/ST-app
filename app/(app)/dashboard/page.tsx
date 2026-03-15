@@ -379,12 +379,12 @@ export default function DashboardPage() {
               <p className={`px-5 py-6 ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No schedule items today.</p>
             ) : (
               <div
-                className="schedule-strip-scroll cursor-pointer overflow-hidden px-6 py-4 md:cursor-default sm:px-8"
+                className="schedule-strip-scroll cursor-pointer overflow-hidden px-6 py-4 sm:px-8"
                 style={{ contain: "layout paint" }}
-                role={isMobile ? "button" : undefined}
-                tabIndex={isMobile ? 0 : undefined}
-                onClick={() => isMobile && setScheduleSheetOpen(true)}
-                onKeyDown={(e) => isMobile && (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
+                role="button"
+                tabIndex={0}
+                onClick={() => setScheduleSheetOpen(true)}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setScheduleSheetOpen(true)}
               >
                 <div
                   className="schedule-ticker-track flex min-w-min flex-row"

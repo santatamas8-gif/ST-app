@@ -125,7 +125,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
           </button>
         </div>
         <div
-          className="flex-1 overflow-y-auto overscroll-contain border-t border-white/25 p-4 pb-8 sm:pt-4 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/25 p-4 pb-8 sm:pt-4 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400"
           style={{
             paddingTop: isMobile ? "5rem" : undefined,
             paddingBottom: "max(2rem, env(safe-area-inset-bottom))",

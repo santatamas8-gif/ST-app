@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Users, MousePointerClick } from "lucide-react";
+import { Users, MousePointerClick, User, CircleDot, Calendar } from "lucide-react";
+import { PlayersCardRow } from "./PlayersCardRow";
 import { getAppUser } from "@/lib/auth";
 import { formatDate } from "@/lib/formatDate";
 import { redirect } from "next/navigation";
@@ -123,47 +124,39 @@ export default async function PlayersListPage() {
                 );
               })}
             </div>
-            {/* Desktop: table with status (read-only; only admin can change status on dashboard) */}
+            {/* Desktop: card list with icon headers, no green bar */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-700 text-zinc-400">
-                    <th className="pb-2 pr-4 font-medium">Player</th>
-                    <th className="pb-2 pr-4 font-medium">Status</th>
-                    <th className="pb-2 font-medium">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-300">
-                  {sortedPlayers.map((p) => {
-                    const status = statusByUserId.get(p.id) ?? "available";
-                    const badge = getStatusBadge(status);
-                    const borderColor = getStatusBorderColor(status);
-                    return (
-                      <tr key={p.id} className="border-b border-zinc-800">
-                        <td
-                          className="py-3 pr-4 border-l-4"
-                          style={{ borderLeftColor: borderColor }}
-                        >
-                          <Link
-                            href={`/players/${p.id}`}
-                            className="text-white hover:underline"
-                          >
-                            {displayName(p)}
-                          </Link>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className={`inline-block rounded-lg px-2 py-0.5 text-xs font-semibold ${badge.className}`}>
-                            {badge.label}
-                          </span>
-                        </td>
-                        <td className="py-3">
-                          {formatDate(p.created_at)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-zinc-700 px-4 pb-2 text-zinc-400">
+                <span className="flex items-center gap-2 font-medium">
+                  <User className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+                  Player
+                </span>
+                <span className="flex items-center justify-center gap-2 font-medium">
+                  <CircleDot className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+                  Status
+                </span>
+                <span className="flex items-center justify-end gap-2 font-medium">
+                  <Calendar className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+                  Created
+                </span>
+              </div>
+              <div className="mt-3 flex flex-col gap-3">
+                {sortedPlayers.map((p) => {
+                  const status = statusByUserId.get(p.id) ?? "available";
+                  const badge = getStatusBadge(status);
+                  return (
+                    <PlayersCardRow key={p.id} href={`/players/${p.id}`}>
+                      <span className="text-white">{displayName(p)}</span>
+                      <span className="flex justify-center">
+                        <span className={`inline-block rounded-lg px-2 py-0.5 text-xs font-semibold ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </span>
+                      <span className="text-right">{formatDate(p.created_at)}</span>
+                    </PlayersCardRow>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}

@@ -74,9 +74,11 @@ export function ChatHeader({
           <h1 className="truncate text-base font-bold tracking-tight text-white sm:text-lg md:text-base md:font-semibold">
             {roomName}
           </h1>
-          <p className="mt-0.5 hidden text-xs text-zinc-500 lg:block" aria-hidden>
-            {membersLabel}
-          </p>
+          {isAdmin && (
+            <p className="mt-0.5 hidden text-xs text-zinc-500 lg:block" aria-hidden>
+              {membersLabel}
+            </p>
+          )}
         </div>
       </div>
 
@@ -93,14 +95,7 @@ export function ChatHeader({
               subtleOnDesktop
             />
           </div>
-        ) : (
-          <span
-            className="rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1.5 text-xs font-medium text-zinc-300 lg:hidden"
-            title="Members"
-          >
-            {membersLabel}
-          </span>
-        )}
+        ) : null}
         <div className="hidden lg:block">
           {isAdmin && <DeleteRoomButton roomId={roomId} />}
         </div>
