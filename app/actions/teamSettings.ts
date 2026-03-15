@@ -76,7 +76,7 @@ export async function updateTeamSettings(
     .eq("id", row.id);
 
   if (error) return { error: error.message };
-  revalidateTag(TEAM_SETTINGS_CACHE_TAG);
+  revalidateTag(TEAM_SETTINGS_CACHE_TAG, "max");
   revalidatePath("/dashboard");
   revalidatePath("/chat");
   revalidatePath("/login");
