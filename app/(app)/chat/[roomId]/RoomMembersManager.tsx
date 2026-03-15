@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addRoomMember, removeRoomMember } from "@/app/actions/chat";
+import { addRoomMembers, removeRoomMember } from "@/app/actions/chat";
 
 type Member = { user_id: string; email: string; full_name: string | null };
 type AvailableUser = { id: string; email: string; full_name: string | null };
@@ -37,16 +37,26 @@ export function RoomMembersManager({
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
   const open = isControlled ? controlledOpen! : internalOpen;
   const setOpen = (v: boolean) => (isControlled ? onOpenChange!(v) : setInternalOpen(v));
-  const [adding, setAdding] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+  function toggleSelected(userId: string) {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
 
   async function handleAdd() {
-    if (!selectedUserId) return;
-    setAdding(selectedUserId);
-    const result = await addRoomMember(roomId, selectedUserId);
-    setAdding(null);
-    setSelectedUserId("");
+    const ids = Array.from(selectedUserIds);
+    if (ids.length === 0) return;
+    setAdding(true);
+    const result = await addRoomMembers(roomId, ids);
+    setAdding(false);
+    setSelectedUserIds(new Set());
     if (!result.error) router.refresh();
   }
 
@@ -87,26 +97,30 @@ export function RoomMembersManager({
         ))}
       </ul>
       {availableUsers.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="">Add person…</option>
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-zinc-500">Add person(s) – select multiple, then Add</p>
+          <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-zinc-600 bg-zinc-800/60 p-2">
             {availableUsers.map((u) => (
-              <option key={u.id} value={u.id}>
-                {displayName(u)}
-              </option>
+              <li key={u.id}>
+                <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700/50">
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.has(u.id)}
+                    onChange={() => toggleSelected(u.id)}
+                    className="h-4 w-4 rounded border-zinc-500 bg-zinc-800 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="truncate">{displayName(u)}</span>
+                </label>
+              </li>
             ))}
-          </select>
+          </ul>
           <button
             type="button"
             onClick={handleAdd}
-            disabled={!selectedUserId || !!adding}
-            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
+            disabled={selectedUserIds.size === 0 || adding}
+            className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
           >
-            {adding ? "Adding…" : "Add"}
+            {adding ? "Adding…" : selectedUserIds.size > 0 ? `Add (${selectedUserIds.size})` : "Add"}
           </button>
         </div>
       )}

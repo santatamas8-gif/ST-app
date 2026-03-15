@@ -1,6 +1,7 @@
 import { getAppUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getChatRooms, getUnreadByRoom, getLastMessageByRoom } from "@/app/actions/chat";
+import { getTeamSettings } from "@/app/actions/teamSettings";
 import { ChatLayout } from "@/components/chat/ChatLayout";
 
 export default async function ChatLayoutWrapper({
@@ -11,10 +12,11 @@ export default async function ChatLayoutWrapper({
   const user = await getAppUser();
   if (!user) redirect("/login");
 
-  const [rooms, unreadByRoom, lastMessageByRoom] = await Promise.all([
+  const [rooms, unreadByRoom, lastMessageByRoom, teamSettings] = await Promise.all([
     getChatRooms(),
     getUnreadByRoom(),
     getLastMessageByRoom(),
+    getTeamSettings(),
   ]);
   const isAdmin = user.role === "admin";
 
@@ -25,6 +27,7 @@ export default async function ChatLayoutWrapper({
         unreadByRoom={unreadByRoom}
         lastMessageByRoom={lastMessageByRoom}
         isAdmin={isAdmin}
+        teamLogoUrl={teamSettings?.team_logo_url ?? null}
       >
         {children}
       </ChatLayout>

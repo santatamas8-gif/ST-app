@@ -71,11 +71,13 @@ export function ChatSidebar({
   unreadByRoom,
   lastMessageByRoom,
   isAdmin,
+  teamLogoUrl = null,
 }: {
   rooms: ChatRoomRow[];
   unreadByRoom: Record<string, number>;
   lastMessageByRoom: LastMessageByRoom;
   isAdmin: boolean;
+  teamLogoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const [search, setSearch] = useState("");
@@ -175,12 +177,21 @@ export function ChatSidebar({
                         : "border border-zinc-700/40 bg-zinc-800/60 shadow-sm hover:bg-zinc-800/70 hover:border-zinc-600/50 active:bg-zinc-700/60 lg:border-0 lg:bg-transparent lg:shadow-none lg:hover:bg-white/[0.06] lg:active:bg-white/[0.08]"
                     }`}
                   >
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold lg:h-8 lg:w-8 lg:text-[11px] ${getRoomAvatarColor(room.name)}`}
-                      aria-hidden
-                    >
-                      {getRoomInitials(room.name)}
-                    </span>
+                    {teamLogoUrl ? (
+                      <img
+                        src={teamLogoUrl}
+                        alt=""
+                        className="h-7 w-7 shrink-0 rounded-lg object-contain lg:h-8 lg:w-8"
+                        aria-hidden
+                      />
+                    ) : (
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold lg:h-8 lg:w-8 lg:text-[11px] ${getRoomAvatarColor(room.name)}`}
+                        aria-hidden
+                      >
+                        {getRoomInitials(room.name)}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
                         <span

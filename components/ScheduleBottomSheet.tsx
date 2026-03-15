@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, X } from "lucide-react";
 import { MATT_CARD_STYLE } from "@/lib/themes";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
@@ -67,6 +68,7 @@ type ScheduleBottomSheetProps = {
 };
 
 export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleBottomSheetProps) {
+  const isMobile = useIsMobile();
   const isHighContrast = themeId === "neon" || themeId === "matt";
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
 
   if (!open) return null;
 
-  return (
+  const sheetContent = (
     <>
       {/* Backdrop – fully opaque, covers entire viewport so content underneath is not visible */}
       <div
@@ -93,9 +95,9 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
         onTouchMove={(e) => e.preventDefault()}
         onClick={onClose}
       />
-      {/* Sheet panel – white border frame; clearly lighter than backdrop */}
+      {/* Sheet panel – mobile position via .schedule-sheet-panel in globals.css (media query); desktop: centered */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[201] flex min-h-[85vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-2 border-white/30 shadow-2xl sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:min-h-0 sm:max-h-[min(560px,88vh)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
+        className="schedule-sheet-panel fixed left-0 right-0 bottom-0 z-[201] flex min-h-[85vh] max-h-[85vh] flex-col overflow-hidden rounded-t-2xl border-2 border-white/30 shadow-2xl sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:min-h-0 sm:max-h-[min(560px,88vh)] sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           ...(themeId === "neon"
@@ -123,8 +125,9 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
           </button>
         </div>
         <div
-          className="flex-1 overflow-y-auto overscroll-contain border-t border-white/25 p-4 pb-8 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400"
+          className="flex-1 overflow-y-auto overscroll-contain border-t border-white/25 p-4 pb-8 sm:pt-4 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-zinc-800/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400"
           style={{
+            paddingTop: isMobile ? "5rem" : undefined,
             paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
             minHeight: 0,
             scrollbarColor: "#71717a transparent",
@@ -267,4 +270,8 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
       </div>
     </>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(sheetContent, document.body)
+    : null;
 }

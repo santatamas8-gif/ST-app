@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Activity, Calendar, CheckCircle, Flag, HeartPulse, Pause, Play, Users, X } from "lucide-react";
+import { Activity, Calendar, CheckCircle, ChevronDown, ChevronUp, Flag, HeartPulse, Pause, Play, Users, X } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE, getNeonCardStyleForStatus, getStatusCardStyle } from "@/lib/themes";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
@@ -112,11 +112,11 @@ function formatShortDate(dateStr: string) {
 }
 
 const STATUS_OPTIONS = [
-  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/60 shadow-[0_0_18px_rgba(16,185,129,0.12)]", tintClass: "bg-emerald-500/15", borderLClass: "border-l-emerald-500" },
-  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/60 shadow-[0_0_18px_rgba(245,158,11,0.12)]", tintClass: "bg-amber-500/15", borderLClass: "border-l-amber-500" },
-  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/60 shadow-[0_0_18px_rgba(249,115,22,0.12)]", tintClass: "bg-orange-500/15", borderLClass: "border-l-orange-500" },
-  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/60 shadow-[0_0_18px_rgba(239,68,68,0.12)]", tintClass: "bg-red-500/15", borderLClass: "border-l-red-500" },
-  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/60 shadow-[0_0_18px_rgba(14,165,233,0.12)]", tintClass: "bg-sky-500/15", borderLClass: "border-l-sky-500" },
+  { value: "available", label: "Available", pillClass: "bg-emerald-500/30", badgeClass: "bg-emerald-500/20 text-emerald-400", ringClass: "ring-2 ring-emerald-500/45 shadow-[0_0_14px_rgba(16,185,129,0.08)]", tintClass: "bg-emerald-500/15", borderLClass: "border-l-emerald-500" },
+  { value: "limited", label: "Limited", pillClass: "bg-amber-500/30", badgeClass: "bg-amber-500/20 text-amber-400", ringClass: "ring-2 ring-amber-500/45 shadow-[0_0_14px_rgba(245,158,11,0.08)]", tintClass: "bg-amber-500/15", borderLClass: "border-l-amber-500" },
+  { value: "unavailable", label: "Unavailable", pillClass: "bg-orange-500/30", badgeClass: "bg-orange-500/20 text-orange-400", ringClass: "ring-2 ring-orange-500/45 shadow-[0_0_14px_rgba(249,115,22,0.08)]", tintClass: "bg-orange-500/15", borderLClass: "border-l-orange-500" },
+  { value: "injured", label: "Injured", pillClass: "bg-red-500/30", badgeClass: "bg-red-500/20 text-red-400", ringClass: "ring-2 ring-red-500/45 shadow-[0_0_14px_rgba(239,68,68,0.08)]", tintClass: "bg-red-500/15", borderLClass: "border-l-red-500" },
+  { value: "rehab", label: "Rehab", pillClass: "bg-sky-500/30", badgeClass: "bg-sky-500/20 text-sky-400", ringClass: "ring-2 ring-sky-500/45 shadow-[0_0_14px_rgba(14,165,233,0.08)]", tintClass: "bg-sky-500/15", borderLClass: "border-l-sky-500" },
 ] as const;
 
 export function StaffDashboard({
@@ -157,6 +157,9 @@ export function StaffDashboard({
   const [playersSheetOpen, setPlayersSheetOpen] = useState(false);
   const [dropdownSheetButtonRect, setDropdownSheetButtonRect] = useState<{ top: number; left: number; bottom: number } | null>(null);
   const [mobileKpiSheet, setMobileKpiSheet] = useState<null | "submitted" | "highrisk">(null);
+  const [playersGridExpanded, setPlayersGridExpanded] = useState(false);
+  const playersSectionRef = useRef<HTMLDivElement>(null);
+  const expandScrollLockRef = useRef<number | null>(null);
   const playersSheetDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownOpenIdRef = useRef<string | null>(null);
   dropdownOpenIdRef.current = dropdownOpenId;
@@ -210,6 +213,24 @@ export function StaffDashboard({
       return nameA.localeCompare(nameB);
     });
   }, [playersWithStatus, statusOverrides]);
+
+  const DESKTOP_PLAYERS_INITIAL = 16;
+  const desktopPlayersToShow = useMemo(() => {
+    if (playersSortedByStatus.length <= DESKTOP_PLAYERS_INITIAL) return playersSortedByStatus;
+    return playersGridExpanded ? playersSortedByStatus : playersSortedByStatus.slice(0, DESKTOP_PLAYERS_INITIAL);
+  }, [playersSortedByStatus, playersGridExpanded]);
+
+  useLayoutEffect(() => {
+    if (!playersGridExpanded || expandScrollLockRef.current === null) return;
+    const saved = expandScrollLockRef.current;
+    expandScrollLockRef.current = null;
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: saved, left: window.scrollX, behavior: "auto" });
+      });
+    });
+    return () => cancelAnimationFrame(raf1);
+  }, [playersGridExpanded]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -782,7 +803,12 @@ export function StaffDashboard({
 
         {/* PLAYERS – ID cards (desktop) / summary + sheet (mobile) */}
         {playersWithStatus.length > 0 && (
-          <div ref={statusDropdownRef}>
+          <div
+            ref={(el) => {
+              statusDropdownRef.current = el;
+              playersSectionRef.current = el;
+            }}
+          >
             <h2 className="relative mb-3 flex items-center gap-2 border-b border-zinc-700/80 pb-2 text-xl font-semibold text-white md:mb-4">
               <Users className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
               <span>Players</span>
@@ -825,9 +851,19 @@ export function StaffDashboard({
                 All players
               </button>
             </div>
-            {/* Desktop: full grid (same order: available, limited, …) */}
-            <div className="hidden grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4 md:grid">
-              {playersSortedByStatus.map((p) => {
+            {/* Desktop: full grid – first 16 visible, rest expandable; shadow on card bottoms only */}
+            <div className="relative hidden md:block [overflow-anchor:none]">
+              <div
+                className={`relative overflow-hidden transition-[max-height] duration-300 ease-out motion-reduce:duration-0 ${
+                  playersSortedByStatus.length > DESKTOP_PLAYERS_INITIAL
+                    ? playersGridExpanded
+                      ? "max-h-[2000px]"
+                      : "max-h-[560px]"
+                    : "max-h-none"
+                }`}
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+                  {desktopPlayersToShow.map((p) => {
                 const effectiveStatus = statusOverrides[p.id] ?? p.status;
                 const { pillClass, badgeClass, label, ringClass, tintClass, borderLClass } = getStatusStyle(effectiveStatus);
                 const displayName = (p.full_name && p.full_name.trim()) || p.email;
@@ -1058,6 +1094,40 @@ export function StaffDashboard({
                   </div>
                 );
               })}
+                </div>
+                {!playersGridExpanded && playersSortedByStatus.length > DESKTOP_PLAYERS_INITIAL && (
+                  <div
+                    className="pointer-events-none absolute bottom-0 left-0 right-0 h-24"
+                    style={{
+                      background: "linear-gradient(to top, rgba(24,24,28,0.85) 0%, rgba(24,24,28,0.5) 50%, transparent 100%)",
+                    }}
+                    aria-hidden
+                  />
+                )}
+              </div>
+              {playersSortedByStatus.length > DESKTOP_PLAYERS_INITIAL && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const wasExpanded = playersGridExpanded;
+                    if (!wasExpanded) expandScrollLockRef.current = window.scrollY;
+                    setPlayersGridExpanded((e) => !e);
+                    if (wasExpanded) {
+                      setTimeout(() => {
+                        playersSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+                      }, 320);
+                    }
+                  }}
+                  className="relative z-10 mt-2 flex w-full items-center justify-center rounded-full border border-white/10 bg-white/5 py-2 text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+                  aria-label={playersGridExpanded ? "Show less" : "Show more"}
+                >
+                  {playersGridExpanded ? (
+                    <ChevronUp className="h-6 w-6" />
+                  ) : (
+                    <ChevronDown className="h-6 w-6" />
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Mobile only: Players bottom sheet */}

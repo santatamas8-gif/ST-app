@@ -119,6 +119,21 @@ export async function addRoomMember(roomId: string, userId: string): Promise<{ e
   return {};
 }
 
+export async function addRoomMembers(roomId: string, userIds: string[]): Promise<{ error?: string }> {
+  const user = await getAppUser();
+  if (!user) return { error: "Not authenticated" };
+  if (!isAdmin(user.role)) return { error: "Only admin can add members." };
+  if (userIds.length === 0) return {};
+
+  const supabase = await createClient();
+  const rows = userIds.map((user_id) => ({ room_id: roomId, user_id }));
+  const { error } = await supabase.from("chat_room_members").insert(rows);
+  if (error) return { error: error.message };
+  revalidatePath(`/chat/${roomId}`);
+  revalidatePath("/chat");
+  return {};
+}
+
 export async function removeRoomMember(roomId: string, userId: string): Promise<{ error?: string }> {
   const user = await getAppUser();
   if (!user) return { error: "Not authenticated" };

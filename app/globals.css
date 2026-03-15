@@ -47,6 +47,33 @@
   -webkit-backface-visibility: hidden;
 }
 
+/* Schedule bottom sheet – mobile: from top to bottom so header is always visible */
+@media (max-width: 767px) {
+  .schedule-sheet-panel {
+    top: 0 !important;
+    bottom: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
+  }
+}
+
+/* Schedule Add program sheet (ScheduleCalendar) – mobile: full height from top so header visible */
+@media (max-width: 767px) {
+  .schedule-add-sheet-panel {
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: none !important;
+    height: 100dvh !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
+    border-radius: 0 !important;
+  }
+}
+
 /* Today's Schedule strip: hide scrollbar completely (no manual scroll) */
 .schedule-strip-scroll {
   scrollbar-width: none !important;

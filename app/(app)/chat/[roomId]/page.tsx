@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getMessages, getRoomMembers, getAvailableUsersToAdd, getLikesForRoom, getLastReadAt } from "@/app/actions/chat";
+import { getTeamSettings } from "@/app/actions/teamSettings";
 import { ChatRoomRealtime } from "./ChatRoomRealtime";
 import { ReplyProvider } from "./ReplyContext";
 import { MarkRoomRead } from "./MarkRoomRead";
@@ -57,11 +58,12 @@ export default async function ChatRoomPage({
   }
 
   const isAdmin = user.role === "admin";
-  const [membersList, availableUsersList, likesByMessage, lastReadAt] = await Promise.all([
+  const [membersList, availableUsersList, likesByMessage, lastReadAt, teamSettings] = await Promise.all([
     isAdmin ? getRoomMembers(roomId) : Promise.resolve([]),
     isAdmin ? getAvailableUsersToAdd(roomId) : Promise.resolve([]),
     getLikesForRoom(roomId),
     getLastReadAt(roomId),
+    getTeamSettings(),
   ]);
 
   return (
@@ -84,6 +86,7 @@ export default async function ChatRoomPage({
             members={membersList}
             availableUsers={availableUsersList}
             currentUserId={user.id}
+            teamLogoUrl={teamSettings?.team_logo_url ?? null}
           />
           <ReplyProvider>
             <MessageList

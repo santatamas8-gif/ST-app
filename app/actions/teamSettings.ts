@@ -1,13 +1,32 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPublicClient } from "@/lib/supabase/server";
 import { getAppUser } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 export type TeamSettings = {
   team_name: string | null;
   team_logo_url: string | null;
 };
+
+const TEAM_SETTINGS_CACHE_TAG = "team-settings";
+
+/** Public: no auth required. Used e.g. on login page to show team logo. Cached 60s to reduce DB load. */
+export async function getPublicTeamLogo(): Promise<{ team_logo_url: string | null }> {
+  return unstable_cache(
+    async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("team_settings")
+        .select("team_logo_url")
+        .limit(1)
+        .maybeSingle();
+      return { team_logo_url: data?.team_logo_url ?? null };
+    },
+    ["public-team-logo"],
+    { revalidate: 60, tags: [TEAM_SETTINGS_CACHE_TAG] }
+  )();
+}
 
 export async function getTeamSettings(): Promise<TeamSettings> {
   const user = await getAppUser();
@@ -57,6 +76,9 @@ export async function updateTeamSettings(
     .eq("id", row.id);
 
   if (error) return { error: error.message };
+  revalidateTag(TEAM_SETTINGS_CACHE_TAG);
   revalidatePath("/dashboard");
+  revalidatePath("/chat");
+  revalidatePath("/login");
   return {};
 }

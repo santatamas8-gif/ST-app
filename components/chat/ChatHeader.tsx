@@ -17,6 +17,7 @@ export function ChatHeader({
   members = [],
   availableUsers = [],
   currentUserId,
+  teamLogoUrl = null,
 }: {
   roomName: string;
   membersCount: number;
@@ -25,6 +26,8 @@ export function ChatHeader({
   members?: Member[];
   availableUsers?: AvailableUser[];
   currentUserId?: string;
+  /** Team logo URL set by admin on dashboard – shown before room name */
+  teamLogoUrl?: string | null;
 }) {
   const membersLabel = `${membersCount} ${membersCount === 1 ? "member" : "members"}`;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,6 +62,14 @@ export function ChatHeader({
         >
           <ChevronLeft className="h-5 w-5" />
         </Link>
+        {teamLogoUrl ? (
+          <img
+            src={teamLogoUrl}
+            alt=""
+            className="h-8 w-8 shrink-0 rounded-lg object-contain sm:h-9 sm:w-9"
+            aria-hidden
+          />
+        ) : null}
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-bold tracking-tight text-white sm:text-lg md:text-base md:font-semibold">
             {roomName}

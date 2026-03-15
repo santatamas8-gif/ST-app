@@ -12,12 +12,16 @@ import { formatSleepDuration } from "@/utils/sleep";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
-import { StaffDashboard } from "@/components/StaffDashboard";
 import dynamic from "next/dynamic";
 
 const TrendCharts = dynamic(
   () => import("@/components/TrendCharts").then((m) => ({ default: m.TrendCharts })),
   { ssr: true }
+);
+
+const StaffDashboard = dynamic(
+  () => import("@/components/StaffDashboard").then((m) => ({ default: m.StaffDashboard })),
+  { ssr: false, loading: () => <div className="flex min-h-[280px] items-center justify-center text-zinc-400">Loading…</div> }
 );
 
 type AttentionPlayer = { user_id: string; email: string; reason?: string; wellness?: number | null; fatigue?: number | null; load?: number };
@@ -176,7 +180,10 @@ export default function DashboardPage() {
             <p className="mt-2 text-sm text-zinc-400">{err}</p>
             <button
               type="button"
-              onClick={() => router.refresh()}
+              onClick={() => {
+                setErr(null);
+                loadDashboard();
+              }}
               className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
             >
               Retry

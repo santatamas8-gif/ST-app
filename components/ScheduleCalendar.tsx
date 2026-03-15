@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import {
@@ -841,16 +842,17 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
             </div>
           )}
 
-          {/* Add program sheet – opens when admin selects an activity type */}
-          {addingType != null && isAdmin && selectedDate && (
-            <>
-              <div
-                className="fixed inset-0 z-40 bg-black touch-none overflow-hidden"
-                aria-hidden
-                onClick={() => { setAddingType(null); setSheetSelectedTypes([]); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); setTimeSaveError(null); }}
-              />
-              <div
-                className={`fixed left-0 right-0 z-50 flex flex-col overflow-hidden rounded-t-2xl border-2 shadow-2xl top-4 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:right-auto sm:max-h-[min(900px,94vh)] sm:w-full sm:max-w-7xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl ${themeId === "neon" ? "border-emerald-500/40 neon-card-text" : themeId === "matt" ? "border-white/25 matt-card-text" : "border-white/30"}`}
+          {/* Add program sheet – opens when admin selects an activity type; portal so mobile top is visible */}
+          {addingType != null && isAdmin && selectedDate && (() => {
+            const addSheet = (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-black touch-none overflow-hidden"
+                  aria-hidden
+                  onClick={() => { setAddingType(null); setSheetSelectedTypes([]); setAddStart(""); setAddEnd(""); setAddNotes(""); setAddTeamA(""); setAddTeamB(""); setTimeSaveError(null); }}
+                />
+                <div
+                  className={`schedule-add-sheet-panel fixed left-0 right-0 z-50 flex flex-col overflow-hidden rounded-t-2xl border-2 shadow-2xl top-4 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:right-auto sm:max-h-[min(900px,94vh)] sm:w-full sm:max-w-7xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl ${themeId === "neon" ? "border-emerald-500/40 neon-card-text" : themeId === "matt" ? "border-white/25 matt-card-text" : "border-white/30"}`}
                 style={{
                   paddingBottom: "env(safe-area-inset-bottom, 0px)",
                   borderRadius: 12,
@@ -864,7 +866,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                 aria-modal="true"
                 aria-labelledby="add-program-sheet-title"
               >
-                <div className={`flex items-center justify-between border-b px-4 py-2.5 shrink-0 ${themeId === "neon" ? "border-emerald-500/30 bg-white/[0.04]" : themeId === "matt" ? "border-white/20 bg-white/[0.06]" : "border-white/10 bg-zinc-900/40"}`}>
+                <div className={`flex items-center justify-between rounded-t-2xl border-b px-4 py-2.5 shrink-0 ${themeId === "neon" ? "border-emerald-500/30 bg-white/[0.04]" : themeId === "matt" ? "border-white/20 bg-white/[0.06]" : "border-white/10 bg-zinc-900/40"}`}>
                   <h2 id="add-program-sheet-title" className="text-xl font-semibold text-white">
                     Program · {formatSheetDate(selectedDate, todayISO)}
                   </h2>
@@ -889,10 +891,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                       <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
                       Activities
                     </p>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2 sm:gap-3">
                       <div>
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">Meals & training</span>
-                        <div className="flex flex-wrap gap-2">
+                        <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500 sm:mb-1.5">Meals & training</span>
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {ADD_ROW_1.map((type) => {
                             const selected = sheetSelectedTypes.includes(type);
                             return (
@@ -900,13 +902,13 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                                 key={type}
                                 type="button"
                                 onClick={() => selectSingleSheetType(type)}
-                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-base transition ${
+                                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm transition sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2 sm:text-base ${
                                   selected
                                     ? "border-emerald-500/70 bg-emerald-500/25 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
                                     : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
                                 }`}
                               >
-                                <ScheduleIcon type={type} className="h-5 w-5 shrink-0" />
+                                <ScheduleIcon type={type} className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
                                 {ACTIVITY_LABELS[type]}
                               </button>
                             );
@@ -914,8 +916,8 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         </div>
                       </div>
                       <div>
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500">Other</span>
-                        <div className="flex flex-wrap gap-2">
+                        <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500 sm:mb-1.5">Other</span>
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {ADD_ROW_2.map((type) => {
                             const selected = sheetSelectedTypes.includes(type);
                             return (
@@ -923,13 +925,13 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                                 key={type}
                                 type="button"
                                 onClick={() => selectSingleSheetType(type)}
-                                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-base transition ${
+                                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm transition sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2 sm:text-base ${
                                   selected
                                     ? "border-emerald-500/70 bg-emerald-500/25 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
                                     : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
                                 }`}
                               >
-                                <ScheduleIcon type={type} className="h-5 w-5 shrink-0" />
+                                <ScheduleIcon type={type} className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
                                 {ACTIVITY_LABELS[type]}
                               </button>
                             );
@@ -1028,7 +1030,9 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                 </div>
               </div>
             </>
-          )}
+            );
+            return typeof document !== "undefined" ? createPortal(addSheet, document.body) : null;
+          })()}
         </div>
       )}
     </div>

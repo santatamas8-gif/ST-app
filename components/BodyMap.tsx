@@ -116,6 +116,58 @@ function BodyFigure({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const lastTouchRef = React.useRef<{ x: number; y: number } | null>(null);
   const lastPinchRef = React.useRef<{ distance: number; zoom: number } | null>(null);
+  const lastMouseRef = React.useRef<{ x: number; y: number } | null>(null);
+  const didPanWithMouseRef = React.useRef(false);
+  const [isMousePanning, setIsMousePanning] = React.useState(false);
+  const setPanningRef = React.useRef(setIsMousePanning);
+  setPanningRef.current = setIsMousePanning;
+  const panZoomRef = React.useRef({ pan, zoom });
+  panZoomRef.current = { pan, zoom };
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (touchFriendly || e.button !== 0) return;
+      lastMouseRef.current = { x: e.clientX, y: e.clientY };
+      didPanWithMouseRef.current = false;
+    },
+    [touchFriendly]
+  );
+
+  useEffect(() => {
+    if (touchFriendly) return;
+    const onMove = (e: MouseEvent) => {
+      if (!lastMouseRef.current) return;
+      const { pan: p, zoom: z } = panZoomRef.current;
+      const dx = e.clientX - lastMouseRef.current.x;
+      const dy = e.clientY - lastMouseRef.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        didPanWithMouseRef.current = true;
+        setPanningRef.current?.(true);
+      }
+      lastMouseRef.current = { x: e.clientX, y: e.clientY };
+      onZoomPanChange(z, { x: p.x + dx, y: p.y + dy });
+    };
+    const onUp = () => {
+      lastMouseRef.current = null;
+      setPanningRef.current?.(false);
+    };
+    const doc = typeof document !== "undefined" ? document : null;
+    if (!doc) return;
+    doc.addEventListener("mousemove", onMove);
+    doc.addEventListener("mouseup", onUp);
+    return () => {
+      doc.removeEventListener("mousemove", onMove);
+      doc.removeEventListener("mouseup", onUp);
+    };
+  }, [touchFriendly, onZoomPanChange]);
+
+  const handleContainerClickCapture = useCallback((e: React.MouseEvent) => {
+    if (didPanWithMouseRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      didPanWithMouseRef.current = false;
+    }
+  }, []);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -204,11 +256,13 @@ function BodyFigure({
     <div
       ref={containerRef}
       className={`relative select-none overflow-hidden rounded-xl border border-zinc-600 ${className ?? ""}`}
-      style={{ backgroundColor: PANEL_BG, touchAction: touchFriendly ? "none" : undefined }}
+      style={{ backgroundColor: PANEL_BG, touchAction: touchFriendly ? "none" : undefined, cursor: !touchFriendly && isMousePanning ? "grabbing" : !touchFriendly ? "grab" : undefined }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onClickCapture={handleContainerClickCapture}
     >
       <div
         className="origin-center h-full min-h-[260px] min-w-full w-full transition-transform duration-100 md:min-h-[400px]"

@@ -16,12 +16,14 @@ export function ChatLayout({
   unreadByRoom,
   lastMessageByRoom,
   isAdmin,
+  teamLogoUrl = null,
   children,
 }: {
   rooms: ChatRoomRow[];
   unreadByRoom: Record<string, number>;
   lastMessageByRoom: LastMessageByRoom;
   isAdmin: boolean;
+  teamLogoUrl?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -83,6 +85,7 @@ export function ChatLayout({
           unreadByRoom={unreadByRoom}
           lastMessageByRoom={lastMessageByRoom}
           isAdmin={isAdmin}
+          teamLogoUrl={teamLogoUrl}
         />
       )}
       {showMain && (

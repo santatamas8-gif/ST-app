@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
+import { getPublicTeamLogo } from "@/app/actions/teamSettings";
 
 const REMEMBER_EMAIL_KEY = "stams_remember_email";
 const REMEMBER_ME_KEY = "stams_remember_me";
@@ -17,6 +17,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [teamLogoUrl, setTeamLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    getPublicTeamLogo().then((r) => {
+      if (r.team_logo_url) setTeamLogoUrl(r.team_logo_url);
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -77,9 +84,22 @@ export default function LoginPage() {
       {/* Login card */}
       <div className="relative z-10 w-full max-w-sm">
         <div
-          className="rounded-2xl border border-zinc-700 bg-zinc-900/80 p-6 shadow-xl shadow-black/20 sm:p-8"
+          className="rounded-2xl border border-zinc-700 bg-zinc-900/80 pt-4 px-6 pb-6 shadow-xl shadow-black/20 sm:pt-5 sm:px-8 sm:pb-8"
           style={{ boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)" }}
         >
+          {teamLogoUrl ? (
+            <div className="mb-2 flex justify-center">
+              <img
+                src={teamLogoUrl}
+                alt=""
+                width={36}
+                height={36}
+                fetchPriority="high"
+                className="h-8 w-8 rounded-lg object-contain sm:h-9 sm:w-9"
+                aria-hidden
+              />
+            </div>
+          ) : null}
           <h2 className="mb-6 text-center text-base font-medium text-zinc-200">
             Sign in to continue
           </h2>
@@ -159,6 +179,13 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      <a
+        href="mailto:santatamas8@gmail.com"
+        className="absolute bottom-3 right-3 z-10 text-[10px] text-zinc-500/80 hover:text-zinc-400 sm:bottom-5 sm:right-5 sm:text-[11px]"
+      >
+        contact:santatamas8@gmail.com
+      </a>
     </div>
   );
 }
