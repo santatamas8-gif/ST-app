@@ -394,7 +394,7 @@ export function StaffWellnessView({
                     <tr>
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
                       <th className="px-4 py-2.5 text-base font-bold">Illness</th>
-                      <th className="px-4 py-2.5 text-base font-bold">Bed – Wake</th>
+                      <th className="px-4 py-2.5 text-base font-bold"><span className="ml-3 block w-fit">Bed – Wake</span></th>
                       {(["sleep_duration", "sleep_quality", "fatigue", "soreness", "stress", "mood", "readiness"] as const).map((col) => {
                         const label = col === "sleep_duration" ? "Sleep (h)" : col === "sleep_quality" ? "Sleep quality" : col === "readiness" ? "Readiness" : col.charAt(0).toUpperCase() + col.slice(1);
                         const isActive = columnSort?.column === col;
@@ -437,7 +437,7 @@ export function StaffWellnessView({
                               </button>
                               {atRisk && <RiskBadge />}
                               {r.illness === true && (
-                                <span className="rounded bg-red-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300" title="Illness reported">
+                                <span className="md:hidden rounded bg-red-600/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300" title="Illness reported">
                                   Illness
                                 </span>
                               )}
@@ -455,7 +455,7 @@ export function StaffWellnessView({
                               <span className="rounded bg-emerald-500/20 px-2 py-1 text-sm font-semibold text-emerald-400">No</span>
                             )}
                           </td>
-                          <td className="px-4 py-2 tabular-nums">
+                          <td className="px-4 py-2 font-mono tabular-nums">
                             {timeToHHmm(r.bed_time) != null && timeToHHmm(r.wake_time) != null
                               ? `${timeToHHmm(r.bed_time)} – ${timeToHHmm(r.wake_time)}`
                               : timeToHHmm(r.bed_time) ?? timeToHHmm(r.wake_time) ?? "—"}

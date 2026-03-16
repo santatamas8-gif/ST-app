@@ -11,14 +11,14 @@ interface RiskRowHighlightProps {
 }
 
 export function RiskRowHighlight({ isAtRisk, children, className = "", rowIndex = 0 }: RiskRowHighlightProps) {
-  const rowStyle = isAtRisk
-    ? { backgroundColor: "rgba(220, 38, 38, 0.22)" }
-    : undefined;
+  // At-risk: red tint on mobile only; desktop (md) same as other rows (zebra)
+  const atRiskClass = isAtRisk
+    ? `bg-red-500/20 md:bg-transparent ${rowIndex % 2 === 1 ? "md:bg-zinc-800/40" : ""}`
+    : "";
   const zebraClass = !isAtRisk && rowIndex % 2 === 1 ? "bg-zinc-800/40" : "";
   return (
     <tr
-      className={`border-b border-zinc-800 transition-colors hover:bg-zinc-800/50 ${zebraClass} ${className}`}
-      style={rowStyle}
+      className={`border-b border-zinc-800 transition-colors hover:bg-zinc-800/50 ${zebraClass} ${atRiskClass} ${className}`}
     >
       {children}
     </tr>
