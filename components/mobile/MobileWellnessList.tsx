@@ -204,8 +204,8 @@ export function MobileWellnessList({
       if (a.type !== "row" && b.type === "row") return 1;
       if (a.type === "row" && b.type !== "row") return -1;
       if (a.type !== "row" && b.type !== "row") return 0;
-      const ra = wellnessAverageFromRow(a.row) ?? 0;
-      const rb = wellnessAverageFromRow(b.row) ?? 0;
+      const ra = a.type === "row" ? wellnessAverageFromRow(a.row) ?? 0 : 0;
+      const rb = b.type === "row" ? wellnessAverageFromRow(b.row) ?? 0 : 0;
       return sortByReadiness === "asc" ? ra - rb : rb - ra;
     });
   }, [rowsForDate, missingUserIds, filter, sortByReadiness]);
