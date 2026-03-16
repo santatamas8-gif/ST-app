@@ -1717,54 +1717,45 @@ export function StaffDashboard({
             <span>At risk players</span>
           </h2>
           {atRisk.length > 0 ? (
-            <ul className="mt-3 space-y-2 md:mt-4 md:space-y-3">
+            <ul className="mt-3 grid grid-cols-1 gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3">
               {atRisk.map((p) => {
-                const w = p.wellness ?? 0;
-                const f = p.fatigue ?? 0;
-                const critical = w < 5 || f > 7;
-                const badge = critical ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400";
-                const leftBorder = critical ? "border-l-red-500" : "border-l-amber-500";
-                const riskStatusStyle = isHighContrast ? getStatusCardStyle(themeId, critical ? "injured" : "limited") : null;
+                const reasons = (p.reason ?? "").split(",").map((r) => r.trim()).filter(Boolean);
+                const hasCritical =
+                  reasons.some((r) => r.startsWith("illness")) ||
+                  reasons.some((r) => r.startsWith("pain")) ||
+                  reasons.some((r) => r.startsWith("readiness")) ||
+                  reasons.some((r) => r.startsWith("soreness")) ||
+                  reasons.some((r) => r.startsWith("stress")) ||
+                  reasons.some((r) => r.startsWith("fatigue"));
+                const badge = hasCritical ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400";
+                const leftBorder = hasCritical ? "border-l-red-500" : "border-l-amber-500";
+                const riskStatusStyle = isHighContrast ? getStatusCardStyle(themeId, hasCritical ? "injured" : "limited") : null;
                 return (
                   <li
                     key={p.user_id}
-                    className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border-l-4 px-4 py-3 ${isHighContrast ? (themeId === "neon" ? "neon-card-text" : "matt-card-text") : "bg-zinc-900/60"} ${leftBorder}`}
-                    style={riskStatusStyle ? { ...riskStatusStyle, borderRadius: 8 } : undefined}
+                    className={`flex flex-col justify-between rounded-xl border px-4 py-3 shadow-sm ${isHighContrast ? (themeId === "neon" ? "neon-card-text" : "matt-card-text") : "bg-zinc-900/70"} ${leftBorder}`}
+                    style={riskStatusStyle ? { ...riskStatusStyle, borderRadius: 12 } : undefined}
                   >
-                    <div className="min-w-0">
-                      <p className={`text-xs font-medium uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>At risk player</p>
+                    <div className="mb-2 min-w-0">
                       <Link
                         href={`/players/${p.user_id}`}
-                        className="font-semibold text-white hover:text-emerald-400 hover:underline"
+                        className="text-sm font-semibold text-white hover:text-emerald-400 hover:underline"
                       >
                         {(p.full_name && p.full_name.trim()) || p.email}
                       </Link>
                     </div>
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
-                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Wellness:</span> {p.wellness != null ? p.wellness.toFixed(1) : "—"}
+                    <div className="mt-auto flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className={`rounded px-2 py-0.5 font-medium ${badge}`}>
+                        {hasCritical ? "Critical" : "Warning"}
                       </span>
-                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
-                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Fatigue:</span> {p.fatigue ?? "—"}
-                      </span>
-                      <span className={`rounded px-2 py-1 tabular-nums ${isHighContrast ? "bg-white/10 text-white/90" : "bg-zinc-800/80 text-zinc-300"}`}>
-                        <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>Load:</span> {p.load ?? 0}
-                      </span>
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${badge}`}
-                      >
-                        {critical ? "Critical" : "Warning"}
-                      </span>
-                      {p.reason != null && p.reason.includes("pain") && (
-                        <span className="rounded bg-red-600/30 px-2 py-0.5 text-xs font-semibold text-red-300">
-                          Pain
+                      {reasons.map((reason) => (
+                        <span
+                          key={reason}
+                          className="rounded bg-red-600/30 px-2 py-0.5 text-[11px] font-semibold text-red-200"
+                        >
+                          {reason}
                         </span>
-                      )}
-                      {p.reason != null && p.reason.includes("illness") && (
-                        <span className="rounded bg-red-600/30 px-2 py-0.5 text-xs font-semibold text-red-300">
-                          Illness
-                        </span>
-                      )}
+                      ))}
                     </div>
                   </li>
                 );

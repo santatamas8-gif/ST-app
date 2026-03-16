@@ -28,6 +28,47 @@ const SCHEDULE_ACTIVITY_LABELS: Record<string, string> = {
   individual: "Individual",
 };
 
+function sheetNeonCardStyle(type: string, isMatch: boolean) {
+  if (isMatch || type === "match") {
+    return {
+      backgroundImage:
+        "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)",
+      boxShadow:
+        "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
+      borderRadius: 12,
+    };
+  }
+
+  const glowByType: Record<string, string> = {
+    breakfast: "rgba(16, 185, 129, 0.26)",
+    lunch: "rgba(16, 185, 129, 0.26)",
+    dinner: "rgba(16, 185, 129, 0.26)",
+    arrival: "rgba(249, 115, 22, 0.30)",
+    training: "rgba(16, 185, 129, 0.30)",
+    gym: "rgba(132, 204, 22, 0.28)",
+    recovery: "rgba(45, 212, 191, 0.30)",
+    pre_activation: "rgba(6, 182, 212, 0.30)",
+    video_analysis: "rgba(139, 92, 246, 0.30)",
+    traveling: "rgba(245, 158, 11, 0.30)",
+    physio: "rgba(56, 189, 248, 0.30)",
+    medical: "rgba(244, 63, 94, 0.30)",
+    meeting: "rgba(79, 70, 229, 0.30)",
+    media: "rgba(217, 70, 239, 0.30)",
+    team_building: "rgba(147, 51, 234, 0.30)",
+    rest_off: "rgba(59, 130, 246, 0.26)",
+    individual: "rgba(52, 211, 153, 0.30)",
+  };
+
+  const glow = glowByType[type] ?? "rgba(16, 185, 129, 0.26)";
+
+  return {
+    backgroundImage: `radial-gradient(circle at left, ${glow} 0, transparent 55%), linear-gradient(135deg, #041311, #020617)`,
+    boxShadow:
+      "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
+    borderRadius: 12,
+  };
+}
+
 export type ScheduleItemForSheet = {
   id: string;
   activity_type: string;
@@ -165,14 +206,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                     <li key={`${item.id}-${idx}`}>
                       <div
                         className="w-full rounded-xl border border-transparent shadow-[var(--card-shadow)]"
-                        style={{
-                          backgroundImage: isMatch
-                            ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
-                            : "radial-gradient(circle at left, rgba(16, 185, 129, 0.22) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
-                          boxShadow: isMatch
-                            ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08), 0 4px 12px rgba(0,0,0,0.25)"
-                            : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
-                        }}
+                        style={sheetNeonCardStyle(item.activity_type, isMatch)}
                       >
                         <div className="schedule-card-text space-y-1 px-4 py-3">
                           <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>

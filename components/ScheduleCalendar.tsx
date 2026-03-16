@@ -100,6 +100,47 @@ const ADD_ROW_2: ScheduleActivityType[] = [
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function scheduleListNeonStyle(type: string, isMatch: boolean) {
+  if (isMatch || type === "match") {
+    return {
+      backgroundImage:
+        "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)",
+      boxShadow:
+        "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+      borderRadius: 12,
+    };
+  }
+
+  const glowByType: Record<string, string> = {
+    breakfast: "rgba(16, 185, 129, 0.26)",
+    lunch: "rgba(16, 185, 129, 0.26)",
+    dinner: "rgba(16, 185, 129, 0.26)",
+    arrival: "rgba(249, 115, 22, 0.30)",
+    training: "rgba(16, 185, 129, 0.30)",
+    gym: "rgba(132, 204, 22, 0.28)",
+    recovery: "rgba(56, 189, 248, 0.30)",
+    pre_activation: "rgba(245, 158, 11, 0.30)",
+    video_analysis: "rgba(139, 92, 246, 0.30)",
+    traveling: "rgba(245, 158, 11, 0.30)",
+    physio: "rgba(56, 189, 248, 0.30)",
+    medical: "rgba(244, 63, 94, 0.30)",
+    meeting: "rgba(79, 70, 229, 0.30)",
+    media: "rgba(217, 70, 239, 0.30)",
+    team_building: "rgba(147, 51, 234, 0.30)",
+    rest_off: "rgba(59, 130, 246, 0.26)",
+    individual: "rgba(52, 211, 153, 0.30)",
+  };
+
+  const glow = glowByType[type] ?? "rgba(16, 185, 129, 0.26)";
+
+  return {
+    backgroundImage: `radial-gradient(circle at left, ${glow} 0, transparent 55%), linear-gradient(135deg, #041311, #020617)`,
+    boxShadow:
+      "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+    borderRadius: 12,
+  };
+}
+
 function formatSheetDate(dateISO: string, todayISO: string): string {
   if (dateISO === todayISO) return "Today";
   const d = new Date(dateISO + "T12:00:00");
@@ -272,7 +313,19 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
     return nextSessionDate === todayISO ? `Today – ${labels}` : `${formatted} – ${labels}`;
   }, [nextSessionDate, itemsByDate]);
 
-  const selectedItems = selectedDate ? itemsByDate.get(selectedDate) ?? [] : [];
+  const selectedItems = useMemo(() => {
+    if (!selectedDate) return [];
+    const items = itemsByDate.get(selectedDate) ?? [];
+    return [...items].sort((a, b) => {
+      const aStart = (a.start_time ?? "") as string;
+      const bStart = (b.start_time ?? "") as string;
+      // üresek menjenek a lista végére
+      if (!aStart && !bStart) return 0;
+      if (!aStart) return 1;
+      if (!bStart) return -1;
+      return aStart.localeCompare(bStart);
+    });
+  }, [itemsByDate, selectedDate]);
 
   function handlePrevMonth() {
     if (month === 0) {
@@ -637,7 +690,14 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
               return (
                 <li
                   key={item.id}
-                  className={`grid grid-cols-[1fr_minmax(6rem,1.5fr)_auto] gap-2 items-center rounded-lg border border-zinc-700/60 px-3 py-2.5 shadow-sm ${leftBorder} ${isHighContrast ? "bg-white/5 text-white/90" : "bg-zinc-800 text-zinc-200"}`}
+                  className={`grid grid-cols-[1fr_minmax(6rem,1.5fr)_auto] gap-2 items-center rounded-lg border border-zinc-700/60 px-3 py-2.5 shadow-sm ${leftBorder} ${
+                    themeId === "neon"
+                      ? "text-white"
+                      : isHighContrast
+                        ? "bg-white/5 text-white/90"
+                        : `${getScheduleActivityBg(item.activity_type)} text-zinc-200`
+                  }`}
+                  style={themeId === "neon" ? scheduleListNeonStyle(item.activity_type, item.activity_type === "match") : undefined}
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 font-medium text-white text-xs">
@@ -860,8 +920,8 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
                       >
                         {ACTIVITY_LABELS[type]}
-                        <span className={`inline-flex items-center justify-center h-10 w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
-                          <ScheduleIcon type={type} className="h-7 w-7 shrink-0" />
+                        <span className={`inline-flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
+                          <ScheduleIcon type={type} className="h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
                         </span>
                       </button>
                     ))}
@@ -879,8 +939,8 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
                       >
                         {ACTIVITY_LABELS[type]}
-                        <span className={`inline-flex items-center justify-center h-10 w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
-                          <ScheduleIcon type={type} className="h-7 w-7 shrink-0" />
+                        <span className={`inline-flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
+                          <ScheduleIcon type={type} className="h-5 w-5 sm:h-7 sm:w-7 shrink-0" />
                         </span>
                       </button>
                     ))}

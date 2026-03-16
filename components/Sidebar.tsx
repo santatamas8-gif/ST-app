@@ -441,7 +441,27 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           {menuPanelContent}
         </div>
       )}
-      <main className="min-w-0 flex-1 overflow-auto">{children}</main>
+      <main className="min-w-0 flex-1 overflow-auto">
+        {/* Mobile back row to dashboard when not on dashboard */}
+        {!isDashboardDesktop && (
+          <div className="mb-0.5 mt-1 flex items-center justify-start md:hidden">
+            <Link
+              href="/dashboard"
+              prefetch={true}
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                isNeon || isMatt
+                  ? "border-white/15 bg-white/[0.03] text-white/80 hover:border-white/25 hover:bg-white/[0.06]"
+                  : "border-zinc-700 bg-zinc-900/60 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800"
+              }`}
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              <span>Back</span>
+            </Link>
+          </div>
+        )}
+        {children}
+      </main>
     </div>
     {mobileMenuOpen && mobileDrawer}
     </>

@@ -97,7 +97,7 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
 
   return (
     <div
-      className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8"
+      className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-5 sm:py-8 sm:mx-0 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
       <div className="mx-auto max-w-4xl space-y-8">

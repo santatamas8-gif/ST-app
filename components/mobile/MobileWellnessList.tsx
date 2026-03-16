@@ -75,6 +75,22 @@ function getTopIssues(row: WellnessRow): string[] {
   return issues.slice(0, 3);
 }
 
+function readinessColorClass(readiness: number | null | undefined, isHighContrast: boolean): string {
+  if (readiness == null) {
+    return isHighContrast ? "text-white" : "text-zinc-200";
+  }
+  if (readiness < 5) {
+    // 1–4.9: piros
+    return "text-red-400";
+  }
+  if (readiness < 8) {
+    // 5–7.9: sárga
+    return "text-amber-300";
+  }
+  // 8+: zöld
+  return "text-emerald-300";
+}
+
 export interface MobileWellnessListProps {
   list: WellnessRow[];
   emailByUserId: Record<string, string>;
@@ -158,6 +174,8 @@ export function MobileWellnessList({
     [allPlayerIds, submittedUserIds]
   );
 
+  const [sortByReadiness, setSortByReadiness] = useState<"none" | "asc" | "desc">("none");
+
   const sortedAndFiltered = useMemo(() => {
     type Item = { type: "row"; row: WellnessRow; status: string } | { type: "missing"; user_id: string };
     const items: Item[] = [];
@@ -174,17 +192,26 @@ export function MobileWellnessList({
         : filter === "missing"
           ? items.filter((i) => i.type === "missing")
           : items.filter((i) => i.type === "row" && i.status.toLowerCase() === filter);
-    return filtered.sort((a, b) => {
+    const baseSorted = filtered.sort((a, b) => {
       const submittedFirst = (a.type === "row" ? 0 : 1) - (b.type === "row" ? 0 : 1);
       if (submittedFirst !== 0) return submittedFirst;
       if (a.type === "row" && b.type === "row")
         return (SORT_ORDER[a.status] ?? 4) - (SORT_ORDER[b.status] ?? 4);
       return 0;
     });
-  }, [rowsForDate, missingUserIds, filter]);
+    if (sortByReadiness === "none") return baseSorted;
+    return [...baseSorted].sort((a, b) => {
+      if (a.type !== "row" && b.type === "row") return 1;
+      if (a.type === "row" && b.type !== "row") return -1;
+      if (a.type !== "row" && b.type !== "row") return 0;
+      const ra = wellnessAverageFromRow(a.row) ?? 0;
+      const rb = wellnessAverageFromRow(b.row) ?? 0;
+      return sortByReadiness === "asc" ? ra - rb : rb - ra;
+    });
+  }, [rowsForDate, missingUserIds, filter, sortByReadiness]);
 
   return (
-    <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-6 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)" }}>
+    <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-4 sm:py-6 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)" }}>
       <div className="mx-auto max-w-7xl min-w-0">
         {/* Sticky filter/search header - mobile only */}
         <div className="sticky top-0 z-10 -mx-3 px-3 py-3 pb-2" style={{ backgroundColor: "var(--page-bg)" }}>
@@ -229,9 +256,27 @@ export function MobileWellnessList({
               >
                 Today
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setSortByReadiness((prev) =>
+                    prev === "none" ? "desc" : prev === "desc" ? "asc" : "none",
+                  )
+                }
+                className={`flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-medium ${
+                  sortByReadiness === "none"
+                    ? isHighContrast
+                      ? "border-white/20 bg-white/5 text-white/80"
+                      : "border-white/10 bg-white/5 text-zinc-300"
+                    : "border-emerald-500/60 bg-emerald-500/15 text-emerald-300"
+                }`}
+                aria-label="Sort by readiness"
+              >
+                {sortByReadiness === "asc" ? "↑" : sortByReadiness === "desc" ? "↓" : "↕"}
+              </button>
             </div>
           </div>
-          <div className="mt-2 flex justify-center w-full">
+          <div className="mt-2 flex w-full justify-center">
             <div
               className="inline-flex w-full max-w-md rounded-[14px] border p-0.5 h-10"
               style={{
@@ -311,13 +356,12 @@ export function MobileWellnessList({
               const readiness = wellnessAverageFromRow(r);
               const status = getStatusLabel(r, readiness ?? null);
               const badge = getStatusBadge(status);
-              const sleepHours = r.sleep_duration != null ? `${formatSleepDuration(r.sleep_duration)}h` : "—";
               return (
                 <li key={r.id}>
                   <button
                     type="button"
                     onClick={() => setDetailRow(r)}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+                    className={`flex w-full items-center gap-2 rounded-xl border px-4 py-3 text-left transition ${
                       isHighContrast ? "border-white/20 bg-white/5 hover:bg-white/10" : "border-zinc-700 hover:bg-zinc-700/80"
                     }`}
                     style={
@@ -331,8 +375,12 @@ export function MobileWellnessList({
                     <span className="min-w-0 flex-1 truncate font-medium text-white">
                       {displayName}
                     </span>
-                    <span className={`shrink-0 tabular-nums ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>{sleepHours}</span>
-                    <span className="shrink-0 tabular-nums text-white">
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 tabular-nums text-sm font-semibold ${readinessColorClass(
+                        readiness,
+                        isHighContrast,
+                      )}`}
+                    >
                       {readiness != null ? readiness.toFixed(1) : "—"}
                     </span>
                     <span
@@ -442,12 +490,15 @@ export function MobileWellnessList({
                     Top issues
                   </p>
                   <ul
-                    className={`mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-sm ${
+                    className={`mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-sm ${
                       isRed ? "text-red-200/90" : "text-amber-200/90"
                     }`}
                   >
-                    {issues.map((issue) => (
-                      <li key={issue}>{issue}</li>
+                    {issues.map((issue, idx) => (
+                      <li key={issue} className="flex items-center gap-1">
+                        <span>{issue}</span>
+                        {idx < issues.length - 1 && <span className="opacity-70">·</span>}
+                      </li>
                     ))}
                   </ul>
                 </div>

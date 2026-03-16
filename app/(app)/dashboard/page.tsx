@@ -12,6 +12,7 @@ import { formatSleepDuration } from "@/utils/sleep";
 import { RedFlagsCard } from "@/components/RedFlagsCard";
 import { ScheduleBottomSheet, useIsMobile } from "@/components/ScheduleBottomSheet";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
+import { getScheduleActivityBg } from "@/components/scheduleColors";
 import dynamic from "next/dynamic";
 
 const TrendCharts = dynamic(
@@ -61,6 +62,45 @@ type DashboardData = {
   todayScheduleItems?: ScheduleItemToday[];
   playersWithStatus?: PlayerWithStatus[];
 };
+
+function dashboardNeonCardStyle(type: string, isMatch: boolean) {
+  if (isMatch || type === "match") {
+    return {
+      backgroundImage:
+        "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)",
+      boxShadow:
+        "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)",
+    };
+  }
+
+  const glowByType: Record<string, string> = {
+    breakfast: "rgba(16, 185, 129, 0.26)",
+    lunch: "rgba(16, 185, 129, 0.26)",
+    dinner: "rgba(16, 185, 129, 0.26)",
+    arrival: "rgba(249, 115, 22, 0.30)",
+    training: "rgba(16, 185, 129, 0.30)",
+    gym: "rgba(132, 204, 22, 0.28)",
+    recovery: "rgba(56, 189, 248, 0.30)",
+    pre_activation: "rgba(245, 158, 11, 0.30)",
+    video_analysis: "rgba(139, 92, 246, 0.30)",
+    traveling: "rgba(245, 158, 11, 0.30)",
+    physio: "rgba(56, 189, 248, 0.30)",
+    medical: "rgba(244, 63, 94, 0.30)",
+    meeting: "rgba(79, 70, 229, 0.30)",
+    media: "rgba(217, 70, 239, 0.30)",
+    team_building: "rgba(147, 51, 234, 0.30)",
+    rest_off: "rgba(59, 130, 246, 0.26)",
+    individual: "rgba(52, 211, 153, 0.30)",
+  };
+
+  const glow = glowByType[type] ?? "rgba(16, 185, 129, 0.26)";
+
+  return {
+    backgroundImage: `radial-gradient(circle at left, ${glow} 0, transparent 55%), linear-gradient(135deg, #041311, #020617)`,
+    boxShadow:
+      "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
+  };
+}
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return (
@@ -431,14 +471,7 @@ export default function DashboardPage() {
                         <div
                           key={`${item.id}-${idx}`}
                           className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-[var(--card-shadow-hover)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
-                          style={{
-                            backgroundImage: isMatch
-                              ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
-                              : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
-                            boxShadow: isMatch
-                              ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)"
-                              : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)",
-                          }}
+                          style={dashboardNeonCardStyle(item.activity_type, isMatch)}
                         >
                           <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                             <p
@@ -449,7 +482,11 @@ export default function DashboardPage() {
                               {item.end_time != null ? item.end_time : null}
                             </p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">
-                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              {!isMatch && (
+                                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                  <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />
+                                </span>
+                              )}
                               <span>{label}</span>
                             </p>
                             {notes ? (
@@ -486,7 +523,11 @@ export default function DashboardPage() {
                               {timeStr}
                             </p>
                             <p className="flex items-center gap-2 text-sm font-medium text-white">
-                              {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}
+                              {!isMatch && (
+                                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                  <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />
+                                </span>
+                              )}
                               <span>{label}</span>
                             </p>
                             {notes ? (
@@ -519,7 +560,11 @@ export default function DashboardPage() {
                               isMatch ? "text-sm" : "text-xs"
                             }`}
                           >
-                            {!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}
+                            {!isMatch && (
+                              <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                <ScheduleIcon type={item.activity_type} className="shrink-0" />
+                              </span>
+                            )}
                             <span>{label}</span>
                           </p>
                           {notes ? (
@@ -547,10 +592,21 @@ export default function DashboardPage() {
                       const isMatch = item.activity_type === "match";
                       if (themeId === "neon") {
                         return (
-                          <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={{ backgroundImage: isMatch ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)" : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)", boxShadow: isMatch ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)" : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08)" }}>
+                          <div
+                            key={`dup-${item.id}-${idx}`}
+                            className={`flex shrink-0 rounded-xl border border-transparent shadow-[var(--card-shadow)] ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`}
+                            style={dashboardNeonCardStyle(item.activity_type, isMatch)}
+                          >
                             <div className="schedule-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                               <p className={`tabular-nums font-bold text-sm sm:text-base tracking-[0.03em] ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{item.start_time}{item.end_time != null ? <span className="inline-block px-1">–</span> : null}{item.end_time != null ? item.end_time : null}</p>
-                              <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                              <p className="flex items-center gap-2 text-sm font-medium text-white">
+                                {!isMatch && (
+                                  <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                    <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />
+                                  </span>
+                                )}
+                                <span>{label}</span>
+                              </p>
                               {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                             </div>
                           </div>
@@ -561,7 +617,14 @@ export default function DashboardPage() {
                           <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-xl border border-transparent ${isMatch ? "w-44 sm:w-52" : "w-40 sm:w-44"}`} style={isMatch ? { backgroundImage: "radial-gradient(circle at left, rgba(251, 191, 36, 0.28) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0802)", boxShadow: "0 0 0 1px rgba(255,255,255,0.2), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08)", borderRadius: 12 } : { ...MATT_CARD_STYLE, borderRadius: 12 }}>
                             <div className="matt-card-text min-w-0 flex-1 space-y-1 px-2.5 py-2 sm:space-y-1.5 sm:px-3 sm:py-2.5">
                               <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
-                              <p className="flex items-center gap-2 text-sm font-medium text-white">{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />}<span>{label}</span></p>
+                              <p className="flex items-center gap-2 text-sm font-medium text-white">
+                                {!isMatch && (
+                                  <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                    <ScheduleIcon type={item.activity_type} className="shrink-0 text-white/90" />
+                                  </span>
+                                )}
+                                <span>{label}</span>
+                              </p>
                               {notes ? <p className="flex items-center gap-1.5 text-xs text-white/90"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden />{notes}</p> : null}
                             </div>
                           </div>
@@ -571,7 +634,14 @@ export default function DashboardPage() {
                         <div key={`dup-${item.id}-${idx}`} className={`flex shrink-0 rounded-lg border border-zinc-700/80 shadow-[var(--card-shadow)] ${isMatch ? "w-40 border-l-[6px] border-l-amber-500/70 bg-amber-500/10 sm:w-48" : "w-36 border-l-4 border-l-emerald-500/60 bg-zinc-800/80 sm:w-40"}`}>
                           <div className="min-w-0 flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5">
                             <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>{timeStr}</p>
-                            <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>{!isMatch && <ScheduleIcon type={item.activity_type} className="shrink-0" />}<span>{label}</span></p>
+                            <p className={`mt-1 flex items-center gap-2 font-medium text-zinc-300 ${isMatch ? "text-sm" : "text-xs"}`}>
+                              {!isMatch && (
+                                <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(item.activity_type)}`}>
+                                  <ScheduleIcon type={item.activity_type} className="shrink-0" />
+                                </span>
+                              )}
+                              <span>{label}</span>
+                            </p>
                             {notes ? <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500"><LocationPinIcon className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />{notes}</p> : null}
                           </div>
                         </div>
