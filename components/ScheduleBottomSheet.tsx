@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Calendar, X } from "lucide-react";
 import { MATT_CARD_STYLE } from "@/lib/themes";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
+import { getScheduleActivityBg } from "@/components/scheduleColors";
 
 const SCHEDULE_ACTIVITY_LABELS: Record<string, string> = {
   arrival: "Arrival",
@@ -167,7 +168,7 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                         style={{
                           backgroundImage: isMatch
                             ? "radial-gradient(circle at left, rgba(251, 191, 36, 0.26) 0, transparent 55%), linear-gradient(135deg, #141006, #0a0502)"
-                            : "radial-gradient(circle at left, rgba(16, 185, 129, 0.26) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
+                            : "radial-gradient(circle at left, rgba(16, 185, 129, 0.22) 0, transparent 55%), linear-gradient(135deg, #041311, #020617)",
                           boxShadow: isMatch
                             ? "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(251, 191, 36, 0.2), 0 5px 16px rgba(180, 83, 9, 0.08), 0 4px 12px rgba(0,0,0,0.25)"
                             : "0 0 0 1px rgba(255,255,255,0.05), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 5px 16px rgba(6, 95, 70, 0.08), 0 4px 12px rgba(0,0,0,0.25)",
@@ -180,7 +181,19 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                             {item.end_time != null ? item.end_time : null}
                           </p>
                           <p className="flex items-center gap-2 text-sm font-medium text-white">
-                            {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" />}
+                            {!isMatch && (
+                              <span
+                                className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(
+                                  item.activity_type,
+                                )}`}
+                              >
+                                <ScheduleIcon
+                                  type={item.activity_type}
+                                  size={22}
+                                  className="shrink-0 text-white/90"
+                                />
+                              </span>
+                            )}
                             <span>{label}</span>
                           </p>
                           {notes ? (
@@ -215,10 +228,22 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                           <p className={`tabular-nums font-bold text-sm sm:text-base ${isMatch ? "text-amber-700" : "text-emerald-300"}`}>
                             {timeStr}
                           </p>
-                          <p className="flex items-center gap-2 text-sm font-medium text-white">
-                            {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0 text-white/90" />}
-                            <span>{label}</span>
-                          </p>
+                            <p className="flex items-center gap-2 text-sm font-medium text-white">
+                              {!isMatch && (
+                                <span
+                                  className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(
+                                    item.activity_type,
+                                  )}`}
+                                >
+                                  <ScheduleIcon
+                                    type={item.activity_type}
+                                    size={22}
+                                    className="shrink-0 text-white/90"
+                                  />
+                                </span>
+                              )}
+                              <span>{label}</span>
+                            </p>
                           {notes ? (
                             <p className="flex items-center gap-2 text-[11px] text-white/60">
                               <LocationPinIcon className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
@@ -250,7 +275,15 @@ export function ScheduleBottomSheet({ open, onClose, items, themeId }: ScheduleB
                             isMatch ? "text-sm" : "text-xs"
                           }`}
                         >
-                          {!isMatch && <ScheduleIcon type={item.activity_type} size={28} className="shrink-0" />}
+                          {!isMatch && (
+                            <span
+                              className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(
+                                item.activity_type,
+                              )}`}
+                            >
+                              <ScheduleIcon type={item.activity_type} size={22} className="shrink-0" />
+                            </span>
+                          )}
                           <span>{label}</span>
                         </p>
                         {notes ? (

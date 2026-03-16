@@ -2,8 +2,8 @@
 
 import type { ScheduleActivityType } from "@/lib/types";
 
-const SIZE = 24;
-const SIZE_MEDIA = 30;
+const SIZE = 30;
+const SIZE_MEDIA = 36;
 const CLASS = "shrink-0 text-zinc-400";
 
 /** Meals (breakfast, lunch, dinner) share one icon; every other type has its own. */
@@ -17,7 +17,15 @@ export function ScheduleIcon({ type, className = "", size: sizeProp }: { type: S
 
   if (isMeal) {
     return (
-      <img src="/icons/meals-plate.svg" width={s} height={s} alt="" className={c} aria-hidden />
+      <img
+        src="/icons/meals-plate.svg"
+        width={s}
+        height={s}
+        alt=""
+        className={c}
+        aria-hidden
+        style={{ filter: "brightness(0) invert(1)" }}
+      />
     );
   }
 
@@ -35,7 +43,15 @@ export function ScheduleIcon({ type, className = "", size: sizeProp }: { type: S
       );
     case "training":
       return (
-        <img src="/icons/training-soccer.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/training-soccer.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "gym":
       return (
@@ -43,7 +59,15 @@ export function ScheduleIcon({ type, className = "", size: sizeProp }: { type: S
       );
     case "recovery":
       return (
-        <img src="/icons/recovery-swim.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/recovery-swim.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "pre_activation":
       return (
@@ -51,39 +75,111 @@ export function ScheduleIcon({ type, className = "", size: sizeProp }: { type: S
       );
     case "video_analysis":
       return (
-        <img src="/icons/video-analysis-cinema.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/video-analysis-cinema.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "grayscale(1)" }}
+        />
       );
     case "meeting":
       return (
-        <img src="/icons/meeting-interview.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/meeting-interview.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "traveling":
       return (
-        <img src="/icons/traveling-bus.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/traveling-bus.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "medical":
       return (
-        <img src="/icons/medical-doctor.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/medical-doctor.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "physio":
       return (
-        <img src="/icons/physio-doctor.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/physio-doctor.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "grayscale(1)" }}
+        />
       );
     case "media":
       return (
-        <img src="/icons/camera-media.svg" width={sMedia} height={sMedia} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/camera-media.svg"
+          width={sMedia}
+          height={sMedia}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "rest_off":
       return (
-        <img src="/icons/rest-off-sleep.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/rest-off-sleep.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "grayscale(1) brightness(1.1) contrast(1.6)" }}
+        />
       );
     case "match":
       return (
-        <img src="/icons/match-stadium.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/match-stadium.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
       );
     case "team_building":
       return (
-        <img src="/icons/team-building-group.svg" width={s} height={s} alt="" className={c} aria-hidden />
+        <img
+          src="/icons/team-building-group.svg"
+          width={s}
+          height={s}
+          alt=""
+          className={c}
+          aria-hidden
+          style={{ filter: "grayscale(1)" }}
+        />
       );
     case "individual":
       return (

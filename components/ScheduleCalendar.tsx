@@ -16,6 +16,7 @@ import type { ScheduleActivityType } from "@/lib/types";
 import { getDateContextLabel } from "@/lib/dateContext";
 import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { Trash2, X, Clock, MapPin, CalendarDays, Plus } from "lucide-react";
+import { getScheduleActivityBg } from "@/components/scheduleColors";
 
 function LocationPinIcon({ className, ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return (
@@ -67,6 +68,10 @@ const ACTIVITY_TYPES: ScheduleActivityType[] = [
   "team_building",
   "individual",
 ];
+
+function iconBgClass(type: ScheduleActivityType) {
+  return getScheduleActivityBg(type);
+}
 
 /** First row of Add buttons (arrival, meals & core activities). */
 const ADD_ROW_1: ScheduleActivityType[] = [
@@ -589,7 +594,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
           className={`min-w-0 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/20" : ""}`}
           style={{ borderRadius: 12, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)", borderColor: "var(--card-border)" }) }}
         >
-          <h2 className="mb-3 text-sm font-semibold text-white">
+          <h2 className="mb-3 text-base sm:text-lg font-semibold text-white">
             Program for {selectedDate}{getDateContextLabel(selectedDate)}
           </h2>
           {timeSaveError && (
@@ -597,7 +602,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
           )}
           {selectedItems.length === 0 && (
             <div className="mb-3 rounded-lg border border-zinc-700/60 bg-zinc-800/50 px-3 py-3">
-              <p className="text-xs text-zinc-400">No program for this day.</p>
+              <p className="text-xs sm:text-sm text-zinc-300">No program for this day.</p>
               {canEdit && (() => {
                 const yesterday = getYesterday(selectedDate!);
                 const yesterdayItems = itemsByDate.get(yesterday) ?? [];
@@ -607,7 +612,7 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                       type="button"
                       onClick={handleCopyFromYesterday}
                       disabled={copyLoading || yesterdayItems.length === 0}
-                      className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {copyLoading ? "Copying…" : yesterdayItems.length > 0 ? `Copy from yesterday (${yesterdayItems.length})` : "Copy from yesterday"}
                     </button>
@@ -636,14 +641,24 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                 >
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 font-medium text-white text-xs">
-                      {item.activity_type === "match"
+                      {item.activity_type !== "match" && (
+                        <span
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 ${getScheduleActivityBg(
+                            item.activity_type,
+                          )}`}
+                        >
+                          <ScheduleIcon type={item.activity_type} className="h-5 w-5 shrink-0" />
+                        </span>
+                      )}
+                      <span>
+                        {item.activity_type === "match"
                         ? (item.team_a?.trim() && item.team_b?.trim()
                           ? `${item.team_a.trim()} vs. ${item.team_b.trim()}`
                           : item.opponent?.trim()
                             ? `Match vs. ${item.opponent.trim()}`
                             : "Match")
                         : (ACTIVITY_LABELS[item.activity_type as ScheduleActivityType] ?? item.activity_type)}
-                      {item.activity_type !== "match" && <ScheduleIcon type={item.activity_type} />}
+                      </span>
                     </p>
                     {item.activity_type === "match" && isAdmin && (
                       editingMatchTeamsId === item.id ? (
@@ -679,12 +694,41 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                       )
                     )}
                     {item.notes?.trim() ? (
-                      <p className={`flex items-center gap-1 text-[10px] sm:text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
-                        <LocationPinIcon className={`h-3 w-3 shrink-0 ${isHighContrast ? "text-white/60" : "text-zinc-500"}`} />
+                      <p
+                        className={`flex cursor-pointer items-center gap-1 text-[10px] sm:text-xs ${
+                          isHighContrast ? "text-white/80" : "text-zinc-400"
+                        }`}
+                        onClick={() => {
+                          if (!isAdmin || isEditing) return;
+                          setEditingNotesId(item.id);
+                          setEditingNotesValue(item.notes ?? "");
+                        }}
+                      >
+                        <LocationPinIcon
+                          className={`h-3 w-3 shrink-0 ${
+                            isHighContrast ? "text-white/60" : "text-zinc-500"
+                          }`}
+                        />
                         {item.notes.trim()}
                       </p>
                     ) : null}
-                    <p className={`text-[10px] sm:text-xs tabular-nums tracking-[0.03em] ${timeStr != null ? (isHighContrast ? "text-emerald-300/90" : "text-emerald-400/90") : isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
+                    <p
+                      className={`text-[10px] sm:text-xs tabular-nums tracking-[0.03em] ${
+                        timeStr != null
+                          ? isHighContrast
+                            ? "text-emerald-300/90"
+                            : "text-emerald-400/90"
+                          : isHighContrast
+                            ? "text-white/80"
+                            : "text-zinc-400"
+                      } ${isAdmin && !isEditing && timeStr != null ? "cursor-pointer" : ""}`}
+                      onClick={() => {
+                        if (!isAdmin || isEditing || timeStr == null) return;
+                        setEditingTimeId(item.id);
+                        setEditStart(start ?? "");
+                        setEditEnd(end ?? "");
+                      }}
+                    >
                       {timeStr != null ? (
                         <>
                           {start}
@@ -816,7 +860,9 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
                       >
                         {ACTIVITY_LABELS[type]}
-                        <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                        <span className={`inline-flex items-center justify-center h-10 w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
+                          <ScheduleIcon type={type} className="h-7 w-7 shrink-0" />
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -833,7 +879,9 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                         className="flex items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800/90 px-3 py-1.5 text-sm text-white hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-50"
                       >
                         {ACTIVITY_LABELS[type]}
-                        <ScheduleIcon type={type} className="h-6 w-6 shrink-0" />
+                        <span className={`inline-flex items-center justify-center h-10 w-10 rounded-md border border-white/10 ${iconBgClass(type)}`}>
+                          <ScheduleIcon type={type} className="h-7 w-7 shrink-0" />
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -908,8 +956,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                                     : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
                                 }`}
                               >
-                                <ScheduleIcon type={type} className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
-                                {ACTIVITY_LABELS[type]}
+                                <span className={`inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/10 sm:h-10 sm:w-10 ${iconBgClass(type)}`}>
+                                  <ScheduleIcon type={type} className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
+                                </span>
+                                <span>{ACTIVITY_LABELS[type]}</span>
                               </button>
                             );
                           })}
@@ -931,8 +981,10 @@ export function ScheduleCalendar({ canEdit, isAdmin = false, isPlayer = false }:
                                     : "border-zinc-600 bg-zinc-800/80 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700/80"
                                 }`}
                               >
-                                <ScheduleIcon type={type} className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
-                                {ACTIVITY_LABELS[type]}
+                                <span className={`inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/10 sm:h-10 sm:w-10 ${iconBgClass(type)}`}>
+                                  <ScheduleIcon type={type} className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
+                                </span>
+                                <span>{ACTIVITY_LABELS[type]}</span>
                               </button>
                             );
                           })}
