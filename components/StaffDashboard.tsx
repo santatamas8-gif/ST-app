@@ -48,14 +48,14 @@ function dashboardNeonCardStyle(type: string, isMatch: boolean) {
   // A többi típusnál csak a bal oldali "glow" színe változik,
   // illeszkedve az ikon hátterének Tailwind színéhez.
   const glowByType: Record<string, string> = {
-    breakfast: "rgba(16, 185, 129, 0.26)", // emerald
-    lunch: "rgba(16, 185, 129, 0.26)",
-    dinner: "rgba(16, 185, 129, 0.26)",
+    breakfast: "rgba(252, 211, 77, 0.30)", // amber
+    lunch: "rgba(252, 211, 77, 0.30)",
+    dinner: "rgba(252, 211, 77, 0.30)",
     arrival: "rgba(249, 115, 22, 0.30)", // orange
     training: "rgba(16, 185, 129, 0.30)", // emerald
     gym: "rgba(132, 204, 22, 0.28)", // lime
-    recovery: "rgba(45, 212, 191, 0.30)", // teal
-    pre_activation: "rgba(6, 182, 212, 0.30)", // cyan
+    recovery: "rgba(56, 189, 248, 0.30)", // light blue
+    pre_activation: "rgba(245, 158, 11, 0.30)", // amber
     video_analysis: "rgba(139, 92, 246, 0.30)", // violet
     traveling: "rgba(245, 158, 11, 0.30)", // amber
     physio: "rgba(56, 189, 248, 0.30)", // sky

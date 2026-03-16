@@ -74,9 +74,9 @@ function dashboardNeonCardStyle(type: string, isMatch: boolean) {
   }
 
   const glowByType: Record<string, string> = {
-    breakfast: "rgba(16, 185, 129, 0.26)",
-    lunch: "rgba(16, 185, 129, 0.26)",
-    dinner: "rgba(16, 185, 129, 0.26)",
+    breakfast: "rgba(252, 211, 77, 0.30)",
+    lunch: "rgba(252, 211, 77, 0.30)",
+    dinner: "rgba(252, 211, 77, 0.30)",
     arrival: "rgba(249, 115, 22, 0.30)",
     training: "rgba(16, 185, 129, 0.30)",
     gym: "rgba(132, 204, 22, 0.28)",

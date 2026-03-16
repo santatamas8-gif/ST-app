@@ -3,9 +3,9 @@ import type { ScheduleActivityType } from "@/lib/types";
 export function getScheduleActivityBg(type: ScheduleActivityType | string) {
   const t = type as ScheduleActivityType;
 
-  // Meals: single shared color (slightly warmer, külön a training zöldtől)
+  // Meals: single shared color (melegebb, sötétebb sárga – jobb kontraszt a fehér ikonhoz)
   if (t === "breakfast" || t === "lunch" || t === "dinner") {
-    return "bg-emerald-400/25";
+    return "bg-amber-400/25";
   }
 
   // Arrival
