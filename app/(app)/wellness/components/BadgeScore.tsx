@@ -8,17 +8,18 @@ function getColorClass(value: number | null | undefined, type: BadgeType): strin
   const v = value;
   switch (type) {
     case "goodHigh":
-      if (v <= 4) return "bg-red-600/25 text-red-300";
-      if (v <= 7) return "bg-yellow-500/30 text-yellow-400";
-      return "bg-emerald-500/20 text-emerald-400";
+      // Keep the same hues but normalize "strength" across bands.
+      if (v <= 4) return "bg-red-500/20 text-red-300";
+      if (v <= 7) return "bg-yellow-500/30 text-yellow-300";
+      return "bg-emerald-500/30 text-emerald-300";
     case "badHigh":
-      if (v >= 8) return "bg-red-600/25 text-red-300";
-      if (v >= 5) return "bg-yellow-500/30 text-yellow-400";
-      return "bg-emerald-500/20 text-emerald-400";
+      if (v >= 8) return "bg-red-500/20 text-red-300";
+      if (v >= 5) return "bg-yellow-500/30 text-yellow-300";
+      return "bg-emerald-500/30 text-emerald-300";
     case "badLow":
-      if (v <= 4) return "bg-red-600/25 text-red-300";
-      if (v <= 7) return "bg-yellow-500/30 text-yellow-400";
-      return "bg-emerald-500/20 text-emerald-400";
+      if (v <= 4) return "bg-red-500/20 text-red-300";
+      if (v <= 7) return "bg-yellow-500/30 text-yellow-300";
+      return "bg-emerald-500/30 text-emerald-300";
     default:
       return "bg-zinc-700/60 text-zinc-400";
   }

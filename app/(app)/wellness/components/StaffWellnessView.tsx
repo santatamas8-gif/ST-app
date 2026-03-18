@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Activity, AlertTriangle, UserRound, FileDown, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Activity, AlertTriangle, UserRound, FileDown, ArrowUpDown, ArrowUp, ArrowDown, CalendarOff } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { WellnessRow } from "@/lib/types";
@@ -108,6 +108,39 @@ function timeToHHmm(s: string | null | undefined): string | null {
   return s;
 }
 
+function scoreBandClassGoodHigh(value: number | null | undefined): string {
+  // Mirror `BadgeScore` (goodHigh): 1–4 red, 5–7 yellow, 8+ green
+  if (value == null || value === 0) return "bg-zinc-700/60";
+  // Slightly stronger fill for the mini-bar (still same hue logic as the badge).
+  if (value <= 4) return "bg-red-500/80";
+  if (value <= 7) return "bg-yellow-400/80";
+  return "bg-emerald-400/80";
+}
+
+function clamp01(n: number) {
+  return Math.max(0, Math.min(1, n));
+}
+
+function MiniScoreBar({
+  label,
+  value,
+  isHighContrast,
+}: {
+  label: string;
+  value: number | null | undefined;
+  isHighContrast: boolean;
+}) {
+  if (value == null || value === 0) return null;
+  const pct = clamp01(value / 10) * 100;
+  const fillClass = scoreBandClassGoodHigh(value);
+  const trackClass = isHighContrast ? "bg-white/6 ring-1 ring-white/10" : "bg-zinc-900/40 ring-1 ring-white/5";
+  return (
+    <span className={`hidden md:inline-flex h-2 w-12 overflow-hidden rounded-full ${trackClass}`} aria-hidden>
+      <span className={`h-full ${fillClass}`} style={{ width: `${pct}%` }} />
+    </span>
+  );
+}
+
 interface StaffWellnessViewProps {
   list: WellnessRow[];
   emailByUserId: Record<string, string>;
@@ -211,7 +244,7 @@ export function StaffWellnessView({
       className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-8 sm:mx-0 sm:px-6 lg:px-8"
       style={{ backgroundColor: "var(--page-bg)" }}
     >
-      <div className="mx-auto max-w-7xl min-w-0 space-y-8">
+      <div className="mx-auto max-w-screen-2xl min-w-0 space-y-8">
         {/* HEADER */}
         <div>
           <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl lg:text-2xl">Wellness</h1>
@@ -324,77 +357,77 @@ export function StaffWellnessView({
           className={`wellness-print-area mt-2 overflow-hidden rounded-xl ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
           style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }}
         >
+          {/* Egy sáv: dátum + keresés + legend + Export (üres napnál is így lehet régebbi napot választani) */}
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 sm:gap-x-4 ${isHighContrast ? "border-white/20 bg-white/5" : "border-zinc-700 bg-zinc-800/70"}`}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
+                Date
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
+                />
+              </label>
+              <div className="relative min-w-0 flex-1 basis-32 sm:max-w-[180px]">
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`min-h-[36px] w-full rounded-md border px-2 py-1.5 pr-12 text-sm placeholder-zinc-500 focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
+                  aria-label="Search by name or email"
+                  title="Search by name or email (Ctrl+K)"
+                />
+                <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                  Ctrl+K
+                </span>
+              </div>
+            </div>
+            <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
+              <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                <span className="inline-block h-3 w-5 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
+                Good
+              </span>
+              <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                <span className="inline-block h-3 w-5 rounded bg-yellow-500/60 ring-1 ring-yellow-400/40" aria-hidden />
+                Watch
+              </span>
+              <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
+                <span className="inline-block h-3 w-5 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
+                Critical
+              </span>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium no-print sm:ml-2 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-700/80 text-zinc-200 hover:bg-zinc-600"}`}
+                title="Export / Save as PDF (opens print dialog)"
+                aria-label="Export as PDF"
+              >
+                <FileDown className="h-3.5 w-3.5" aria-hidden />
+                Export PDF
+              </button>
+            </div>
+            <p className={`mt-2 w-full text-xs md:hidden ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+              Scale: 1–4 poor, 5–7 okay, 8+ great
+            </p>
+          </div>
           {filteredAndSorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className={isHighContrast ? "text-white/90" : "text-zinc-400"}>No wellness entries for selected date.</p>
-              {list.length === 0 && (
-                <p className={`mt-1 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>Try another date or ensure data is loaded.</p>
-              )}
+              <CalendarOff className={`mx-auto h-12 w-12 ${isHighContrast ? "text-white/40" : "text-zinc-500/80"}`} aria-hidden />
+              <p className={`mt-3 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+                {list.length === 0 ? "No data loaded." : "No entries for this date."}
+              </p>
             </div>
           ) : (
-            <>
-              <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 sm:gap-x-4 ${isHighContrast ? "border-white/20 bg-white/5" : "border-zinc-700 bg-zinc-800/70"}`}>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <label className={`flex items-center gap-1.5 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-                    Date
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className={`min-h-[36px] rounded-md border px-2 py-1.5 text-sm focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
-                    />
-                  </label>
-                  <div className="relative min-w-0 flex-1 basis-32 sm:max-w-[180px]">
-                    <input
-                      ref={searchInputRef}
-                      type="search"
-                      placeholder="Search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`min-h-[36px] w-full rounded-md border px-2 py-1.5 pr-12 text-sm placeholder-zinc-500 focus:outline-none ${isHighContrast ? "border-white/30 bg-white/10 text-white focus:border-white/60" : "border-zinc-600 bg-zinc-800/80 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
-                      aria-label="Search by name or email"
-                      title="Search by name or email (Ctrl+K)"
-                    />
-                    <span className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
-                      Ctrl+K
-                    </span>
-                  </div>
-                  </div>
-                <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-5 rounded bg-emerald-500/50 ring-1 ring-emerald-400/30" aria-hidden />
-                    Good
-                  </span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-5 rounded bg-yellow-500/60 ring-1 ring-yellow-400/40" aria-hidden />
-                    Watch
-                  </span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-medium ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                    <span className="inline-block h-3 w-5 rounded bg-red-500/50 ring-1 ring-red-400/30" aria-hidden />
-                    Critical
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium no-print sm:ml-2 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-700/80 text-zinc-200 hover:bg-zinc-600"}`}
-                    title="Export / Save as PDF (opens print dialog)"
-                    aria-label="Export as PDF"
-                  >
-                    <FileDown className="h-3.5 w-3.5" aria-hidden />
-                    Export PDF
-                  </button>
-                </div>
-                <p className={`mt-2 w-full text-xs md:hidden ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-                  Scale: 1–4 poor, 5–7 okay, 8+ great
-                </p>
-              </div>
-              <div className={`overflow-x-auto ${isHighContrast ? "rounded-b-xl ring-1 ring-white/10" : ""}`}>
+            <div className={`overflow-x-auto ${isHighContrast ? "rounded-b-xl ring-1 ring-white/10" : ""}`}>
                 <table className={`w-full text-left text-sm ${isHighContrast ? "border border-white/10" : ""}`}>
                   <thead className={`sticky top-0 z-10 border-b-2 shadow-md ${isHighContrast ? "border-white/25 bg-white/12 text-white" : "border-zinc-500 bg-zinc-800 text-zinc-200"}`}>
                     <tr>
                       <th className="px-4 py-2.5 text-base font-bold">Player</th>
                       <th className="px-4 py-2.5 text-base font-bold">Illness</th>
-                      <th className="px-4 py-2.5 text-base font-bold"><span className="ml-3 block w-fit">Bed – Wake</span></th>
+                      <th className="px-3 py-2.5 text-base font-bold"><span className="ml-2 block w-fit">Bed – Wake</span></th>
                       {(["sleep_duration", "sleep_quality", "fatigue", "soreness", "stress", "mood", "readiness"] as const).map((col) => {
                         const label = col === "sleep_duration" ? "Sleep (h)" : col === "sleep_quality" ? "Sleep quality" : col === "readiness" ? "Readiness" : col.charAt(0).toUpperCase() + col.slice(1);
                         const isActive = columnSort?.column === col;
@@ -406,14 +439,27 @@ export function StaffWellnessView({
                           >
                             <button
                               type="button"
-                              onClick={() => setColumnSort((prev) => (prev?.column === col ? (prev.dir === "asc" ? { column: col, dir: "desc" as const } : { column: col, dir: "asc" as const }) : { column: col, dir: "asc" as const }))}
+                              onClick={() =>
+                                setColumnSort((prev) => {
+                                  if (!prev || prev.column !== col) return { column: col, dir: "asc" };
+                                  if (prev.dir === "asc") return { column: col, dir: "desc" };
+                                  return null; // desc -> no sort
+                                })
+                              }
                               className="inline-flex items-center justify-center gap-1 rounded hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                               title={`Sort by ${label} (asc/desc)`}
                             >
                               <span>{label}</span>
-                              {dir === "asc" && <ArrowUp className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
-                              {dir === "desc" && <ArrowDown className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
-                              {!dir && <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />}
+                              <ArrowUp
+                                className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                                  dir === "asc"
+                                    ? "opacity-90"
+                                    : dir === "desc"
+                                      ? "opacity-90 rotate-180"
+                                      : "opacity-50"
+                                }`}
+                                aria-hidden
+                              />
                             </button>
                           </th>
                         );
@@ -450,20 +496,20 @@ export function StaffWellnessView({
                           </td>
                           <td className="px-4 py-2">
                             {r.illness === true ? (
-                              <span className="rounded bg-red-600/30 px-2 py-1 text-sm font-semibold text-red-300">Yes</span>
+                              <span className="rounded bg-red-500/20 px-2 py-1 text-sm font-semibold text-red-300">Yes</span>
                             ) : (
-                              <span className="rounded bg-emerald-500/20 px-2 py-1 text-sm font-semibold text-emerald-400">No</span>
+                              <span className="rounded bg-emerald-500/30 px-2 py-1 text-sm font-semibold text-emerald-300">No</span>
                             )}
                           </td>
-                          <td className="px-4 py-2 font-mono tabular-nums">
+                          <td className="px-3 py-2 font-mono tabular-nums">
                             {timeToHHmm(r.bed_time) != null && timeToHHmm(r.wake_time) != null
                               ? `${timeToHHmm(r.bed_time)} – ${timeToHHmm(r.wake_time)}`
                               : timeToHHmm(r.bed_time) ?? timeToHHmm(r.wake_time) ?? "—"}
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-3 py-2">
                             {r.sleep_duration != null ? (
                               <span
-                                className="inline-flex min-w-[3rem] justify-center rounded-md px-3 py-1 tabular-nums font-semibold"
+                                className="inline-flex min-w-[2.75rem] justify-center rounded-md px-2.5 py-1 tabular-nums font-semibold"
                                 style={
                                   r.sleep_duration >= 8
                                     ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
@@ -482,16 +528,28 @@ export function StaffWellnessView({
                             <BadgeScore value={r.sleep_quality} type="goodHigh" />
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.fatigue} type="goodHigh" />
+                            <span className="inline-flex items-center justify-center gap-1" title={r.fatigue ? `Fatigue: ${r.fatigue}/10` : undefined}>
+                              <MiniScoreBar label="Fatigue" value={r.fatigue} isHighContrast={isHighContrast} />
+                              <BadgeScore value={r.fatigue} type="goodHigh" />
+                            </span>
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.soreness} type="goodHigh" />
+                            <span className="inline-flex items-center justify-center gap-1" title={r.soreness ? `Soreness: ${r.soreness}/10` : undefined}>
+                              <MiniScoreBar label="Soreness" value={r.soreness} isHighContrast={isHighContrast} />
+                              <BadgeScore value={r.soreness} type="goodHigh" />
+                            </span>
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.stress} type="goodHigh" />
+                            <span className="inline-flex items-center justify-center gap-1" title={r.stress ? `Stress: ${r.stress}/10` : undefined}>
+                              <MiniScoreBar label="Stress" value={r.stress} isHighContrast={isHighContrast} />
+                              <BadgeScore value={r.stress} type="goodHigh" />
+                            </span>
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.mood} type="goodHigh" />
+                            <span className="inline-flex items-center justify-center gap-1" title={r.mood ? `Mood: ${r.mood}/10` : undefined}>
+                              <MiniScoreBar label="Mood" value={r.mood} isHighContrast={isHighContrast} />
+                              <BadgeScore value={r.mood} type="goodHigh" />
+                            </span>
                           </td>
                           <td className={`border-l px-2 py-2 text-center ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
                             <BadgeScore value={wellnessAverageFromRow(r)} type="goodHigh" />
@@ -514,7 +572,6 @@ export function StaffWellnessView({
                   )}
                 </table>
               </div>
-            </>
           )}
         </div>
 

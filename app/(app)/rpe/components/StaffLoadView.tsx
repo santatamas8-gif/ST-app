@@ -495,6 +495,108 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           </div>
         </section>
 
+        {/* Daily table – Sessions by player */}
+        <section className="space-y-2">
+          <h2 className={`border-b pb-1.5 text-xs font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+            Sessions by player – {formatMonthDay(selectedDate)}
+          </h2>
+          <div
+            className={`overflow-hidden rounded-lg ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+            style={{ borderRadius: "10px", ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
+          >
+          {sortedTableRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <Calendar className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
+              <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions for the selected date.</p>
+              <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Try another date.</p>
+            </div>
+          ) : (
+            <div className="relative" style={{ maxHeight: "400px" }}>
+              <div
+                ref={sessionsTableScrollRef}
+                onScroll={updateSessionsTableFade}
+                className="overflow-y-auto overflow-x-auto"
+                style={{ maxHeight: "400px" }}
+              >
+                <table className="w-full text-left text-xs">
+                  <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
+                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-600 text-zinc-400"}`}>
+                    <th className="px-2.5 py-2 font-medium">Player</th>
+                    <th className="px-2.5 py-2 font-medium">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLoadSortOrder(
+                            loadSortOrder == null ? "asc" : loadSortOrder === "asc" ? "desc" : "asc"
+                          )
+                        }
+                        className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-700/80 hover:text-white"
+                        title="Rendezés: kattintás vált növekvő ↔ csökkenő"
+                        aria-label="Sort by load"
+                      >
+                        Load
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold ${loadSortOrder != null ? "text-emerald-400" : "text-zinc-500"}`}>
+                          {loadSortOrder === "asc" ? "↑" : loadSortOrder === "desc" ? "↓" : "↕"}
+                        </span>
+                      </button>
+                    </th>
+                    <th className="px-2.5 py-2 font-medium">Spike</th>
+                    <th className="px-2.5 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
+                  {sortedTableRows.map(({ userId, load, spike }, idx) => {
+                    const risk = spikeToRiskLevel(spike);
+                    const daySessions = list.filter(
+                      (s) => s.user_id === userId && s.date === selectedDate
+                    );
+                    const loadBreakdown = formatLoadBreakdown(daySessions, load);
+                    const displayName = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
+                    const rowBg = idx % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/40") : "";
+                    return (
+                      <tr
+                        key={userId}
+                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg} ${
+                          risk === "danger" ? "bg-red-500/5" : risk === "warning" ? "bg-amber-500/5" : ""
+                        }`}
+                      >
+                        <td className="px-2.5 py-2">
+                          <button
+                            type="button"
+                            onClick={() => setModalUserId(userId)}
+                            className="min-h-[36px] rounded font-medium text-emerald-400 hover:underline text-left"
+                          >
+                            {displayName}
+                          </button>
+                        </td>
+                        <td className="px-2.5 py-2 tabular-nums">
+                          <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
+                        </td>
+                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
+                          {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}
+                        </td>
+                        <td className="px-2.5 py-2">
+                          <RiskBadge level={risk} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              </div>
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 transition-opacity duration-200"
+                style={{
+                  background: "linear-gradient(to top, rgba(13,17,23,0.95), transparent)",
+                  opacity: sessionsTableShowFade ? 1 : 0,
+                }}
+                aria-hidden
+              />
+            </div>
+          )}
+          </div>
+        </section>
+
         {/* Overview – KPI */}
         <section className="space-y-3">
           <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
@@ -672,108 +774,6 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                 Select a player to compare.
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Daily table */}
-        <section className="space-y-2">
-          <h2 className={`border-b pb-1.5 text-xs font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            Sessions by player – {formatMonthDay(selectedDate)}
-          </h2>
-          <div
-            className={`overflow-hidden rounded-lg ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-            style={{ borderRadius: "10px", ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-          >
-          {sortedTableRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <Calendar className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
-              <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions for the selected date.</p>
-              <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Try another date.</p>
-            </div>
-          ) : (
-            <div className="relative" style={{ maxHeight: "400px" }}>
-              <div
-                ref={sessionsTableScrollRef}
-                onScroll={updateSessionsTableFade}
-                className="overflow-y-auto overflow-x-auto"
-                style={{ maxHeight: "400px" }}
-              >
-                <table className="w-full text-left text-xs">
-                  <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
-                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-600 text-zinc-400"}`}>
-                    <th className="px-2.5 py-2 font-medium">Player</th>
-                    <th className="px-2.5 py-2 font-medium">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLoadSortOrder(
-                            loadSortOrder == null ? "asc" : loadSortOrder === "asc" ? "desc" : "asc"
-                          )
-                        }
-                        className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-700/80 hover:text-white"
-                        title="Rendezés: kattintás vált növekvő ↔ csökkenő"
-                        aria-label="Sort by load"
-                      >
-                        Load
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold ${loadSortOrder != null ? "text-emerald-400" : "text-zinc-500"}`}>
-                          {loadSortOrder === "asc" ? "↑" : loadSortOrder === "desc" ? "↓" : "↕"}
-                        </span>
-                      </button>
-                    </th>
-                    <th className="px-2.5 py-2 font-medium">Spike</th>
-                    <th className="px-2.5 py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
-                  {sortedTableRows.map(({ userId, load, spike }, idx) => {
-                    const risk = spikeToRiskLevel(spike);
-                    const daySessions = list.filter(
-                      (s) => s.user_id === userId && s.date === selectedDate
-                    );
-                    const loadBreakdown = formatLoadBreakdown(daySessions, load);
-                    const displayName = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
-                    const rowBg = idx % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/40") : "";
-                    return (
-                      <tr
-                        key={userId}
-                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg} ${
-                          risk === "danger" ? "bg-red-500/5" : risk === "warning" ? "bg-amber-500/5" : ""
-                        }`}
-                      >
-                        <td className="px-2.5 py-2">
-                          <button
-                            type="button"
-                            onClick={() => setModalUserId(userId)}
-                            className="min-h-[36px] rounded font-medium text-emerald-400 hover:underline text-left"
-                          >
-                            {displayName}
-                          </button>
-                        </td>
-                        <td className="px-2.5 py-2 tabular-nums">
-                          <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
-                        </td>
-                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
-                          {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}
-                        </td>
-                        <td className="px-2.5 py-2">
-                          <RiskBadge level={risk} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
-              <div
-                className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 transition-opacity duration-200"
-                style={{
-                  background: "linear-gradient(to top, rgba(13,17,23,0.95), transparent)",
-                  opacity: sessionsTableShowFade ? 1 : 0,
-                }}
-                aria-hidden
-              />
-            </div>
-          )}
           </div>
         </section>
 
