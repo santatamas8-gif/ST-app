@@ -43,6 +43,8 @@ export interface SessionRow {
   duration: number;
   rpe: number | null;
   load: number | null;
+  session_type?: string | null;
+  matchday_tag?: string | null;
   created_at?: string;
 }
 
