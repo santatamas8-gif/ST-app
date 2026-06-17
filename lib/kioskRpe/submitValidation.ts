@@ -3,7 +3,7 @@ import {
   MIN_DURATION_MINUTES,
   SESSION_TYPES,
 } from "@/lib/kioskRpe/constants";
-import type { KioskMatchdayTag, KioskSessionType } from "@/lib/kioskRpe/types";
+import type { KioskSessionType } from "@/lib/kioskRpe/types";
 
 export const KIOSK_SUBMIT_MAX_ENTRIES = 100;
 

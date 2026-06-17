@@ -16,6 +16,7 @@ type KioskGlobalSettingsProps = {
   onApplyAll: () => void;
   durationInvalid: boolean;
   applyAllDisabled: boolean;
+  readOnly?: boolean;
 };
 
 export function KioskGlobalSettings({
@@ -26,6 +27,7 @@ export function KioskGlobalSettings({
   onApplyAll,
   durationInvalid,
   applyAllDisabled,
+  readOnly = false,
 }: KioskGlobalSettingsProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
@@ -62,6 +64,7 @@ export function KioskGlobalSettings({
           <select
             id="kiosk-session-type"
             value={settings.sessionType}
+            disabled={readOnly}
             onChange={(e) =>
               onSettingsChange({
                 ...settings,
@@ -85,6 +88,7 @@ export function KioskGlobalSettings({
           <select
             id="kiosk-matchday-tag"
             value={settings.matchdayTag}
+            disabled={readOnly}
             onChange={(e) =>
               onSettingsChange({
                 ...settings,
@@ -113,6 +117,7 @@ export function KioskGlobalSettings({
             step={1}
             inputMode="numeric"
             value={durationInput}
+            disabled={readOnly}
             onChange={(e) => onDurationInputChange(e.target.value)}
             aria-invalid={durationInvalid}
             aria-describedby={durationInvalid ? "kiosk-duration-error" : undefined}
@@ -129,7 +134,7 @@ export function KioskGlobalSettings({
           <button
             type="button"
             onClick={onApplyAll}
-            disabled={applyAllDisabled}
+            disabled={applyAllDisabled || readOnly}
             className="mt-1.5 h-10 w-full rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:border-emerald-800 disabled:bg-emerald-900/40 disabled:text-emerald-600 sm:mt-0 lg:mt-6"
             aria-disabled={applyAllDisabled}
           >

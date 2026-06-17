@@ -4,6 +4,10 @@ import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Activity } from "lucide-react";
 import type { SessionRow } from "@/lib/types";
 import { formatMonthDay } from "@/lib/formatDate";
+import {
+  formatMatchdayTagDisplay,
+  formatSessionTypeDisplay,
+} from "@/lib/sessionDisplay";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 
@@ -108,7 +112,7 @@ export function PlayerLoadBreakdown({ sessions }: PlayerLoadBreakdownProps) {
         ) : (
           <div className="mt-3 overflow-x-auto -mx-1 px-1">
             <div
-              className="rounded-[16px] border overflow-hidden min-w-[280px] flex flex-col"
+              className="rounded-[16px] border overflow-hidden min-w-[360px] flex flex-col"
               style={{
                 backgroundColor: isHighContrast ? "rgba(255,255,255,0.03)" : "#0d1117",
                 borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
@@ -118,7 +122,7 @@ export function PlayerLoadBreakdown({ sessions }: PlayerLoadBreakdownProps) {
               <div
                 className="grid gap-x-0 gap-y-0 text-xs font-semibold uppercase tracking-wide min-h-[48px] items-center px-4 shrink-0"
                 style={{
-                  gridTemplateColumns: "1.2fr 1fr 0.6fr 0.8fr",
+                  gridTemplateColumns: "1fr 0.9fr 0.8fr 0.7fr 0.6fr 0.8fr",
                   backgroundColor: isHighContrast ? "rgba(255,255,255,0.08)" : "rgba(15,23,32,0.95)",
                   color: isHighContrast ? "rgba(255,255,255,0.95)" : "rgba(226,232,240,0.95)",
                   borderBottom: "1px solid " + (isHighContrast ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.1)"),
@@ -126,6 +130,8 @@ export function PlayerLoadBreakdown({ sessions }: PlayerLoadBreakdownProps) {
               >
                 <div className="text-left">Date</div>
                 <div className="text-left">Duration</div>
+                <div className="text-left">Type</div>
+                <div className="text-left">MD</div>
                 <div className="text-center">RPE</div>
                 <div className="text-center">Load</div>
               </div>
@@ -147,12 +153,18 @@ export function PlayerLoadBreakdown({ sessions }: PlayerLoadBreakdownProps) {
                         key={s.id}
                         className="grid gap-x-0 min-h-[52px] items-center px-4 text-sm tabular-nums transition-[background-color,filter] hover:brightness-110 active:opacity-90"
                         style={{
-                          gridTemplateColumns: "1.2fr 1fr 0.6fr 0.8fr",
+                          gridTemplateColumns: "1fr 0.9fr 0.8fr 0.7fr 0.6fr 0.8fr",
                           backgroundColor: rowBg,
                         }}
                       >
                         <div className="text-left text-gray-300">{formatMonthDay(s.date)}</div>
                         <div className="text-left text-gray-300">{d} min</div>
+                        <div className="text-left text-gray-400 text-xs">
+                          {formatSessionTypeDisplay(s.session_type)}
+                        </div>
+                        <div className="text-left text-gray-400 text-xs">
+                          {formatMatchdayTagDisplay(s.matchday_tag)}
+                        </div>
                         <div className="text-center font-medium" style={rpeColorStyle(r)}>
                           {r}
                         </div>

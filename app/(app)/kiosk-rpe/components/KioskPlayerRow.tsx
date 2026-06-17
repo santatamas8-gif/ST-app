@@ -34,6 +34,7 @@ interface KioskPlayerRowProps {
   settings: KioskPlayerRowSettings;
   durationInput: string;
   isCompleted: boolean;
+  readOnly?: boolean;
   onDurationInputChange: (value: string) => void;
   onSettingsChange: (patch: KioskPlayerSettingsPatch) => void;
   onRpeSelect: (rpe: RpeValue) => void;
@@ -59,6 +60,8 @@ function PlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | n
   return (
     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 sm:h-11 sm:w-11">
       {showImage ? (
+        // Native img keeps onError fallback for arbitrary Supabase avatar URLs (no next/image remote config).
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarUrl!}
           alt=""
@@ -96,6 +99,7 @@ export function KioskPlayerRow({
   settings,
   durationInput,
   isCompleted,
+  readOnly = false,
   onDurationInputChange,
   onSettingsChange,
   onRpeSelect,
@@ -150,10 +154,11 @@ export function KioskPlayerRow({
                 <button
                   key={value}
                   type="button"
+                  disabled={readOnly}
                   aria-pressed={selected}
                   aria-label={`Set ${name} RPE to ${value} — ${meaning}`}
                   onClick={() => onRpeSelect(value)}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm sm:h-10 sm:w-10 sm:text-base ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm sm:h-10 sm:w-10 sm:text-base disabled:cursor-default disabled:opacity-100 ${
                     selected ? getRpeButtonSelectedClasses(value) : getRpeButtonBaseClasses(value)
                   }`}
                 >
@@ -172,6 +177,7 @@ export function KioskPlayerRow({
           <select
             id={sessionTypeFieldId}
             value={settings.sessionType}
+            disabled={readOnly}
             onChange={(e) =>
               onSettingsChange({ sessionType: e.target.value as KioskSessionType })
             }
@@ -188,6 +194,7 @@ export function KioskPlayerRow({
           <select
             id={matchdayFieldId}
             value={settings.matchdayTag}
+            disabled={readOnly}
             onChange={(e) =>
               onSettingsChange({ matchdayTag: e.target.value as KioskMatchdayTag })
             }
@@ -210,6 +217,7 @@ export function KioskPlayerRow({
               step={1}
               inputMode="numeric"
               value={durationInput}
+              disabled={readOnly}
               onChange={(e) => onDurationInputChange(e.target.value)}
               aria-label={`Duration in minutes for ${name}`}
               aria-invalid={durationInvalid}

@@ -1,0 +1,81 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+const CARD_RADIUS = "12px";
+
+type KioskSubmitConfirmationProps = {
+  open: boolean;
+  completedCount: number;
+  missingCount: number;
+  isSubmitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+export function KioskSubmitConfirmation({
+  open,
+  completedCount,
+  missingCount,
+  isSubmitting,
+  onCancel,
+  onConfirm,
+}: KioskSubmitConfirmationProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    confirmRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kiosk-submit-confirm-title"
+    >
+      <div
+        className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-5 shadow-xl sm:p-6"
+        style={{ borderRadius: CARD_RADIUS, backgroundColor: "var(--card-bg)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="kiosk-submit-confirm-title" className="text-lg font-semibold text-white">
+          Submit completed players?
+        </h2>
+        <p className="mt-3 text-sm text-zinc-300">
+          {missingCount} {missingCount === 1 ? "player is" : "players are"} still missing. Submit
+          the {completedCount} completed {completedCount === 1 ? "entry" : "entries"} anyway?
+        </p>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="rounded-lg border border-zinc-600 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting ? "Submitting..." : "Submit completed players"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAppUser } from "@/lib/auth";
 import { validateKioskRpeSubmitRequest } from "@/lib/kioskRpe/submitValidation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -70,6 +71,10 @@ export async function POST(request: Request) {
     console.error("[kiosk-rpe/submit] batch insert failed", insertError);
     return NextResponse.json({ error: "Failed to save sessions." }, { status: 500 });
   }
+
+  revalidatePath("/rpe");
+  revalidatePath("/dashboard");
+  revalidatePath("/players", "layout");
 
   return NextResponse.json({
     success: true,

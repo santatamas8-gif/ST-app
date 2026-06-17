@@ -6,6 +6,10 @@ import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { formatMonthDay } from "@/lib/formatDate";
+import {
+  formatMatchdayTagDisplay,
+  formatSessionTypeDisplay,
+} from "@/lib/sessionDisplay";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { TeamLoadBarChart } from "./LoadBarChart";
 import { RpeForm } from "@/components/RpeForm";
@@ -135,6 +139,8 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                       <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
                         <th className="px-4 py-3 font-medium">Date</th>
                         <th className="px-4 py-3 font-medium">Duration (min)</th>
+                        <th className="hidden px-4 py-3 font-medium sm:table-cell">Type</th>
+                        <th className="hidden px-4 py-3 font-medium md:table-cell">MD</th>
                         <th className="px-4 py-3 font-medium">RPE</th>
                         <th className="px-4 py-3 font-medium">Load</th>
                       </tr>
@@ -144,6 +150,12 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                         <tr key={r.id} className={isHighContrast ? "border-b border-white/10" : "border-b border-zinc-800"}>
                           <td className="px-4 py-3 text-sm">{formatMonthDay(r.date)}</td>
                           <td className="px-4 py-3 tabular-nums text-sm">{r.duration}</td>
+                          <td className="hidden px-4 py-3 text-xs sm:table-cell">
+                            {formatSessionTypeDisplay(r.session_type)}
+                          </td>
+                          <td className="hidden px-4 py-3 text-xs md:table-cell">
+                            {formatMatchdayTagDisplay(r.matchday_tag)}
+                          </td>
                           <td className="px-4 py-3">
                             {r.rpe == null ? (
                               <span className={isHighContrast ? "text-white/60" : "text-zinc-400"}>—</span>
@@ -264,6 +276,8 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                           <tr>
                             <th className="px-4 py-3 font-medium">Date</th>
                             <th className="px-4 py-3 font-medium">Duration (min)</th>
+                            <th className="hidden px-4 py-3 font-medium sm:table-cell">Type</th>
+                            <th className="hidden px-4 py-3 font-medium md:table-cell">MD</th>
                             <th className="px-4 py-3 font-medium">RPE</th>
                             <th className="px-4 py-3 font-medium">Load</th>
                           </tr>
@@ -280,6 +294,12 @@ export function PlayerLoadView({ list, hasSubmittedToday }: PlayerLoadViewProps)
                               >
                                 <td className="px-4 py-3 text-sm">{formatMonthDay(r.date)}</td>
                                 <td className="px-4 py-3 tabular-nums text-sm">{r.duration}</td>
+                                <td className="hidden px-4 py-3 text-xs sm:table-cell">
+                                  {formatSessionTypeDisplay(r.session_type)}
+                                </td>
+                                <td className="hidden px-4 py-3 text-xs md:table-cell">
+                                  {formatMatchdayTagDisplay(r.matchday_tag)}
+                                </td>
                                 <td className="px-4 py-3">
                                   {r.rpe == null ? (
                                     <span className={isHighContrast ? "text-white/60" : "text-zinc-400"}>—</span>

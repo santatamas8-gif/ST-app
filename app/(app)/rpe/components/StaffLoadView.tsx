@@ -5,12 +5,20 @@ import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
-import { getDateContextLabel } from "@/lib/dateContext";
 import { formatMonthDay, formatDayShort } from "@/lib/formatDate";
+import {
+  formatAggregatedMatchdayTag,
+  formatAggregatedSessionType,
+} from "@/lib/sessionDisplay";
 import { LoadKpiCard } from "./LoadKpiCard";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
+import { MatchdayAnalysis } from "./MatchdayAnalysis";
+import { PlayerComparison } from "./PlayerComparison";
+import { PlayerSelfBaseline } from "./PlayerSelfBaseline";
+import { PlayerTeamBaseline } from "./PlayerTeamBaseline";
+import { RpeAnalyticsDataProvider } from "./RpeAnalyticsDataProvider";
 import { Activity, BarChart2, Calendar, LayoutDashboard, User, X } from "lucide-react";
 
 const CARD_RADIUS = "12px";
@@ -301,7 +309,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
       spikeByUser,
       sessionsByUser,
     };
-  }, [list, last7, prev7, last28, lastN, selectedDate, searchQuery, onlyAtRisk, emailByUserId, displayNameByUserId, periodDays]);
+  }, [list, last7, prev7, last28, lastN, selectedDate, searchQuery, onlyAtRisk, emailByUserId, displayNameByUserId]);
 
   const { teamCompareData, playerCompareData, allPlayerIds } = useMemo(() => {
     const w1 = getWeekDates(week1Start);
@@ -540,6 +548,8 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                         </span>
                       </button>
                     </th>
+                    <th className="hidden px-2.5 py-2 font-medium sm:table-cell">Type</th>
+                    <th className="hidden px-2.5 py-2 font-medium md:table-cell">MD</th>
                     <th className="px-2.5 py-2 font-medium">Spike</th>
                     <th className="px-2.5 py-2 font-medium">Status</th>
                   </tr>
@@ -571,6 +581,16 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                         </td>
                         <td className="px-2.5 py-2 tabular-nums">
                           <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
+                        </td>
+                        <td className="hidden px-2.5 py-2 sm:table-cell">
+                          <span className="inline-block rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
+                            {formatAggregatedSessionType(daySessions)}
+                          </span>
+                        </td>
+                        <td className="hidden px-2.5 py-2 md:table-cell">
+                          <span className="inline-block rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
+                            {formatAggregatedMatchdayTag(daySessions)}
+                          </span>
                         </td>
                         <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
                           {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}
@@ -777,6 +797,16 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           </div>
         </section>
 
+        <RpeAnalyticsDataProvider>
+          <MatchdayAnalysis />
+
+          <PlayerComparison />
+
+          <PlayerSelfBaseline />
+
+          <PlayerTeamBaseline />
+        </RpeAnalyticsDataProvider>
+
       </div>
 
       {modalUserId && modalUser && (
@@ -785,6 +815,7 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
           userId={modalUserId}
           sessions={modalSessions}
           spikePercent={modalSpike}
+          highlightDate={selectedDate}
           onClose={() => setModalUserId(null)}
         />
       )}
@@ -870,6 +901,12 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
                       <User className="h-4 w-4" aria-hidden />
                     </span>
                     <span className="min-w-0 break-words text-sm font-semibold leading-snug text-white">{name}</span>
+                    {sessionsForDay.length > 0 && (
+                      <p className="text-[10px] font-medium text-zinc-400">
+                        {formatAggregatedSessionType(sessionsForDay)} ·{" "}
+                        {formatAggregatedMatchdayTag(sessionsForDay)}
+                      </p>
+                    )}
                   </div>
                   <div className="shrink-0 rounded-lg bg-zinc-800/80 px-2.5 py-1.5 text-right font-mono text-sm tabular-nums ring-1 ring-emerald-500/20">
                     {formulaContent}

@@ -15,5 +15,8 @@ export default async function KioskRpePage() {
     listPlayersForKiosk(supabase)
   );
 
-  return <KioskRpeView players={players ?? []} loadError={loadError} />;
+  const roster = players ?? [];
+  const rosterKey = roster.map((player) => player.id).join("|");
+
+  return <KioskRpeView key={rosterKey} players={roster} loadError={loadError} />;
 }

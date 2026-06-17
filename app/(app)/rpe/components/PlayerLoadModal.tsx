@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -11,7 +12,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { SessionRow } from "@/lib/types";
-import { formatDayShort } from "@/lib/formatDate";
+import { formatDayShort, formatMonthDay } from "@/lib/formatDate";
+import {
+  formatMatchdayTagDisplay,
+  formatSessionTypeDisplay,
+} from "@/lib/sessionDisplay";
 import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
 
 const CARD_RADIUS = "12px";
@@ -21,6 +26,7 @@ interface PlayerLoadModalProps {
   userId: string;
   sessions: SessionRow[];
   spikePercent: number | null;
+  highlightDate?: string;
   onClose: () => void;
 }
 
@@ -29,6 +35,7 @@ export function PlayerLoadModal({
   userId,
   sessions,
   spikePercent,
+  highlightDate,
   onClose,
 }: PlayerLoadModalProps) {
   const last7 = sessions.slice(0, 7);
@@ -38,6 +45,19 @@ export function PlayerLoadModal({
   })).reverse();
   const dailyLoadSum = last7.reduce((a, s) => a + (s.load ?? 0), 0);
   const riskLevel = spikeToRiskLevel(spikePercent);
+
+  const detailSessions = useMemo(() => {
+    const sorted = [...sessions].sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (highlightDate) {
+      const onDate = sorted.filter((session) => session.date === highlightDate);
+      if (onDate.length > 0) return onDate;
+    }
+    return sorted.slice(0, 12);
+  }, [highlightDate, sessions]);
+
+  const detailTitle = highlightDate
+    ? `Sessions on ${formatMonthDay(highlightDate)}`
+    : "Recent sessions";
 
   return (
     <div
@@ -90,6 +110,48 @@ export function PlayerLoadModal({
             <span className="text-zinc-500">—</span>
           )}
           <RiskBadge level={riskLevel} />
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-zinc-400">{detailTitle}</h3>
+          {detailSessions.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-500">No sessions to show.</p>
+          ) : (
+            <div className="mt-2 overflow-x-auto rounded-lg border border-zinc-800">
+              <table className="w-full min-w-[520px] text-left text-xs">
+                <thead className="bg-zinc-900/80 text-zinc-400">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">Duration</th>
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">MD</th>
+                    <th className="px-3 py-2 font-medium">RPE</th>
+                    <th className="px-3 py-2 font-medium">Load</th>
+                  </tr>
+                </thead>
+                <tbody className="text-zinc-300">
+                  {detailSessions.map((session) => (
+                    <tr key={session.id} className="border-t border-zinc-800/80">
+                      <td className="px-3 py-2">{formatMonthDay(session.date)}</td>
+                      <td className="px-3 py-2 tabular-nums">{session.duration} min</td>
+                      <td className="px-3 py-2">
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium">
+                          {formatSessionTypeDisplay(session.session_type)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium">
+                          {formatMatchdayTagDisplay(session.matchday_tag)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{session.rpe ?? "—"}</td>
+                      <td className="px-3 py-2 tabular-nums">{session.load ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="mt-6">
