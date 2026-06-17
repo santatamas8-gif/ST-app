@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const APP_ROUTES = /^\/(dashboard|admin|wellness|rpe|players|schedule|users)(\/|$)/;
+const APP_ROUTES = /^\/(dashboard|admin|wellness|rpe|players|schedule|users|kiosk-rpe)(\/|$)/;
 
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);

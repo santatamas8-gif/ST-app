@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -29,6 +29,7 @@ const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRo
   { href: "/rpe", label: "RPE", icon: Activity },
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/admin/users", label: "Users", icon: UserCog, roles: ["admin"] },
+  { href: "/kiosk-rpe", label: "Kiosk RPE", icon: Monitor, roles: ["admin", "staff"] },
 ];
 
 interface SidebarProps {
