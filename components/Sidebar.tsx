@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor } from "lucide-react";
 import type { UserRole } from "@/lib/types";
+import { KioskExitButton } from "@/app/(app)/kiosk-rpe/components/KioskExitButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
 
@@ -41,11 +42,13 @@ interface SidebarProps {
   unreadChatCount?: number;
   /** True for admin or primary admin when staff (so they can open Users and reclaim admin). */
   canAccessUsers?: boolean;
+  /** Active Kiosk Lock: hide normal app navigation and logout. */
+  kioskLocked?: boolean;
   /** Main content (layout passes children here for desktop dashboard panel + main). */
   children?: React.ReactNode;
 }
 
-export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAccessUsers = false, children }: SidebarProps) {
+export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAccessUsers = false, kioskLocked = false, children }: SidebarProps) {
   const pathname = usePathname();
   const { themeId, setThemeId } = useTheme();
   const [themePopoverOpen, setThemePopoverOpen] = useState(false);
@@ -155,13 +158,43 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
 
   /** On dashboard keep flyout open; on other pages close it (more space). Hover still opens on any page. */
   useEffect(() => {
+    // Keep the flyout synchronized with route changes in the existing header shell.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (pathname === "/dashboard") setFlyoutOpen(true);
     else setFlyoutOpen(false);
   }, [pathname]);
 
   useEffect(() => {
+    // Close the mobile drawer after navigation completes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  if (kioskLocked) {
+    return (
+      <>
+        <aside
+          className={`no-print flex w-full shrink-0 flex-col border-b ${sidebarBorderClass}`}
+          style={sidebarBgStyle ?? { backgroundColor: "var(--card-bg)" }}
+        >
+          <div className={`flex h-14 min-h-[44px] items-center justify-between gap-2 border-b px-3 py-2 md:h-16 md:px-4 ${sidebarBorderClass}`}>
+            <span className={`shrink-0 text-lg font-bold tracking-tight md:text-xl ${isNeon ? "text-emerald-400/90" : "text-white"}`}>
+              ST AMS
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${isNeon || isMatt ? "border-white/15 bg-white/[0.03] text-white/70" : "border-zinc-700 bg-zinc-900/60 text-zinc-400"}`}>
+                Kiosk mode
+              </span>
+              <KioskExitButton />
+            </div>
+          </div>
+        </aside>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className="min-w-0 flex-1 overflow-auto">{children}</main>
+        </div>
+      </>
+    );
+  }
 
   const needsTodo = (href: string) => {
     if (!todoToday) return false;
