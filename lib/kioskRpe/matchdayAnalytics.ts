@@ -3,6 +3,9 @@ import type { SessionRow } from "@/lib/types";
 
 /** Fixed display order for matchday groups (not alphabetical). */
 export const MATCHDAY_TAG_ORDER = [
+  "MD+4",
+  "MD+3",
+  "MD+2",
   "MD+1",
   "MD-4",
   "MD-3",

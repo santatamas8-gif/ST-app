@@ -11,6 +11,9 @@ export const KIOSK_SUBMIT_MAX_ENTRIES = 100;
 export const KIOSK_MATCHDAY_DB_VALUES = [
   "MD",
   "MD+1",
+  "MD+2",
+  "MD+3",
+  "MD+4",
   "MD-4",
   "MD-3",
   "MD-2",

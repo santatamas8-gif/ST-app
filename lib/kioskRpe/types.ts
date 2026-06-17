@@ -11,6 +11,9 @@ export type KioskSessionType =
 export type KioskMatchdayTag =
   | "MD"
   | "MD+1"
+  | "MD+2"
+  | "MD+3"
+  | "MD+4"
   | "MD-4"
   | "MD-3"
   | "MD-2"

@@ -267,3 +267,67 @@ input.rpe-input-track {
   border: 0;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+
+/* Kiosk RPE tablet: some tablets report a narrow mobile viewport, so also key off device width. */
+@media (min-width: 430px), (min-device-width: 700px) and (orientation: portrait) {
+  .kiosk-global-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(5.5rem, 0.65fr);
+  }
+
+  .kiosk-player-grid {
+    grid-template-columns: 44px minmax(0, 8rem) minmax(0, 1fr) 5.5rem;
+    align-items: center;
+  }
+
+  .kiosk-rpe-cell {
+    grid-column: 3 / 4;
+    grid-row: 1;
+  }
+
+  .kiosk-rpe-buttons {
+    gap: 0.125rem;
+  }
+
+  .kiosk-rpe-button {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .kiosk-meaning-cell {
+    grid-column: 4 / 5;
+    grid-row: 1;
+    width: 100%;
+    min-height: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    line-height: 1.05;
+  }
+
+  .kiosk-player-controls-cell {
+    grid-column: 3 / 4;
+    grid-row: 2;
+    padding-top: 0;
+    border-top: 0;
+    gap: 0.25rem;
+  }
+
+  .kiosk-player-controls-cell select,
+  .kiosk-player-controls-cell input {
+    height: 1.625rem;
+    font-size: 0.6875rem;
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+
+  .kiosk-status-cell {
+    grid-column: 4 / 5;
+    grid-row: 2;
+    width: 100%;
+    min-height: 1.625rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+    overflow: hidden;
+    text-align: center;
+    justify-content: center;
+  }
+}

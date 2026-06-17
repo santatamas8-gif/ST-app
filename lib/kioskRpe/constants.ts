@@ -14,6 +14,9 @@ export const SESSION_TYPES = [
 export const MATCHDAY_TAGS = [
   "MD",
   "MD+1",
+  "MD+2",
+  "MD+3",
+  "MD+4",
   "MD-4",
   "MD-3",
   "MD-2",

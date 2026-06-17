@@ -8,6 +8,7 @@ import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import {
   getRpeButtonBaseClasses,
   getRpeButtonSelectedClasses,
+  getRpeIntensityBand,
   getRpeMeaning,
   MATCHDAY_TAGS,
   parseDurationInput,
@@ -16,7 +17,6 @@ import {
 } from "@/lib/kioskRpe/constants";
 import type { KioskPlayerSettingsPatch } from "@/lib/kioskRpe/state";
 import type { KioskMatchdayTag, KioskSessionType, RpeValue } from "@/lib/kioskRpe/types";
-import { sessionLoad } from "@/utils/load";
 
 const CARD_RADIUS = "12px";
 
@@ -58,7 +58,7 @@ function PlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | n
   const showImage = Boolean(avatarUrl) && !imgError;
 
   return (
-    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 sm:h-11 sm:w-11">
+    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600 min-[430px]:h-11 min-[430px]:w-11">
       {showImage ? (
         // Native img keeps onError fallback for arbitrary Supabase avatar URLs (no next/image remote config).
         // eslint-disable-next-line @next/next/no-img-element
@@ -84,11 +84,32 @@ function MetaChip({ children, className = "" }: { children: ReactNode; className
   const isHighContrast = themeId === "neon" || themeId === "matt";
   return (
     <span
-      className={`shrink-0 whitespace-nowrap rounded-md border border-zinc-700/80 px-2 py-1 text-xs font-medium sm:text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"} ${className}`}
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-zinc-700/80 px-2 py-1 text-xs font-medium sm:text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"} ${className}`}
     >
       {children}
     </span>
   );
+}
+
+function getRpeMeaningBadgeClasses(rpe: number | null): string {
+  if (rpe === null) {
+    return "!border-zinc-700/80 !bg-zinc-800/40 text-zinc-500";
+  }
+
+  switch (getRpeIntensityBand(rpe)) {
+    case "easy":
+      return "!border-emerald-600/70 !bg-emerald-950/50 text-emerald-300";
+    case "moderate":
+      return "!border-lime-600/70 !bg-lime-950/45 text-lime-300";
+    case "hard":
+      return "!border-orange-600/70 !bg-orange-950/45 text-orange-300";
+    case "very-hard":
+      return "!border-orange-700/80 !bg-orange-950/60 text-orange-200";
+    case "extreme":
+      return "!border-red-600/80 !bg-red-950/55 text-red-300";
+    case "maximal":
+      return "!border-red-900 !bg-red-950/80 text-red-200";
+  }
 }
 
 export function KioskPlayerRow({
@@ -108,9 +129,6 @@ export function KioskPlayerRow({
   const isHighContrast = themeId === "neon" || themeId === "matt";
 
   const durationInvalid = parseDurationInput(durationInput) === null;
-  const parsedDuration = parseDurationInput(durationInput);
-  const load =
-    rpe !== null && parsedDuration !== null ? sessionLoad(parsedDuration, rpe) : null;
   const rpeMeaning = rpe !== null ? getRpeMeaning(rpe) : null;
 
   const cardStyle =
@@ -120,11 +138,13 @@ export function KioskPlayerRow({
         ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS }
         : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS };
 
-  const selectClass =
-    "h-9 min-w-[5.5rem] max-w-[7rem] rounded-lg border border-zinc-700 bg-zinc-800/80 px-2 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:text-sm";
+  const sessionSelectClass =
+    "h-8 w-[6.25rem] max-w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-[7rem]";
+  const matchdaySelectClass =
+    "h-8 w-[5rem] max-w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-[5.75rem]";
   const durationInputClass = durationInvalid
-    ? "h-9 w-14 rounded-lg border border-red-600 bg-red-950/20 px-2 text-center text-xs text-white focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 sm:text-sm"
-    : "h-9 w-14 rounded-lg border border-zinc-700 bg-zinc-800/80 px-2 text-center text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:text-sm";
+    ? "h-8 w-14 rounded-lg border border-red-600 bg-red-950/20 px-1.5 text-center text-xs text-white focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+    : "h-8 w-14 rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-center text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   const durationFieldId = `kiosk-player-duration-${playerId}`;
   const sessionTypeFieldId = `kiosk-player-session-type-${playerId}`;
@@ -132,18 +152,23 @@ export function KioskPlayerRow({
 
   return (
     <article
-      className={`rounded-xl border border-zinc-800/90 p-3 sm:p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+      className={`rounded-xl border border-zinc-800/90 p-2.5 sm:p-3 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
       style={cardStyle}
     >
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-        <div className="flex min-w-0 shrink-0 items-center gap-3 lg:w-36 xl:w-40">
+      <div className="kiosk-player-grid grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-x-2 gap-y-2 min-[430px]:grid-cols-[44px_minmax(0,8rem)_minmax(0,1fr)_5.5rem] min-[430px]:items-center sm:grid-cols-[44px_minmax(0,9.5rem)_minmax(0,1fr)_6rem] xl:grid-cols-[44px_minmax(0,11.5rem)_minmax(0,1fr)_6.5rem] xl:gap-x-3">
+        <div className="col-start-1 row-start-1">
           <PlayerAvatar name={name} avatarUrl={avatarUrl} />
-          <p className="truncate font-semibold text-white">{name}</p>
         </div>
 
-        <div className="min-w-0 flex-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin]">
+        <div className="col-start-2 row-start-1 min-w-0">
+          <p className="truncate text-[15px] font-semibold text-white min-[430px]:text-base" title={name}>
+            {name}
+          </p>
+        </div>
+
+        <div className="kiosk-rpe-cell col-span-2 row-start-2 min-w-0 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] min-[430px]:col-start-3 min-[430px]:col-end-4 min-[430px]:row-start-1">
           <div
-            className="flex w-max min-w-full items-center gap-1 sm:gap-1.5"
+            className="kiosk-rpe-buttons flex w-max min-w-full items-center gap-1 min-[430px]:gap-0.5 sm:gap-1"
             role="group"
             aria-label={`RPE for ${name}`}
           >
@@ -158,7 +183,7 @@ export function KioskPlayerRow({
                   aria-pressed={selected}
                   aria-label={`Set ${name} RPE to ${value} — ${meaning}`}
                   onClick={() => onRpeSelect(value)}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm sm:h-10 sm:w-10 sm:text-base disabled:cursor-default disabled:opacity-100 ${
+                  className={`kiosk-rpe-button flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-medium disabled:cursor-default disabled:opacity-100 min-[430px]:h-8 min-[430px]:w-8 ${
                     selected ? getRpeButtonSelectedClasses(value) : getRpeButtonBaseClasses(value)
                   }`}
                 >
@@ -169,11 +194,13 @@ export function KioskPlayerRow({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
-          <MetaChip className={rpeMeaning ? "" : "text-zinc-500"}>
-            {rpeMeaning ?? "—"}
-          </MetaChip>
+        <MetaChip
+          className={`kiosk-meaning-cell col-span-2 row-start-3 w-fit justify-center whitespace-nowrap px-1 text-center text-[10px] leading-tight min-[430px]:col-start-4 min-[430px]:col-end-5 min-[430px]:row-start-1 min-[430px]:w-full min-[430px]:text-[10px] sm:text-[11px] ${getRpeMeaningBadgeClasses(rpe)}`}
+        >
+          {rpeMeaning ?? "—"}
+        </MetaChip>
 
+        <div className="kiosk-player-controls-cell col-span-2 row-start-4 flex min-w-0 flex-wrap items-center gap-1.5 border-t border-zinc-800/80 pt-2 min-[430px]:col-start-3 min-[430px]:col-end-4 min-[430px]:row-start-2 min-[430px]:border-t-0 min-[430px]:pt-0">
           <select
             id={sessionTypeFieldId}
             value={settings.sessionType}
@@ -181,7 +208,7 @@ export function KioskPlayerRow({
             onChange={(e) =>
               onSettingsChange({ sessionType: e.target.value as KioskSessionType })
             }
-            className={selectClass}
+            className={sessionSelectClass}
             aria-label={`Session type for ${name}`}
           >
             {SESSION_TYPES.map((type) => (
@@ -198,7 +225,7 @@ export function KioskPlayerRow({
             onChange={(e) =>
               onSettingsChange({ matchdayTag: e.target.value as KioskMatchdayTag })
             }
-            className={selectClass}
+            className={matchdaySelectClass}
             aria-label={`Matchday tag for ${name}`}
           >
             {MATCHDAY_TAGS.map((tag) => (
@@ -223,28 +250,24 @@ export function KioskPlayerRow({
               aria-invalid={durationInvalid}
               className={durationInputClass}
             />
-            <span className={`text-xs sm:text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+            <span className={`text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
               min
             </span>
           </div>
-
-          <MetaChip className="tabular-nums">
-            {load !== null ? `${load} AU` : "—"}
-          </MetaChip>
-
-          <span
-            className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold sm:text-sm ${
-              isCompleted
-                ? "bg-emerald-500/20 text-emerald-400"
-                : isHighContrast
-                  ? "bg-zinc-700/50 text-zinc-300"
-                  : "bg-zinc-800 text-zinc-400"
-            }`}
-          >
-            {isCompleted && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-            {isCompleted ? "Completed" : "Missing"}
-          </span>
         </div>
+
+        <span
+          className={`kiosk-status-cell col-span-2 row-start-5 inline-flex min-h-8 w-fit shrink-0 items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-[10px] font-semibold leading-tight min-[430px]:col-start-4 min-[430px]:col-end-5 min-[430px]:row-start-2 min-[430px]:w-full sm:px-2 sm:text-[11px] ${
+            isCompleted
+              ? "bg-emerald-500/20 text-emerald-400"
+              : isHighContrast
+                ? "bg-zinc-700/50 text-zinc-300"
+                : "bg-zinc-800 text-zinc-400"
+          }`}
+        >
+          {isCompleted && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+          {isCompleted ? "Completed" : "Missing"}
+        </span>
       </div>
     </article>
   );
