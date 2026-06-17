@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { getAppUser } from "@/lib/auth";
+import { buildKioskInsertRows } from "@/lib/kioskRpe/buildKioskInsertRows";
 import { validateKioskRpeSubmitRequest } from "@/lib/kioskRpe/submitValidation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sessionLoad } from "@/utils/load";
 
 export async function POST(request: Request) {
   const user = await getAppUser();
@@ -55,15 +56,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const insertRows = entries.map((entry) => ({
-    user_id: entry.playerId,
-    date,
-    duration: entry.durationMinutes,
-    rpe: entry.rpe,
-    load: sessionLoad(entry.durationMinutes, entry.rpe),
-    session_type: entry.sessionType,
-    matchday_tag: entry.matchdayTag,
-  }));
+  const kioskBatchId = randomUUID();
+  const insertRows = buildKioskInsertRows({ date, entries, kioskBatchId });
 
   const { error: insertError } = await admin.from("sessions").insert(insertRows);
 

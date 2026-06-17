@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Monitor, Users } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { buildKioskSubmitRequest } from "@/lib/kioskRpe/buildSubmitPayload";
+import { getKioskSubmissionConfirmationCopy } from "@/lib/kioskRpe/submissionConfirmation";
 import {
   DEFAULT_DURATION_MINUTES,
   DEFAULT_GLOBAL_SETTINGS,
@@ -26,6 +27,7 @@ import { KioskGlobalSettings as KioskGlobalSettingsPanel } from "./KioskGlobalSe
 import { KioskSummaryBar } from "./KioskSummaryBar";
 import { KioskPlayerRow } from "./KioskPlayerRow";
 import { KioskSubmitConfirmation } from "./KioskSubmitConfirmation";
+import { KioskTodayNotice } from "./KioskTodayNotice";
 
 const CARD_RADIUS = "12px";
 
@@ -34,9 +36,16 @@ type SubmissionStatus = "idle" | "confirming" | "submitting" | "success" | "erro
 interface KioskRpeViewProps {
   players: KioskPlayer[];
   loadError: SafeError | null;
+  todayKioskBatchCount: number;
+  todayKioskBatchCountUnavailable?: boolean;
 }
 
-export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
+export function KioskRpeView({
+  players,
+  loadError,
+  todayKioskBatchCount,
+  todayKioskBatchCountUnavailable = false,
+}: KioskRpeViewProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -50,6 +59,10 @@ export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
   const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
   const [insertedCount, setInsertedCount] = useState<number | null>(null);
+  const [knownTodayBatchCount, setKnownTodayBatchCount] = useState(todayKioskBatchCount);
+  const [todayBatchCountUnavailable, setTodayBatchCountUnavailable] = useState(
+    todayKioskBatchCountUnavailable
+  );
 
   const playerIds = useMemo(() => players.map((p) => p.id), [players]);
 
@@ -123,6 +136,8 @@ export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
       setSubmissionStatus("success");
       setInsertedCount(result.insertedCount);
       setSubmissionMessage(`${result.insertedCount} RPE entries submitted successfully.`);
+      setKnownTodayBatchCount((count) => count + 1);
+      setTodayBatchCountUnavailable(false);
       feedbackRef.current?.focus();
       return;
     }
@@ -138,13 +153,27 @@ export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
 
     setSubmissionMessage(null);
 
-    if (missing > 0) {
+    const confirmation = getKioskSubmissionConfirmationCopy({
+      completedCount: completed,
+      missingCount: missing,
+      todayBatchCount: knownTodayBatchCount,
+    });
+
+    if (confirmation.required) {
       setSubmissionStatus("confirming");
       return;
     }
 
     void performSubmit();
-  }, [completed, hasPlayers, loadError, missing, performSubmit, submissionStatus]);
+  }, [
+    completed,
+    hasPlayers,
+    knownTodayBatchCount,
+    loadError,
+    missing,
+    performSubmit,
+    submissionStatus,
+  ]);
 
   const handleConfirmSubmit = useCallback(() => {
     void performSubmit();
@@ -214,6 +243,11 @@ export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
           Quick post-session RPE collection for the team.
         </p>
       </header>
+
+      <KioskTodayNotice
+        todayBatchCount={knownTodayBatchCount}
+        countUnavailable={todayBatchCountUnavailable}
+      />
 
       <KioskGlobalSettingsPanel
         settings={globalSettings}
@@ -322,6 +356,7 @@ export function KioskRpeView({ players, loadError }: KioskRpeViewProps) {
         open={submissionStatus === "confirming"}
         completedCount={completed}
         missingCount={missing}
+        todayBatchCount={knownTodayBatchCount}
         isSubmitting={submissionStatus === "submitting"}
         onCancel={handleCancelConfirm}
         onConfirm={handleConfirmSubmit}

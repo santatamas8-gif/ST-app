@@ -19,7 +19,9 @@ import { PlayerComparison } from "./PlayerComparison";
 import { PlayerSelfBaseline } from "./PlayerSelfBaseline";
 import { PlayerTeamBaseline } from "./PlayerTeamBaseline";
 import { RpeAnalyticsDataProvider } from "./RpeAnalyticsDataProvider";
+import { RecentKioskSessions } from "./RecentKioskSessions";
 import { Activity, BarChart2, Calendar, LayoutDashboard, User, X } from "lucide-react";
+import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
 
 const CARD_RADIUS = "12px";
 
@@ -93,6 +95,8 @@ interface StaffLoadViewProps {
   list: SessionRow[];
   emailByUserId: Record<string, string>;
   displayNameByUserId?: Record<string, string>;
+  recentKioskSessions?: RecentKioskSessionSummary[];
+  recentKioskSessionsLoadError?: boolean;
 }
 
 /** Build load breakdown view: "90(d) × 7 = 630" or "(60×5 + 30×7) = 510".
@@ -152,7 +156,13 @@ function rpeColorClass(rpe: number): string {
 
 export type PeriodDays = 7 | 14 | 28;
 
-export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }: StaffLoadViewProps) {
+export function StaffLoadView({
+  list,
+  emailByUserId,
+  displayNameByUserId = {},
+  recentKioskSessions = [],
+  recentKioskSessionsLoadError = false,
+}: StaffLoadViewProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -689,6 +699,11 @@ export function StaffLoadView({ list, emailByUserId, displayNameByUserId = {} }:
             </div>
           )}
         </section>
+
+        <RecentKioskSessions
+          sessions={recentKioskSessions}
+          loadError={recentKioskSessionsLoadError}
+        />
 
         {/* Team load */}
         <section className="space-y-1">

@@ -45,6 +45,7 @@ export interface SessionRow {
   load: number | null;
   session_type?: string | null;
   matchday_tag?: string | null;
+  kiosk_batch_id?: string | null;
   created_at?: string;
 }
 

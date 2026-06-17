@@ -2,6 +2,8 @@ import { getAppUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import type { SessionRow } from "@/lib/types";
+import { getRecentKioskSessions } from "@/lib/kioskRpe/recentKioskSessions.server";
+import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
 import { StaffLoadView } from "./components/StaffLoadView";
 import { PlayerLoadView } from "./components/PlayerLoadView";
 
@@ -42,8 +44,8 @@ export default async function RpePage() {
     );
   }
 
-  let emailByUserId: Record<string, string> = {};
-  let displayNameByUserId: Record<string, string> = {};
+  const emailByUserId: Record<string, string> = {};
+  const displayNameByUserId: Record<string, string> = {};
   if (!isPlayer && list.length > 0) {
     const userIds = [...new Set(list.map((r) => r.user_id))];
     const { data: profiles } = await supabase
@@ -69,11 +71,28 @@ export default async function RpePage() {
     );
   }
 
+  let recentKioskSessions: RecentKioskSessionSummary[] = [];
+  let recentKioskSessionsLoadError = false;
+  try {
+    const recentResult = await getRecentKioskSessions();
+    if (recentResult.error) {
+      recentKioskSessionsLoadError = true;
+      console.error("[rpe] Recent Kiosk Sessions unavailable", recentResult.error);
+    } else {
+      recentKioskSessions = recentResult.data ?? [];
+    }
+  } catch (error) {
+    recentKioskSessionsLoadError = true;
+    console.error("[rpe] Recent Kiosk Sessions failed to load", error);
+  }
+
   return (
     <StaffLoadView
       list={list}
       emailByUserId={emailByUserId}
       displayNameByUserId={displayNameByUserId}
+      recentKioskSessions={recentKioskSessions}
+      recentKioskSessionsLoadError={recentKioskSessionsLoadError}
     />
   );
 }
