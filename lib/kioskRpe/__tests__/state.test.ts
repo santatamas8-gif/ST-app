@@ -87,6 +87,15 @@ describe("kiosk state helpers", () => {
     expect(next[PLAYER_B].rpe).toBeNull();
   });
 
+  it("can clear one player's RPE selection", () => {
+    let states = createInitialPlayerStates([{ id: PLAYER_A }, { id: PLAYER_B }]);
+    states = updatePlayerRpe(states, PLAYER_A, 5);
+    const next = updatePlayerRpe(states, PLAYER_A, null);
+
+    expect(next[PLAYER_A].rpe).toBeNull();
+    expect(next[PLAYER_B].rpe).toBeNull();
+  });
+
   it("syncs duration inputs for all players", () => {
     const inputs = syncAllDurationInputs([PLAYER_A, PLAYER_B], 60, { [PLAYER_A]: "75" });
     expect(inputs[PLAYER_A]).toBe("60");

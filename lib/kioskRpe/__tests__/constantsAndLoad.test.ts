@@ -4,14 +4,14 @@ import { sessionLoad } from "@/utils/load";
 
 describe("RPE meanings", () => {
   it.each([
-    [1, "Easy"],
+    [1, "Very easy"],
     [2, "Easy"],
-    [3, "Moderate"],
+    [3, "Light"],
     [4, "Moderate"],
     [5, "Hard"],
-    [6, "Hard"],
+    [6, "Hard+"],
     [7, "Very hard"],
-    [8, "Very hard"],
+    [8, "Very hard+"],
     [9, "Extremely hard"],
     [10, "Maximal"],
   ])("maps RPE %i to %s", (rpe, label) => {

@@ -4,6 +4,7 @@ import { runQuery } from "@/lib/supabase/safeQuery";
 import type { SessionRow } from "@/lib/types";
 import { getRecentKioskSessions } from "@/lib/kioskRpe/recentKioskSessions.server";
 import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
+import { listPlayersForKiosk, type KioskPlayer } from "@/lib/players/listPlayers";
 import { StaffLoadView } from "./components/StaffLoadView";
 import { PlayerLoadView } from "./components/PlayerLoadView";
 
@@ -46,6 +47,7 @@ export default async function RpePage() {
 
   const emailByUserId: Record<string, string> = {};
   const displayNameByUserId: Record<string, string> = {};
+  let playerRoster: KioskPlayer[] = [];
   if (!isPlayer && list.length > 0) {
     const userIds = [...new Set(list.map((r) => r.user_id))];
     const { data: profiles } = await supabase
@@ -59,6 +61,18 @@ export default async function RpePage() {
         const name = (p as { full_name?: string | null }).full_name;
         displayNameByUserId[p.id] =
           name && typeof name === "string" && name.trim() ? name.trim() : email;
+      }
+    }
+  }
+
+  if (!isPlayer) {
+    const { data: players, error: playersError } = await listPlayersForKiosk(supabase);
+    if (playersError) {
+      console.error("[rpe] Player roster unavailable", playersError);
+    } else {
+      playerRoster = players;
+      for (const player of players) {
+        displayNameByUserId[player.id] = player.name;
       }
     }
   }
@@ -91,6 +105,7 @@ export default async function RpePage() {
       list={list}
       emailByUserId={emailByUserId}
       displayNameByUserId={displayNameByUserId}
+      playerRoster={playerRoster}
       recentKioskSessions={recentKioskSessions}
       recentKioskSessionsLoadError={recentKioskSessionsLoadError}
     />

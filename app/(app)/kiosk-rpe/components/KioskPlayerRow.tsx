@@ -139,12 +139,12 @@ export function KioskPlayerRow({
         : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS };
 
   const sessionSelectClass =
-    "h-8 w-[6.25rem] max-w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-[7rem]";
+    "kiosk-row-select h-8 w-[6.5rem] rounded-lg border border-zinc-700 bg-zinc-800/80 px-2 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
   const matchdaySelectClass =
-    "h-8 w-[5rem] max-w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-[5.75rem]";
+    "kiosk-row-select h-8 w-[5.75rem] rounded-lg border border-zinc-700 bg-zinc-800/80 px-2 text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
   const durationInputClass = durationInvalid
-    ? "h-8 w-14 rounded-lg border border-red-600 bg-red-950/20 px-1.5 text-center text-xs text-white focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-    : "h-8 w-14 rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-center text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    ? "kiosk-row-duration h-8 w-14 rounded-lg border border-red-600 bg-red-950/20 px-1.5 text-center text-xs text-white focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+    : "kiosk-row-duration h-8 w-14 rounded-lg border border-zinc-700 bg-zinc-800/80 px-1.5 text-center text-xs text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   const durationFieldId = `kiosk-player-duration-${playerId}`;
   const sessionTypeFieldId = `kiosk-player-session-type-${playerId}`;
@@ -152,122 +152,126 @@ export function KioskPlayerRow({
 
   return (
     <article
-      className={`rounded-xl border border-zinc-800/90 p-2.5 sm:p-3 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+      className={`kiosk-player-row-card rounded-xl border border-zinc-800/90 p-2.5 sm:p-3 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
       style={cardStyle}
     >
-      <div className="kiosk-player-grid grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-x-2 gap-y-2 min-[430px]:grid-cols-[44px_minmax(0,8rem)_minmax(0,1fr)_5.5rem] min-[430px]:items-center sm:grid-cols-[44px_minmax(0,9.5rem)_minmax(0,1fr)_6rem] xl:grid-cols-[44px_minmax(0,11.5rem)_minmax(0,1fr)_6.5rem] xl:gap-x-3">
-        <div className="col-start-1 row-start-1">
+      <div className="kiosk-player-row-line flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="kiosk-player-fixed flex min-w-0 shrink-0 basis-[13rem] items-center gap-2 min-[430px]:basis-[15rem] sm:basis-[16rem] xl:basis-[18rem]">
           <PlayerAvatar name={name} avatarUrl={avatarUrl} />
-        </div>
-
-        <div className="col-start-2 row-start-1 min-w-0">
-          <p className="truncate text-[15px] font-semibold text-white min-[430px]:text-base" title={name}>
+          <p className="kiosk-player-name truncate text-[15px] font-semibold text-white min-[430px]:text-base" title={name}>
             {name}
           </p>
         </div>
 
-        <div className="kiosk-rpe-cell col-span-2 row-start-2 min-w-0 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] min-[430px]:col-start-3 min-[430px]:col-end-4 min-[430px]:row-start-1">
-          <div
-            className="kiosk-rpe-buttons flex w-max min-w-full items-center gap-1 min-[430px]:gap-0.5 sm:gap-1"
-            role="group"
-            aria-label={`RPE for ${name}`}
-          >
-            {RPE_VALUES.map((value) => {
-              const selected = rpe === value;
-              const meaning = getRpeMeaning(value);
-              return (
-                <button
-                  key={value}
-                  type="button"
+        <div className="relative min-w-0 flex-1">
+          <div className="min-w-0 overflow-x-auto pb-0.5 pr-5 [-ms-overflow-style:none] [scrollbar-width:thin] lg:pr-0">
+            <div className="kiosk-row-scroll-content flex w-max min-w-full items-center gap-1.5 sm:gap-2">
+              <div
+                className="flex shrink-0 items-center gap-1"
+                role="group"
+                aria-label={`RPE for ${name}`}
+              >
+                {RPE_VALUES.map((value) => {
+                  const selected = rpe === value;
+                  const meaning = getRpeMeaning(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={readOnly}
+                      aria-pressed={selected}
+                      aria-label={`Set ${name} RPE to ${value} — ${meaning}`}
+                      onClick={() => onRpeSelect(value)}
+                      className={`kiosk-row-rpe-button flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-medium disabled:cursor-default disabled:opacity-100 ${
+                        selected ? getRpeButtonSelectedClasses(value) : getRpeButtonBaseClasses(value)
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <MetaChip
+                className={`kiosk-row-meaning min-h-8 min-w-[6.75rem] justify-center px-2 text-center text-[11px] leading-tight ${getRpeMeaningBadgeClasses(rpe)}`}
+              >
+                {rpeMeaning ?? "—"}
+              </MetaChip>
+
+              <span
+                className={`kiosk-row-status inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                  isCompleted
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : isHighContrast
+                      ? "bg-zinc-700/50 text-zinc-300"
+                      : "bg-zinc-800 text-zinc-400"
+                }`}
+                aria-label={isCompleted ? `${name} completed` : `${name} missing`}
+                title={isCompleted ? "Completed" : "Missing"}
+              >
+                {isCompleted ? <Check className="h-4 w-4" aria-hidden /> : "–"}
+              </span>
+
+              <select
+                id={sessionTypeFieldId}
+                value={settings.sessionType}
+                disabled={readOnly}
+                onChange={(e) =>
+                  onSettingsChange({ sessionType: e.target.value as KioskSessionType })
+                }
+                className={sessionSelectClass}
+                aria-label={`Session type for ${name}`}
+              >
+                {SESSION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                id={matchdayFieldId}
+                value={settings.matchdayTag}
+                disabled={readOnly}
+                onChange={(e) =>
+                  onSettingsChange({ matchdayTag: e.target.value as KioskMatchdayTag })
+                }
+                className={matchdaySelectClass}
+                aria-label={`Matchday tag for ${name}`}
+              >
+                {MATCHDAY_TAGS.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex shrink-0 items-center gap-1 pr-1">
+                <input
+                  id={durationFieldId}
+                  type="number"
+                  min={1}
+                  max={300}
+                  step={1}
+                  inputMode="numeric"
+                  value={durationInput}
                   disabled={readOnly}
-                  aria-pressed={selected}
-                  aria-label={`Set ${name} RPE to ${value} — ${meaning}`}
-                  onClick={() => onRpeSelect(value)}
-                  className={`kiosk-rpe-button flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-medium disabled:cursor-default disabled:opacity-100 min-[430px]:h-8 min-[430px]:w-8 ${
-                    selected ? getRpeButtonSelectedClasses(value) : getRpeButtonBaseClasses(value)
-                  }`}
-                >
-                  {value}
-                </button>
-              );
-            })}
+                  onChange={(e) => onDurationInputChange(e.target.value)}
+                  aria-label={`Duration in minutes for ${name}`}
+                  aria-invalid={durationInvalid}
+                  className={durationInputClass}
+                />
+                <span className={`kiosk-row-min-label text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+                  min
+                </span>
+              </div>
+            </div>
           </div>
+          <div
+            className="pointer-events-none absolute bottom-0 right-0 top-0 w-8 bg-gradient-to-l from-[#020617] via-[#020617]/70 to-transparent lg:hidden"
+            aria-hidden
+          />
         </div>
-
-        <MetaChip
-          className={`kiosk-meaning-cell col-span-2 row-start-3 w-fit justify-center whitespace-nowrap px-1 text-center text-[10px] leading-tight min-[430px]:col-start-4 min-[430px]:col-end-5 min-[430px]:row-start-1 min-[430px]:w-full min-[430px]:text-[10px] sm:text-[11px] ${getRpeMeaningBadgeClasses(rpe)}`}
-        >
-          {rpeMeaning ?? "—"}
-        </MetaChip>
-
-        <div className="kiosk-player-controls-cell col-span-2 row-start-4 flex min-w-0 flex-wrap items-center gap-1.5 border-t border-zinc-800/80 pt-2 min-[430px]:col-start-3 min-[430px]:col-end-4 min-[430px]:row-start-2 min-[430px]:border-t-0 min-[430px]:pt-0">
-          <select
-            id={sessionTypeFieldId}
-            value={settings.sessionType}
-            disabled={readOnly}
-            onChange={(e) =>
-              onSettingsChange({ sessionType: e.target.value as KioskSessionType })
-            }
-            className={sessionSelectClass}
-            aria-label={`Session type for ${name}`}
-          >
-            {SESSION_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-
-          <select
-            id={matchdayFieldId}
-            value={settings.matchdayTag}
-            disabled={readOnly}
-            onChange={(e) =>
-              onSettingsChange({ matchdayTag: e.target.value as KioskMatchdayTag })
-            }
-            className={matchdaySelectClass}
-            aria-label={`Matchday tag for ${name}`}
-          >
-            {MATCHDAY_TAGS.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex shrink-0 items-center gap-1">
-            <input
-              id={durationFieldId}
-              type="number"
-              min={1}
-              max={300}
-              step={1}
-              inputMode="numeric"
-              value={durationInput}
-              disabled={readOnly}
-              onChange={(e) => onDurationInputChange(e.target.value)}
-              aria-label={`Duration in minutes for ${name}`}
-              aria-invalid={durationInvalid}
-              className={durationInputClass}
-            />
-            <span className={`text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
-              min
-            </span>
-          </div>
-        </div>
-
-        <span
-          className={`kiosk-status-cell col-span-2 row-start-5 inline-flex min-h-8 w-fit shrink-0 items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-[10px] font-semibold leading-tight min-[430px]:col-start-4 min-[430px]:col-end-5 min-[430px]:row-start-2 min-[430px]:w-full sm:px-2 sm:text-[11px] ${
-            isCompleted
-              ? "bg-emerald-500/20 text-emerald-400"
-              : isHighContrast
-                ? "bg-zinc-700/50 text-zinc-300"
-                : "bg-zinc-800 text-zinc-400"
-          }`}
-        >
-          {isCompleted && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-          {isCompleted ? "Completed" : "Missing"}
-        </span>
       </div>
     </article>
   );

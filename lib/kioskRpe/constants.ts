@@ -60,12 +60,28 @@ export function isValidDurationMinutes(value: number): boolean {
 
 /** RPE 1–10 meaning labels for kiosk display. */
 export function getRpeMeaning(rpe: number): string {
-  if (rpe <= 2) return "Easy";
-  if (rpe <= 4) return "Moderate";
-  if (rpe <= 6) return "Hard";
-  if (rpe <= 8) return "Very hard";
-  if (rpe === 9) return "Extremely hard";
-  return "Maximal";
+  switch (rpe) {
+    case 1:
+      return "Very easy";
+    case 2:
+      return "Easy";
+    case 3:
+      return "Light";
+    case 4:
+      return "Moderate";
+    case 5:
+      return "Hard";
+    case 6:
+      return "Hard+";
+    case 7:
+      return "Very hard";
+    case 8:
+      return "Very hard+";
+    case 9:
+      return "Extremely hard";
+    default:
+      return "Maximal";
+  }
 }
 
 export type RpeIntensityBand = "easy" | "moderate" | "hard" | "very-hard" | "extreme" | "maximal";

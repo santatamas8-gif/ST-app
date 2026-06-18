@@ -42,7 +42,7 @@ export function KioskTodayNotice({
       </div>
       {!countUnavailable && (
         <Link
-          href="/rpe#recent-kiosk-sessions"
+          href="/rpe?view=kiosk#recent-kiosk-sessions"
           className="min-h-[36px] shrink-0 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-center text-xs font-semibold text-emerald-400 transition hover:bg-zinc-700/80 hover:text-emerald-300"
         >
           View on RPE page

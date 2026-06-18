@@ -16,6 +16,7 @@ import {
 import { MATCHDAY_FILTER_OPTIONS, type MatchdayFilterOption } from "@/lib/kioskRpe/playerComparisonAnalytics";
 import {
   buildPlayerTeamBaselineResult,
+  chartMetricTitle,
   teamInterpretationLabel,
   type PlayerTeamChartMetric,
   type PlayerTeamDeviation,
@@ -153,7 +154,7 @@ export function PlayerTeamBaseline() {
     : null;
 
   const inputClass =
-    "h-9 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    "h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   const metricCards = result
     ? [
@@ -218,12 +219,15 @@ export function PlayerTeamBaseline() {
         }`}
       >
         <UsersRound className="h-4 w-4 shrink-0" aria-hidden />
-        Player vs Team Baseline
+        Player vs Team
       </h2>
+      <p className={`text-sm ${isHighContrast ? "text-white/65" : "text-zinc-500"}`}>
+        Compare one player with the rest of the team in the same period.
+      </p>
 
       <div
-        className={`rounded-xl p-4 space-y-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-        style={{ borderRadius: CARD_RADIUS, ...cardStyle }}
+        className={`space-y-4 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/15" : "border-zinc-800/90 bg-zinc-900/45"}`}
+        style={themeId === "neon" || themeId === "matt" ? { borderRadius: CARD_RADIUS, ...cardStyle } : { borderRadius: CARD_RADIUS }}
       >
         <div className="flex flex-wrap items-end gap-3">
           <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
@@ -231,7 +235,7 @@ export function PlayerTeamBaseline() {
             <select
               value={playerId}
               onChange={(e) => setPlayerId(e.target.value)}
-              className={`${inputClass} min-w-[10rem]`}
+              className={`${inputClass} min-w-[14rem]`}
             >
               <option value="">Select player…</option>
               {players.map((p) => (
@@ -263,7 +267,7 @@ export function PlayerTeamBaseline() {
           <button
             type="button"
             onClick={handleApplyRange}
-            className="h-9 rounded border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
+            className="h-10 rounded-lg border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
           >
             Apply range
           </button>
@@ -311,7 +315,7 @@ export function PlayerTeamBaseline() {
         )}
 
         {!playerId && !loading && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             Select a player to compare their values with the rest of the team.
           </p>
         )}
@@ -333,13 +337,8 @@ export function PlayerTeamBaseline() {
 
         {playerId && (
           <>
-            <p className={`text-xs leading-relaxed ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-              Differences describe submitted RPE sessions and should be interpreted together with
-              session count, training role, session content, wellness, GPS and coaching context.
-            </p>
-            <p className={`text-xs leading-relaxed ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
-              The team baseline may include players with different playing time, training roles, rehab
-              status and individual workloads.
+            <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+              The selected player is excluded from the team comparison group.
             </p>
           </>
         )}
@@ -352,7 +351,7 @@ export function PlayerTeamBaseline() {
         )}
 
         {playerId && !loading && result && !result.hasAnySessions && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             No matching RPE sessions found for the selected player and team filters.
           </p>
         )}
@@ -360,9 +359,9 @@ export function PlayerTeamBaseline() {
         {playerId && !loading && result && result.hasAnySessions && (
           <>
             {result.limitedData && (
-              <p className="text-sm text-amber-400" role="status">
-                Limited data: the selected player or team baseline does not contain enough matching
-                sessions.
+              <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`} role="status">
+                Limited data for a reliable comparison. Player: {result.player.sessionCount} sessions · Team:{" "}
+                {result.team.sessionCount} sessions · {result.team.uniquePlayerCount} other players.
               </p>
             )}
 
@@ -417,10 +416,10 @@ export function PlayerTeamBaseline() {
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-zinc-700/80">
+            <div className="overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead
-                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-700 bg-zinc-800/80 text-zinc-400"}`}
+                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-800 bg-zinc-800/80 text-zinc-400"}`}
                 >
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Group</th>
@@ -445,13 +444,13 @@ export function PlayerTeamBaseline() {
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(result.player.averageRpe)}</td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageDuration(result.player.averageDuration)}
+                      {result.player.averageDuration == null ? "—" : `${formatAverageDuration(result.player.averageDuration)} min`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-400">
-                      {formatAverageLoad(result.player.averageLoad)}
+                      {result.player.averageLoad == null ? "—" : `${formatAverageLoad(result.player.averageLoad)} AU`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {result.player.sessionCount > 0 ? formatTotalLoad(result.player.totalLoad) : "—"}
+                      {result.player.sessionCount > 0 ? `${formatTotalLoad(result.player.totalLoad)} AU` : "—"}
                     </td>
                   </tr>
                   <tr>
@@ -460,13 +459,13 @@ export function PlayerTeamBaseline() {
                     <td className="px-3 py-2.5 tabular-nums">{result.team.uniquePlayerCount}</td>
                     <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(result.team.averageRpe)}</td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageDuration(result.team.averageDuration)}
+                      {result.team.averageDuration == null ? "—" : `${formatAverageDuration(result.team.averageDuration)} min`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageLoad(result.team.averageLoad)}
+                      {result.team.averageLoad == null ? "—" : `${formatAverageLoad(result.team.averageLoad)} AU`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {result.team.sessionCount > 0 ? formatTotalLoad(result.team.totalLoad) : "—"}
+                      {result.team.sessionCount > 0 ? `${formatTotalLoad(result.team.totalLoad)} AU` : "—"}
                     </td>
                   </tr>
                 </tbody>
@@ -478,7 +477,7 @@ export function PlayerTeamBaseline() {
                 <h3
                   className={`text-xs font-semibold uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}
                 >
-                  Comparison chart
+                  Comparison chart · {chartMetricTitle(chartMetric)}
                 </h3>
                 <div
                   className={`flex flex-wrap rounded-lg border p-0.5 ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
@@ -494,7 +493,7 @@ export function PlayerTeamBaseline() {
                       key={value}
                       type="button"
                       onClick={() => setChartMetric(value)}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                      className={`h-8 rounded-md px-2.5 text-[11px] font-medium transition ${
                         chartMetric === value
                           ? "bg-emerald-600/30 text-emerald-400"
                           : isHighContrast

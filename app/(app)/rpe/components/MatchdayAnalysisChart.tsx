@@ -91,7 +91,7 @@ export function MatchdayAnalysisChart({
             formatter={(value: number) => [formatTooltipValue(value, metric), chartMetricLabel(metric)]}
             labelFormatter={(label) => `Matchday: ${label}`}
           />
-          <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} name={chartMetricLabel(metric)} />
+          <Bar dataKey="value" fill="#14b8a6" radius={[4, 4, 0, 0]} name={chartMetricLabel(metric)} />
         </BarChart>
       </ResponsiveContainer>
     </div>

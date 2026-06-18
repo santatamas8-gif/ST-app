@@ -17,6 +17,7 @@ import {
   BASELINE_PERIOD_OPTIONS,
   buildPlayerSelfBaselineResult,
   calculateSelfBaselineDateRanges,
+  chartMetricTitle,
   interpretationLabel,
   RECENT_PERIOD_OPTIONS,
   type BaselinePeriodDays,
@@ -54,6 +55,14 @@ function formatSignedNumber(value: number, decimals = 0): string {
 function formatPercentageDiff(value: number | null): string {
   if (value == null) return "—";
   return `${formatSignedNumber(value, 1)}%`;
+}
+
+function formatReadableDate(value: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
 }
 
 function formatAbsoluteDiff(
@@ -132,7 +141,7 @@ export function PlayerSelfBaseline() {
     : null;
 
   const inputClass =
-    "h-9 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    "h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   const metricCards = result
     ? [
@@ -181,12 +190,15 @@ export function PlayerSelfBaseline() {
         }`}
       >
         <TrendingUp className="h-4 w-4 shrink-0" aria-hidden />
-        Player Self-Baseline
+        Self-Baseline
       </h2>
+      <p className={`text-sm ${isHighContrast ? "text-white/65" : "text-zinc-500"}`}>
+        Compare a player&apos;s recent period with their own previous baseline.
+      </p>
 
       <div
-        className={`rounded-xl p-4 space-y-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-        style={{ borderRadius: CARD_RADIUS, ...cardStyle }}
+        className={`space-y-4 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/15" : "border-zinc-800/90 bg-zinc-900/45"}`}
+        style={themeId === "neon" || themeId === "matt" ? { borderRadius: CARD_RADIUS, ...cardStyle } : { borderRadius: CARD_RADIUS }}
       >
         <div className="flex flex-wrap items-end gap-3">
           <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
@@ -194,7 +206,7 @@ export function PlayerSelfBaseline() {
             <select
               value={playerId}
               onChange={(e) => setPlayerId(e.target.value)}
-              className={`${inputClass} min-w-[10rem]`}
+              className={`${inputClass} min-w-[14rem]`}
             >
               <option value="">Select player…</option>
               {players.map((p) => (
@@ -266,9 +278,10 @@ export function PlayerSelfBaseline() {
           </label>
         </div>
 
-        <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
-          Recent: {ranges.recentStart} – {ranges.recentEnd} · Baseline: {ranges.baselineStart} –{" "}
-          {ranges.baselineEnd}
+        <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          Recent: {formatReadableDate(ranges.recentStart)} – {formatReadableDate(ranges.recentEnd)}
+          {" · "}
+          Baseline: {formatReadableDate(ranges.baselineStart)} – {formatReadableDate(ranges.baselineEnd)}
         </p>
 
         {fetchError && (
@@ -278,7 +291,7 @@ export function PlayerSelfBaseline() {
         )}
 
         {!playerId && !loading && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             Select a player to compare recent values with their own baseline.
           </p>
         )}
@@ -313,7 +326,7 @@ export function PlayerSelfBaseline() {
         )}
 
         {playerId && !loading && result && !result.hasAnySessions && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             No matching RPE sessions found for the selected player and filters.
           </p>
         )}
@@ -321,8 +334,9 @@ export function PlayerSelfBaseline() {
         {playerId && !loading && result && result.hasAnySessions && (
           <>
             {result.limitedData && (
-              <p className="text-sm text-amber-400" role="status">
-                Limited data: one or both periods contain fewer than 3 sessions.
+              <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`} role="status">
+                Limited data: Recent {result.recent.sessionCount} sessions · Baseline{" "}
+                {result.baseline.sessionCount} sessions.
               </p>
             )}
 
@@ -372,10 +386,10 @@ export function PlayerSelfBaseline() {
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-zinc-700/80">
+            <div className="overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead
-                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-700 bg-zinc-800/80 text-zinc-400"}`}
+                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-800 bg-zinc-800/80 text-zinc-400"}`}
                 >
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Period</th>
@@ -391,37 +405,37 @@ export function PlayerSelfBaseline() {
                   <tr className={`border-b ${isHighContrast ? "border-white/10" : "border-zinc-800"}`}>
                     <td className="px-3 py-2.5 font-medium text-emerald-400">Recent</td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
-                      {result.ranges.recentStart} – {result.ranges.recentEnd}
+                      {formatReadableDate(result.ranges.recentStart)} – {formatReadableDate(result.ranges.recentEnd)}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-400">
                       {result.recent.sessionCount}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(result.recent.averageRpe)}</td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageDuration(result.recent.averageDuration)}
+                      {result.recent.averageDuration == null ? "—" : `${formatAverageDuration(result.recent.averageDuration)} min`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-400">
-                      {formatAverageLoad(result.recent.averageLoad)}
+                      {result.recent.averageLoad == null ? "—" : `${formatAverageLoad(result.recent.averageLoad)} AU`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {result.recent.sessionCount > 0 ? formatTotalLoad(result.recent.totalLoad) : "—"}
+                      {result.recent.sessionCount > 0 ? `${formatTotalLoad(result.recent.totalLoad)} AU` : "—"}
                     </td>
                   </tr>
                   <tr>
                     <td className="px-3 py-2.5 font-medium text-sky-400">Baseline</td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
-                      {result.ranges.baselineStart} – {result.ranges.baselineEnd}
+                      {formatReadableDate(result.ranges.baselineStart)} – {formatReadableDate(result.ranges.baselineEnd)}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">{result.baseline.sessionCount}</td>
                     <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(result.baseline.averageRpe)}</td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageDuration(result.baseline.averageDuration)}
+                      {result.baseline.averageDuration == null ? "—" : `${formatAverageDuration(result.baseline.averageDuration)} min`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {formatAverageLoad(result.baseline.averageLoad)}
+                      {result.baseline.averageLoad == null ? "—" : `${formatAverageLoad(result.baseline.averageLoad)} AU`}
                     </td>
                     <td className="px-3 py-2.5 tabular-nums">
-                      {result.baseline.sessionCount > 0 ? formatTotalLoad(result.baseline.totalLoad) : "—"}
+                      {result.baseline.sessionCount > 0 ? `${formatTotalLoad(result.baseline.totalLoad)} AU` : "—"}
                     </td>
                   </tr>
                 </tbody>
@@ -433,7 +447,7 @@ export function PlayerSelfBaseline() {
                 <h3
                   className={`text-xs font-semibold uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}
                 >
-                  Period comparison
+                  Period comparison · {chartMetricTitle(chartMetric)}
                 </h3>
                 <div
                   className={`flex flex-wrap rounded-lg border p-0.5 ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
@@ -449,7 +463,7 @@ export function PlayerSelfBaseline() {
                       key={value}
                       type="button"
                       onClick={() => setChartMetric(value)}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                      className={`h-8 rounded-md px-2.5 text-[11px] font-medium transition ${
                         chartMetric === value
                           ? "bg-emerald-600/30 text-emerald-400"
                           : isHighContrast

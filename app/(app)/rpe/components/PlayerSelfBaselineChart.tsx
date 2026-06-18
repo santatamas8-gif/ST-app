@@ -24,7 +24,7 @@ import {
   formatAverageRpe,
 } from "@/lib/kioskRpe/matchdayAnalytics";
 
-const RECENT_COLOR = "#10b981";
+const RECENT_COLOR = "#14b8a6";
 const BASELINE_COLOR = "#3b82f6";
 
 interface PlayerSelfBaselineChartProps {

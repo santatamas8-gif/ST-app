@@ -15,6 +15,7 @@ import {
 } from "@/lib/kioskRpe/matchdayAnalytics";
 import {
   buildPlayerComparisonRows,
+  comparisonChartMetricLabel,
   filterSessionsForPlayerComparison,
   MAX_COMPARISON_PLAYERS,
   MATCHDAY_FILTER_OPTIONS,
@@ -132,7 +133,7 @@ export function PlayerComparison() {
   const showNoData = showComparison && !playerHasComparisonData(comparisonRows);
 
   const inputClass =
-    "h-9 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    "h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   return (
     <section className="space-y-4">
@@ -142,12 +143,15 @@ export function PlayerComparison() {
         }`}
       >
         <Users className="h-4 w-4 shrink-0" aria-hidden />
-        Player Comparison
+        Compare Players
       </h2>
+      <p className={`text-sm ${isHighContrast ? "text-white/65" : "text-zinc-500"}`}>
+        Compare load and RPE values for 2–4 selected players.
+      </p>
 
       <div
-        className={`rounded-xl p-4 space-y-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-        style={{ borderRadius: CARD_RADIUS, ...cardStyle }}
+        className={`space-y-4 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/15" : "border-zinc-800/90 bg-zinc-900/45"}`}
+        style={themeId === "neon" || themeId === "matt" ? { borderRadius: CARD_RADIUS, ...cardStyle } : { borderRadius: CARD_RADIUS }}
       >
         <div className="flex flex-wrap items-end gap-3">
           <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
@@ -171,7 +175,7 @@ export function PlayerComparison() {
           <button
             type="button"
             onClick={handleApplyRange}
-            className="h-9 rounded border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
+            className="h-10 rounded-lg border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
           >
             Apply range
           </button>
@@ -216,7 +220,7 @@ export function PlayerComparison() {
                   value={addPlayerId}
                   onChange={(e) => setAddPlayerId(e.target.value)}
                   disabled={!canAddMore || availableToAdd.length === 0}
-                  className={`${inputClass} min-w-[10rem] disabled:opacity-50`}
+                  className={`${inputClass} min-w-[12rem] disabled:opacity-50`}
                 >
                   <option value="">
                     {canAddMore ? "Select player…" : "Maximum 4 players"}
@@ -231,7 +235,7 @@ export function PlayerComparison() {
                   type="button"
                   onClick={handleAddPlayer}
                   disabled={!addPlayerId || !canAddMore}
-                  className="h-9 rounded border border-zinc-600 bg-zinc-800/80 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80 disabled:opacity-50"
+                  className="h-10 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -288,8 +292,8 @@ export function PlayerComparison() {
         )}
 
         {!hasEnoughPlayers && !loading && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
-            Select at least 2 players to compare.
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+            Select at least 2 players to compare. You can compare up to 4 players.
           </p>
         )}
 
@@ -308,17 +312,17 @@ export function PlayerComparison() {
         )}
 
         {showNoData && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             No RPE data found for the selected players and filters.
           </p>
         )}
 
         {showComparison && comparisonRows.length > 0 && (
           <>
-            <div className="overflow-x-auto rounded-lg border border-zinc-700/80">
+            <div className="overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full min-w-[560px] text-left text-xs">
                 <thead
-                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-700 bg-zinc-800/80 text-zinc-400"}`}
+                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-800 bg-zinc-800/80 text-zinc-400"}`}
                 >
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Player</th>
@@ -341,13 +345,13 @@ export function PlayerComparison() {
                       </td>
                       <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(row.averageRpe)}</td>
                       <td className="px-3 py-2.5 tabular-nums">
-                        {formatAverageDuration(row.averageDuration)}
+                        {row.averageDuration == null ? "—" : `${formatAverageDuration(row.averageDuration)} min`}
                       </td>
                       <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-400">
-                        {formatAverageLoad(row.averageLoad)}
+                        {row.averageLoad == null ? "—" : `${formatAverageLoad(row.averageLoad)} AU`}
                       </td>
                       <td className="px-3 py-2.5 tabular-nums text-zinc-400">
-                        {row.sessionCount > 0 ? formatTotalLoad(row.totalLoad) : "—"}
+                        {row.sessionCount > 0 ? `${formatTotalLoad(row.totalLoad)} AU` : "—"}
                       </td>
                     </tr>
                   ))}
@@ -361,7 +365,7 @@ export function PlayerComparison() {
                   <h3
                     className={`text-xs font-semibold uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}
                   >
-                    Comparison chart
+                    Comparison chart · {comparisonChartMetricLabel(chartMetric)}
                   </h3>
                   <div
                     className={`flex flex-wrap rounded-lg border p-0.5 ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}
@@ -378,7 +382,7 @@ export function PlayerComparison() {
                         key={value}
                         type="button"
                         onClick={() => setChartMetric(value)}
-                        className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                        className={`h-8 rounded-md px-2.5 text-[11px] font-medium transition ${
                           chartMetric === value
                             ? "bg-emerald-600/30 text-emerald-400"
                             : isHighContrast

@@ -109,7 +109,10 @@ export function KioskRpeView({
   }, []);
 
   const handleRpeSelect = useCallback((playerId: string, rpe: RpeValue) => {
-    setPlayerStates((prev) => updatePlayerRpe(prev, playerId, rpe));
+    setPlayerStates((prev) => {
+      const currentRpe = prev[playerId]?.rpe ?? null;
+      return updatePlayerRpe(prev, playerId, currentRpe === rpe ? null : rpe);
+    });
   }, []);
 
   const total = players.length;

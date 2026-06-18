@@ -5,6 +5,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import {
   buildMatchdayAnalytics,
+  chartMetricLabel,
   filterSessionsForMatchdayAnalysis,
   formatAverageDuration,
   formatAverageLoad,
@@ -100,7 +101,7 @@ export function MatchdayAnalysis() {
       : filteredSessions.length === 0);
 
   const inputClass =
-    "h-9 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    "h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
 
   return (
     <section className="space-y-4">
@@ -114,8 +115,8 @@ export function MatchdayAnalysis() {
       </h2>
 
       <div
-        className={`rounded-xl p-4 space-y-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-        style={{ borderRadius: CARD_RADIUS, ...cardStyle }}
+        className={`space-y-4 rounded-xl border p-4 ${themeId === "neon" ? "neon-card-text border-white/20" : themeId === "matt" ? "matt-card-text border-white/15" : "border-zinc-800/90 bg-zinc-900/45"}`}
+        style={themeId === "neon" || themeId === "matt" ? { borderRadius: CARD_RADIUS, ...cardStyle } : { borderRadius: CARD_RADIUS }}
       >
         {/* Filters */}
         <div className="flex flex-wrap items-end gap-3">
@@ -140,7 +141,7 @@ export function MatchdayAnalysis() {
           <button
             type="button"
             onClick={handleApplyRange}
-            className="h-9 rounded border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
+            className="h-10 rounded-lg border border-emerald-600/50 bg-emerald-950/30 px-3 text-xs font-medium text-emerald-400 hover:bg-emerald-900/40"
           >
             Apply range
           </button>
@@ -151,7 +152,7 @@ export function MatchdayAnalysis() {
                 key={value}
                 type="button"
                 onClick={() => setMode(value)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  className={`h-8 rounded-md px-3 text-xs font-medium transition ${
                   mode === value
                     ? "bg-emerald-600/30 text-emerald-400"
                     : isHighContrast
@@ -223,7 +224,7 @@ export function MatchdayAnalysis() {
         )}
 
         {mode === "individual" && !playerId && !loading && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             Select a player to view their matchday history.
           </p>
         )}
@@ -236,17 +237,17 @@ export function MatchdayAnalysis() {
         )}
 
         {!loading && showEmpty && (
-          <p className={`text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
+          <p className={`rounded-lg border border-zinc-800 bg-zinc-950/20 px-3 py-2 text-sm ${isHighContrast ? "text-white/70" : "text-zinc-400"}`}>
             No Matchday RPE data found for the selected filters.
           </p>
         )}
 
         {!loading && analyticsRows.length > 0 && (
           <>
-            <div className="overflow-x-auto rounded-lg border border-zinc-700/80">
+            <div className="overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead
-                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-700 bg-zinc-800/80 text-zinc-400"}`}
+                  className={`border-b ${isHighContrast ? "border-white/20 bg-white/5 text-white/80" : "border-zinc-800 bg-zinc-800/80 text-zinc-400"}`}
                 >
                   <tr>
                     <th className="px-3 py-2.5 font-medium">Matchday</th>
@@ -275,13 +276,13 @@ export function MatchdayAnalysis() {
                       )}
                       <td className="px-3 py-2.5 tabular-nums">{formatAverageRpe(row.averageRpe)}</td>
                       <td className="px-3 py-2.5 tabular-nums">
-                        {formatAverageDuration(row.averageDuration)}
+                        {row.averageDuration == null ? "—" : `${formatAverageDuration(row.averageDuration)} min`}
                       </td>
                       <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-400">
-                        {formatAverageLoad(row.averageLoad)}
+                        {row.averageLoad == null ? "—" : `${formatAverageLoad(row.averageLoad)} AU`}
                       </td>
                       <td className="px-3 py-2.5 tabular-nums text-zinc-400">
-                        {formatTotalLoad(row.totalLoad)}
+                        {formatTotalLoad(row.totalLoad)} AU
                       </td>
                     </tr>
                   ))}
@@ -292,7 +293,7 @@ export function MatchdayAnalysis() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className={`text-xs font-semibold uppercase tracking-wide ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
-                  Comparison chart
+                  Comparison chart · {chartMetricLabel(chartMetric)}
                 </h3>
                 <div className={`flex rounded-lg border p-0.5 ${isHighContrast ? "border-white/20" : "border-zinc-700"}`}>
                   {(

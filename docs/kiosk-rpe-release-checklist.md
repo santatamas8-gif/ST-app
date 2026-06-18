@@ -41,6 +41,82 @@ If the Vercel project is connected to the Git repository, push to `master` trigg
 - [ ] Browser console has no errors on `/rpe` and `/kiosk-rpe`
 - [ ] Network tab on staff `/rpe` shows deduplicated `matchday-analysis` requests (~2 on default load, not 4)
 
+## Phase 11: Staff/Admin RPE workspace
+
+### Environment and database
+
+- [ ] Migration `027_sessions_kiosk_fields.sql` has been applied
+- [ ] Migration `028_sessions_kiosk_batch_id.sql` has been applied
+- [ ] No `.env`, PIN, Supabase key, or secret file is staged in Git
+- [ ] `KIOSK_PIN` is configured separately for environments that use Kiosk Lock
+
+### Role smoke test
+
+- [ ] Admin sees the Staff/Admin `/rpe` workspace with all four top-level tabs
+- [ ] Staff sees the same authorized analytical workspace
+- [ ] Player sees only the player RPE load view, not Staff/Admin tabs or Kiosk history
+
+### Overview
+
+- [ ] Date selector works
+- [ ] Today button resets the selected date
+- [ ] Search filters both the daily chart and the player table
+- [ ] Five KPIs are visible: Players submitted, Missing players, Average RPE, Average duration, Total load
+- [ ] Today's Load by Player chart uses the selected date
+- [ ] Player Daily Sessions table opens the existing player detail modal
+- [ ] Multiple same-day sessions aggregate correctly per player
+- [ ] Weekly, Acute, Chronic, At-risk, Spike, Status, and Only at-risk indicators are not visible in Overview
+
+### Team Trends
+
+- [ ] `/rpe?view=team` defaults to Load Trend
+- [ ] Load Trend 7 / 14 / 28 day periods work
+- [ ] Matchday Analysis Team and Individual modes work
+- [ ] Matchday date range and Session Type filters work
+- [ ] Compare Weeks Team-only mode uses the full width
+- [ ] Compare Weeks Player mode shows team and player charts
+
+### Player Analysis
+
+- [ ] `/rpe?view=players` defaults to Compare Players
+- [ ] Compare Players supports 2-4 selected players
+- [ ] Compare Players date, Matchday, and Session Type filters work
+- [ ] Self-Baseline player and period selectors work
+- [ ] Self-Baseline recent and baseline windows remain non-overlapping
+- [ ] Player vs Team excludes the selected player from the team comparison group
+- [ ] Player vs Team sample counts and neutral interpretation text are visible
+
+### Kiosk Sessions
+
+- [ ] `/rpe?view=kiosk#recent-kiosk-sessions` opens and scrolls to Kiosk Sessions
+- [ ] `/rpe#recent-kiosk-sessions` still opens and scrolls to Kiosk Sessions
+- [ ] Latest batches are shown newest first
+- [ ] Multiple same-day batches remain separate
+- [ ] Batch Date, Time, Session Type, Matchday, Players, Avg RPE, and Total Load values are correct
+- [ ] View details expands the correct batch
+- [ ] Hide details collapses the batch
+- [ ] Expanded details preserve stored player rows, including duplicate stored rows if present
+- [ ] Tablet and mobile layouts remain readable and tappable
+
+### Navigation
+
+- [ ] Refresh preserves the active top-level tab
+- [ ] Refresh preserves Team Trends `analysis`
+- [ ] Refresh preserves Player Analysis `playerAnalysis`
+- [ ] Browser Back works across top-level and internal tab changes
+- [ ] Browser Forward works across top-level and internal tab changes
+- [ ] Invalid `view`, `analysis`, or `playerAnalysis` values fall back safely
+
+### Network
+
+- [ ] Overview does not trigger hidden client analytics requests
+- [ ] Team Load does not trigger Matchday analytics requests
+- [ ] Matchday Analysis triggers only its required analytics request
+- [ ] Player Comparison does not trigger Self-Baseline or Player vs Team analytics requests
+- [ ] Switching analyses does not create a request loop
+- [ ] Existing analytics request deduplication remains effective
+- [ ] Kiosk Sessions continues to use the server-side Recent Kiosk Sessions path; hash-only compatibility may require Kiosk batch data to be available on initial Staff/Admin `/rpe` render
+
 ## Phase 9: Recent Kiosk Sessions
 
 ### Supabase

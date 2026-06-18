@@ -3,7 +3,6 @@
 import {
   BarChart,
   Bar,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -54,7 +53,7 @@ export function TwoWeekComparisonChart({
                   borderRadius: "8px",
                 }}
                 formatter={(value: number, name: string) => [
-                  value,
+                  `${Math.round(value).toLocaleString("en-GB")} AU`,
                   name === "loadW1" ? week1Label : week2Label,
                 ]}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.day ?? ""}
@@ -127,7 +126,7 @@ export function TeamLoadBarChart({
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}
-                formatter={(v: number) => [v, "Load"]}
+                formatter={(v: number) => [`${Math.round(v).toLocaleString("en-GB")} AU`, "Load"]}
               />
               <Bar dataKey="load" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -144,15 +143,12 @@ export function TeamLoadBarChart({
 
 /** Player load: vertical bars, names on X (bottom), load on Y, value beside bar */
 interface PlayerLoadBarChartProps {
-  data: { label: string; load: number; spikePercent?: number | null }[];
+  data: { label: string; playerName?: string; load: number; sessionCount?: number }[];
   className?: string;
 }
 
 export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartProps) {
-  const chartData = data.map((d) => ({
-    ...d,
-    fill: d.spikePercent != null && d.spikePercent >= 0.3 ? "#ef4444" : d.spikePercent != null && d.spikePercent >= 0.2 ? "#f59e0b" : "#10b981",
-  }));
+  const chartData = data;
 
   return (
     <div className={className}>
@@ -180,21 +176,31 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}
-                formatter={(v: number, _: unknown, props: { payload?: { spikePercent?: number } }) =>
-                  [v, props.payload?.spikePercent != null ? `Spike: ${(props.payload.spikePercent * 100).toFixed(0)}%` : "Load"]
-                }
+                formatter={(v: number) => [`${Math.round(v).toLocaleString("en-GB")} AU`, "Total load"]}
+                labelFormatter={(_, payload) => {
+                  const row = payload?.[0]?.payload as (typeof chartData)[number] | undefined;
+                  if (!row) return "";
+                  const sessions =
+                    row.sessionCount == null
+                      ? ""
+                      : ` · ${row.sessionCount} session${row.sessionCount === 1 ? "" : "s"}`;
+                  return `${row.playerName ?? row.label}${sessions}`;
+                }}
               />
-              <Bar dataKey="load" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-                <LabelList dataKey="load" position="right" fill="#a1a1aa" fontSize={11} />
+              <Bar dataKey="load" fill="#14b8a6" radius={[4, 4, 0, 0]}>
+                <LabelList
+                  dataKey="load"
+                  position="right"
+                  fill="#a1a1aa"
+                  fontSize={11}
+                  formatter={(value: number) => Math.round(value).toLocaleString("en-GB")}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-            No data
+            No RPE sessions were submitted for this date.
           </div>
         )}
       </div>

@@ -24,7 +24,7 @@ import {
   formatAverageRpe,
 } from "@/lib/kioskRpe/matchdayAnalytics";
 
-const PLAYER_COLOR = "#10b981";
+const PLAYER_COLOR = "#14b8a6";
 const TEAM_COLOR = "#3b82f6";
 
 interface PlayerTeamBaselineChartProps {

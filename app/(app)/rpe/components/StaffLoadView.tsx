@@ -1,29 +1,34 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
-import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import type { SessionRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
-import { formatMonthDay, formatDayShort } from "@/lib/formatDate";
 import {
-  formatAggregatedMatchdayTag,
-  formatAggregatedSessionType,
-} from "@/lib/sessionDisplay";
-import { LoadKpiCard } from "./LoadKpiCard";
-import { RiskBadge, spikeToRiskLevel } from "./RiskBadge";
+  buildDailyPlayerRows,
+  calculateDailyOverviewMetrics,
+  type DailyOverviewPlayer,
+  type DailyPlayerRow,
+} from "@/lib/rpe/dailyOverview";
+import { parsePlayerAnalysisView } from "@/lib/rpe/playerAnalysisView";
+import { parseStaffRpeViewFromLocation } from "@/lib/rpe/staffRpeView";
+import { parseTeamTrendsView } from "@/lib/rpe/teamTrendsView";
+import { formatMonthDay, formatDayShort } from "@/lib/formatDate";
 import { TeamLoadBarChart, PlayerLoadBarChart, TwoWeekComparisonChart, type TwoWeekDataPoint } from "./LoadBarChart";
 import { PlayerLoadModal } from "./PlayerLoadModal";
 import { MatchdayAnalysis } from "./MatchdayAnalysis";
 import { PlayerComparison } from "./PlayerComparison";
 import { PlayerSelfBaseline } from "./PlayerSelfBaseline";
+import { PlayerSessionHistory } from "./PlayerSessionHistory";
 import { PlayerTeamBaseline } from "./PlayerTeamBaseline";
 import { RpeAnalyticsDataProvider } from "./RpeAnalyticsDataProvider";
 import { RecentKioskSessions } from "./RecentKioskSessions";
-import { Activity, BarChart2, Calendar, LayoutDashboard, User, X } from "lucide-react";
+import { StaffRpeTabs } from "./StaffRpeTabs";
+import { PlayerAnalysisTabs } from "./PlayerAnalysisTabs";
+import { TeamTrendsTabs } from "./TeamTrendsTabs";
+import { Activity, BarChart2, Calendar, LayoutDashboard, Search, User, X } from "lucide-react";
 import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
-
-const CARD_RADIUS = "12px";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -53,10 +58,6 @@ function getPrev7Dates(): string[] {
   return out;
 }
 
-function getLast28Dates(): string[] {
-  return getLastNDates(28);
-}
-
 /** Returns 7 consecutive dates starting from startDate (YYYY-MM-DD), local date. */
 function getWeekDates(startDate: string): string[] {
   const [y, m, d] = startDate.split("-").map(Number);
@@ -72,6 +73,124 @@ function getWeekDates(startDate: string): string[] {
 
 function formatWeekLabel(startDate: string): string {
   return formatMonthDay(startDate);
+}
+
+function formatAverage(value: number | null, decimals = 1): string {
+  if (value == null) return "—";
+  return value.toFixed(decimals);
+}
+
+function formatDurationMinutes(value: number | null): string {
+  if (value == null) return "—";
+  return `${Math.round(value)} min`;
+}
+
+function formatLoadAu(value: number): string {
+  return `${Math.round(value).toLocaleString("en-GB")} AU`;
+}
+
+function DailyKpiCard({
+  label,
+  value,
+  sublabel,
+  tone = "normal",
+  isHighContrast,
+}: {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  tone?: "normal" | "missing";
+  isHighContrast: boolean;
+}) {
+  const valueClass = tone === "missing" ? "text-amber-400" : "text-emerald-400";
+  return (
+    <div
+      className={`min-h-[112px] rounded-xl border p-4 ${
+        isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"
+      }`}
+    >
+      <p className={`text-xs font-semibold uppercase tracking-wide ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
+        {label}
+      </p>
+      <p className={`mt-2 text-2xl font-bold tabular-nums ${valueClass}`}>{value}</p>
+      {sublabel != null && (
+        <p className={`mt-1 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+          {sublabel}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CompactEmptyState({
+  icon,
+  title,
+  isHighContrast,
+}: {
+  icon: ReactNode;
+  title: string;
+  isHighContrast: boolean;
+}) {
+  return (
+    <div className="flex min-h-[112px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+      <div className={isHighContrast ? "text-white/45" : "text-zinc-500"}>{icon}</div>
+      <p className={`text-sm ${isHighContrast ? "text-white/75" : "text-zinc-400"}`}>{title}</p>
+    </div>
+  );
+}
+
+function DailyPlayerTableRow({
+  row,
+  index,
+  isHighContrast,
+  onOpen,
+}: {
+  row: DailyPlayerRow;
+  index: number;
+  isHighContrast: boolean;
+  onOpen: () => void;
+}) {
+  const rowBg = index % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/30") : "";
+  return (
+    <tr
+      className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg}`}
+    >
+      <td className="px-3 py-3">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-h-[36px] rounded text-left font-medium text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          {row.playerName}
+        </button>
+      </td>
+      <td className="px-3 py-3 tabular-nums">{row.sessionCount}</td>
+      <td className="px-3 py-3 tabular-nums">{formatAverage(row.averageRpe)}</td>
+      <td className="px-3 py-3 tabular-nums">{row.totalDuration} min</td>
+      <td className="px-3 py-3 font-medium tabular-nums text-emerald-400">
+        {formatLoadAu(row.totalLoad)}
+      </td>
+      <td className="px-3 py-3">
+        <span className="inline-block rounded bg-zinc-800/80 px-2 py-1 text-[11px] font-medium text-zinc-300">
+          {row.sessionTypeLabel}
+        </span>
+      </td>
+      <td className="px-3 py-3">
+        <span className="inline-block rounded bg-zinc-800/80 px-2 py-1 text-[11px] font-medium text-zinc-300">
+          {row.matchdayTagLabel}
+        </span>
+      </td>
+      <td className="px-3 py-3">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-h-[34px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-2.5 py-1.5 text-xs font-medium text-emerald-400 transition hover:bg-zinc-700/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          View
+        </button>
+      </td>
+    </tr>
+  );
 }
 
 /** Spike = (current 7-day load - previous 7-day load) / previous 7-day load. Returns null if prev7 is 0. */
@@ -95,63 +214,9 @@ interface StaffLoadViewProps {
   list: SessionRow[];
   emailByUserId: Record<string, string>;
   displayNameByUserId?: Record<string, string>;
+  playerRoster?: DailyOverviewPlayer[];
   recentKioskSessions?: RecentKioskSessionSummary[];
   recentKioskSessionsLoadError?: boolean;
-}
-
-/** Build load breakdown view: "90(d) × 7 = 630" or "(60×5 + 30×7) = 510".
- * RPE 1–4 green, 5–7 yellow, 8+ red – only the number is colored.
- */
-function formatLoadBreakdown(
-  sessions: SessionRow[],
-  totalLoad: number
-): ReactNode {
-  if (sessions.length === 0) return "—";
-
-  const renderPart = (s: SessionRow): ReactNode => {
-    const d = s.duration ?? 0;
-    const r = s.rpe ?? null;
-    if (r == null) return `${d}(d)`;
-    return (
-      <>
-        {d}
-        ×
-        <span className={rpeColorClass(r)}>{r}</span>
-      </>
-    );
-  };
-
-  if (sessions.length === 1) {
-    const s = sessions[0];
-    if (s.rpe != null) {
-      return (
-        <>
-          {s.duration}(d) × <span className={rpeColorClass(s.rpe)}>{s.rpe}</span> = {totalLoad}
-        </>
-      );
-    }
-    return `${s.duration}(d) = ${totalLoad}`;
-  }
-
-  return (
-    <>
-      (
-      {sessions.map((s, idx) => (
-        <span key={idx}>
-          {idx > 0 && " + "}
-          {renderPart(s)}
-        </span>
-      ))}
-      ) = {totalLoad}
-    </>
-  );
-}
-
-/** RPE 1–4 green, 5–7 yellow, 8+ red (only the number is colored). */
-function rpeColorClass(rpe: number): string {
-  if (rpe >= 8) return "text-red-400 font-bold";
-  if (rpe >= 5) return "text-amber-400 font-semibold";
-  return "text-emerald-400 font-semibold";
 }
 
 export type PeriodDays = 7 | 14 | 28;
@@ -160,22 +225,29 @@ export function StaffLoadView({
   list,
   emailByUserId,
   displayNameByUserId = {},
+  playerRoster = [],
   recentKioskSessions = [],
   recentKioskSessionsLoadError = false,
 }: StaffLoadViewProps) {
   const { themeId } = useTheme();
+  const searchParams = useSearchParams();
   const isHighContrast = themeId === "neon" || themeId === "matt";
+  const [currentHash, setCurrentHash] = useState("");
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [periodDays, setPeriodDays] = useState<PeriodDays>(7);
   const [searchQuery, setSearchQuery] = useState("");
-  const [onlyAtRisk, setOnlyAtRisk] = useState(false);
   const [modalUserId, setModalUserId] = useState<string | null>(null);
   const [showAllPlayersSheet, setShowAllPlayersSheet] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const sessionsTableScrollRef = useRef<HTMLDivElement>(null);
-  const [sessionsTableShowFade, setSessionsTableShowFade] = useState(false);
   useSearchShortcut(searchInputRef);
+
+  useEffect(() => {
+    const updateHash = () => setCurrentHash(window.location.hash);
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -208,45 +280,22 @@ export function StaffLoadView({
     return d.toISOString().slice(0, 10);
   });
   const [comparePlayerId, setComparePlayerId] = useState<string | null>(null);
-  type LoadSortOrder = "asc" | "desc" | null;
-  const [loadSortOrder, setLoadSortOrder] = useState<LoadSortOrder>(null);
   type DailyChartSortOrder = "asc" | "desc";
   const [dailyChartSortOrder, setDailyChartSortOrder] = useState<DailyChartSortOrder>("desc");
-  const [showAtRiskPopover, setShowAtRiskPopover] = useState(false);
 
   const last7 = useMemo(() => getLast7Dates(), []);
   const prev7 = useMemo(() => getPrev7Dates(), []);
-  const last28 = useMemo(() => getLast28Dates(), []);
   const lastN = useMemo(() => getLastNDates(periodDays), [periodDays]);
 
   const {
-    totalTeamLoadToday,
-    weeklyLoad,
-    acuteLoad,
-    chronicLoad,
-    chronicHasEnoughData,
-    atRiskCount,
-    atRiskList,
     teamChartData,
     teamTrend,
-    playerChartData,
-    tableRows,
     spikeByUser,
     sessionsByUser,
   } = useMemo(() => {
-    const today = todayISO();
-    const totalTeamLoadToday = list
-      .filter((s) => s.date === today)
-      .reduce((a, s) => a + (s.load ?? 0), 0);
     const weeklyLoad = list
       .filter((s) => last7.includes(s.date))
       .reduce((a, s) => a + (s.load ?? 0), 0);
-    const acuteLoad = weeklyLoad; // same as 7-day sum
-    const last28LoadSum = list
-      .filter((s) => last28.includes(s.date))
-      .reduce((a, s) => a + (s.load ?? 0), 0);
-    const chronicHasEnoughData = last28.length >= 28;
-    const chronicLoad = chronicHasEnoughData ? last28LoadSum / 28 : null;
 
     const userIds = [...new Set(list.map((s) => s.user_id))];
     const spikeByUser = new Map<string, number | null>();
@@ -258,14 +307,6 @@ export function StaffLoadView({
         list.filter((s) => s.user_id === uid).sort((a, b) => (b.date > a.date ? 1 : -1))
       );
     }
-    const atRiskList: { userId: string; spike: number }[] = [];
-    for (const [uid, spike] of spikeByUser) {
-      if (spike != null && spike >= 0.3) {
-        atRiskList.push({ userId: uid, spike });
-      }
-    }
-    atRiskList.sort((a, b) => b.spike - a.spike);
-    const atRiskCount = atRiskList.length;
 
     const teamChartData = lastN.map((date) => ({
       date,
@@ -277,49 +318,13 @@ export function StaffLoadView({
     const teamTrend =
       prev7Sum === 0 ? "stable" : weeklyLoad > prev7Sum ? "up" : weeklyLoad < prev7Sum ? "down" : "stable";
 
-    const query = searchQuery.trim().toLowerCase();
-    let rows = list.filter((s) => s.date === selectedDate);
-    if (query) {
-      rows = rows.filter((s) => {
-        const email = (emailByUserId[s.user_id] ?? "").toLowerCase();
-        const name = (displayNameByUserId[s.user_id] ?? "").toLowerCase();
-        return name.includes(query) || email.includes(query);
-      });
-    }
-    if (onlyAtRisk) {
-      rows = rows.filter((s) => {
-        const sp = spikeByUser.get(s.user_id);
-        return sp != null && sp >= 0.2;
-      });
-    }
-    const uniqueUsers = [...new Set(rows.map((s) => s.user_id))];
-    const tableRows = uniqueUsers.map((uid) => {
-      const dayLoad = rows.filter((s) => s.user_id === uid).reduce((a, s) => a + (s.load ?? 0), 0);
-      return { userId: uid, load: dayLoad, spike: spikeByUser.get(uid) ?? null };
-    });
-
-    const playerChartData = uniqueUsers.map((uid) => ({
-      label: (displayNameByUserId[uid] ?? emailByUserId[uid] ?? uid).slice(0, 20),
-      load: rows.filter((s) => s.user_id === uid).reduce((a, s) => a + (s.load ?? 0), 0),
-      spikePercent: spikeByUser.get(uid) ?? undefined,
-    }));
-
     return {
-      totalTeamLoadToday,
-      weeklyLoad,
-      acuteLoad,
-      chronicLoad,
-      chronicHasEnoughData,
-      atRiskCount,
-      atRiskList,
       teamChartData,
       teamTrend: teamTrend as "up" | "down" | "stable",
-      playerChartData,
-      tableRows,
       spikeByUser,
       sessionsByUser,
     };
-  }, [list, last7, prev7, last28, lastN, selectedDate, searchQuery, onlyAtRisk, emailByUserId, displayNameByUserId]);
+  }, [list, last7, prev7, lastN]);
 
   const { teamCompareData, playerCompareData, allPlayerIds } = useMemo(() => {
     const w1 = getWeekDates(week1Start);
@@ -347,44 +352,59 @@ export function StaffLoadView({
     return { teamCompareData, playerCompareData, allPlayerIds };
   }, [list, week1Start, week2Start, comparePlayerId]);
 
-  const atRiskStatus = atRiskCount > 0 ? (atRiskCount >= 3 ? "danger" : "warning") : "normal";
+  const dailyMetrics = useMemo(
+    () => calculateDailyOverviewMetrics(list, selectedDate, playerRoster),
+    [list, selectedDate, playerRoster]
+  );
 
-  const sortedTableRows = useMemo(() => {
-    if (loadSortOrder == null) return tableRows;
-    return [...tableRows].sort((a, b) =>
-      loadSortOrder === "asc" ? a.load - b.load : b.load - a.load
+  const dailyRows = useMemo(
+    () => buildDailyPlayerRows(list, selectedDate, playerRoster),
+    [list, selectedDate, playerRoster]
+  );
+
+  const filteredDailyRows = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return dailyRows;
+    return dailyRows.filter((row) =>
+      `${row.playerName} ${emailByUserId[row.userId] ?? ""}`.toLowerCase().includes(query)
     );
-  }, [tableRows, loadSortOrder]);
+  }, [dailyRows, emailByUserId, searchQuery]);
 
   const sortedPlayerChartData = useMemo(() => {
-    return [...playerChartData].sort((a, b) =>
-      dailyChartSortOrder === "asc" ? a.load - b.load : b.load - a.load
+    return [...filteredDailyRows]
+      .sort((a, b) =>
+        dailyChartSortOrder === "asc" ? a.totalLoad - b.totalLoad : b.totalLoad - a.totalLoad
+      )
+      .map((row) => ({
+        label: row.playerName.slice(0, 20),
+        playerName: row.playerName,
+        load: row.totalLoad,
+        sessionCount: row.sessionCount,
+      }));
+  }, [filteredDailyRows, dailyChartSortOrder]);
+
+  const sortedDailyRows = useMemo(() => {
+    return [...filteredDailyRows].sort((a, b) =>
+      dailyChartSortOrder === "asc" ? a.totalLoad - b.totalLoad : b.totalLoad - a.totalLoad
     );
-  }, [playerChartData, dailyChartSortOrder]);
-
-  /** Same order as chart (for sheet list on mobile). */
-  const sortedTableRowsByChartOrder = useMemo(() => {
-    return [...tableRows].sort((a, b) =>
-      dailyChartSortOrder === "asc" ? a.load - b.load : b.load - a.load
-    );
-  }, [tableRows, dailyChartSortOrder]);
-
-  const updateSessionsTableFade = useCallback(() => {
-    const el = sessionsTableScrollRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 2;
-    setSessionsTableShowFade(!atBottom);
-  }, []);
-
-  useEffect(() => {
-    updateSessionsTableFade();
-  }, [sortedTableRows, updateSessionsTableFade]);
+  }, [filteredDailyRows, dailyChartSortOrder]);
 
   const modalUser = modalUserId
     ? displayNameByUserId[modalUserId] ?? emailByUserId[modalUserId] ?? modalUserId
     : null;
   const modalSessions = modalUserId ? sessionsByUser.get(modalUserId) ?? [] : [];
   const modalSpike = modalUserId ? spikeByUser.get(modalUserId) ?? null : null;
+  const activeView = parseStaffRpeViewFromLocation(searchParams.get("view"), currentHash);
+  const activePlayerAnalysisView = parsePlayerAnalysisView(searchParams.get("playerAnalysis"));
+  const activeTeamTrendsView = parseTeamTrendsView(searchParams.get("analysis"));
+  const hasTeamLoadData = teamChartData.some((point) => point.load > 0);
+
+  useEffect(() => {
+    if (activeView !== "kiosk" || currentHash !== "#recent-kiosk-sessions") return;
+    requestAnimationFrame(() => {
+      document.getElementById("recent-kiosk-sessions")?.scrollIntoView({ block: "start" });
+    });
+  }, [activeView, currentHash]);
 
   return (
     <div
@@ -402,425 +422,421 @@ export function StaffLoadView({
             </h1>
           </div>
           <p className={`text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
-            Daily & weekly load, acute/chronic, risk.
+            Monitor daily sessions, team trends and player load.
           </p>
         </div>
 
-        {/* Date + Search */}
-        <div
-          className={`flex flex-wrap items-center justify-between gap-4 rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-          style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-        >
-          <div className="flex items-center gap-2">
-            <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
-              Date
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-9 rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setSelectedDate(todayISO())}
-              className="h-9 rounded border border-zinc-600 bg-zinc-800/80 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80"
+        <StaffRpeTabs activeView={activeView} />
+
+        {activeView === "overview" && (
+          <div className="space-y-6">
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${
+                isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"
+              }`}
             >
-              Today
-            </button>
-          </div>
-          {!isMobile && (
-            <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className={`flex items-center gap-2 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+                  Date
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(todayISO())}
+                  className="h-10 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-700/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  Today
+                </button>
+              </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
                 <input
                   ref={searchInputRef}
                   type="search"
                   placeholder="Search players"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="min-h-[40px] w-36 rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 pr-16 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-44"
+                  className="h-10 w-full rounded-lg border border-zinc-700 bg-zinc-800/80 py-2 pl-9 pr-16 text-sm text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   aria-label="Search players"
                 />
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">
                   / or Ctrl+K
                 </span>
               </div>
-              <label className={`flex cursor-pointer items-center gap-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                <input
-                  type="checkbox"
-                  checked={onlyAtRisk}
-                  onChange={(e) => setOnlyAtRisk(e.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500"
+            </div>
+
+            <section className="space-y-3">
+              <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
+                <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+                Daily Overview
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <DailyKpiCard
+                  label="Players submitted"
+                  value={dailyMetrics.submittedPlayers}
+                  sublabel={`of ${dailyMetrics.totalPlayers} players`}
+                  isHighContrast={isHighContrast}
                 />
-                Only at-risk
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* Charts – Today's load by player only */}
-        <section className="space-y-3">
-          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
-            Charts
-          </h2>
-          <div
-            className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-          >
-            <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <div />
-              <span className={`text-center text-base font-bold uppercase tracking-wide ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>Today&apos;s load (by player)</span>
-              <div className="flex justify-end gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDailyChartSortOrder("asc")}
-                  className={`rounded px-2 py-1 text-xs font-medium transition ${
-                    dailyChartSortOrder === "asc"
-                      ? "bg-emerald-600/30 text-emerald-400"
-                      : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
-                  }`}
-                  title="Ascending (low to high)"
-                >
-                  ↑ Asc
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDailyChartSortOrder("desc")}
-                  className={`rounded px-2 py-1 text-xs font-medium transition ${
-                    dailyChartSortOrder === "desc"
-                      ? "bg-emerald-600/30 text-emerald-400"
-                      : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
-                  }`}
-                  title="Descending (high to low)"
-                >
-                  ↓ Desc
-                </button>
+                <DailyKpiCard
+                  label="Missing players"
+                  value={dailyMetrics.missingPlayers}
+                  sublabel="not submitted"
+                  tone={dailyMetrics.missingPlayers > 0 ? "missing" : "normal"}
+                  isHighContrast={isHighContrast}
+                />
+                <DailyKpiCard
+                  label="Average RPE"
+                  value={formatAverage(dailyMetrics.averageRpe)}
+                  sublabel={`from ${dailyMetrics.sessionCount} sessions`}
+                  isHighContrast={isHighContrast}
+                />
+                <DailyKpiCard
+                  label="Average duration"
+                  value={formatDurationMinutes(dailyMetrics.averageDuration)}
+                  sublabel="per session"
+                  isHighContrast={isHighContrast}
+                />
+                <DailyKpiCard
+                  label="Total load"
+                  value={formatLoadAu(dailyMetrics.totalLoad)}
+                  sublabel="selected day"
+                  isHighContrast={isHighContrast}
+                />
               </div>
-            </div>
-            <PlayerLoadBarChart data={isMobile ? sortedPlayerChartData.slice(0, 10) : sortedPlayerChartData} />
-            {isMobile && sortedPlayerChartData.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllPlayersSheet(true)}
-                className="mt-3 w-full rounded-lg border border-zinc-600 bg-zinc-800/80 py-2.5 text-sm font-medium text-emerald-400 hover:bg-zinc-700/80"
-              >
-                {sortedPlayerChartData.length > 10
-                  ? `View all (${sortedPlayerChartData.length}) players`
-                  : "View list"}
-              </button>
-            )}
-          </div>
-        </section>
+            </section>
 
-        {/* Daily table – Sessions by player */}
-        <section className="space-y-2">
-          <h2 className={`border-b pb-1.5 text-xs font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            Sessions by player – {formatMonthDay(selectedDate)}
-          </h2>
-          <div
-            className={`overflow-hidden rounded-lg ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-            style={{ borderRadius: "10px", ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-          >
-          {sortedTableRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <Calendar className={`h-8 w-8 ${isHighContrast ? "text-white/50" : "text-zinc-500"}`} aria-hidden />
-              <p className={`text-xs ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>No sessions for the selected date.</p>
-              <p className={`text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>Try another date.</p>
-            </div>
-          ) : (
-            <div className="relative" style={{ maxHeight: "400px" }}>
-              <div
-                ref={sessionsTableScrollRef}
-                onScroll={updateSessionsTableFade}
-                className="overflow-y-auto overflow-x-auto"
-                style={{ maxHeight: "400px" }}
-              >
-                <table className="w-full text-left text-xs">
-                  <thead className={`sticky top-0 z-10 ${isHighContrast ? "bg-white/8" : "bg-zinc-800/95"}`}>
-                  <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-600 text-zinc-400"}`}>
-                    <th className="px-2.5 py-2 font-medium">Player</th>
-                    <th className="px-2.5 py-2 font-medium">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLoadSortOrder(
-                            loadSortOrder == null ? "asc" : loadSortOrder === "asc" ? "desc" : "asc"
-                          )
-                        }
-                        className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-700/80 hover:text-white"
-                        title="Rendezés: kattintás vált növekvő ↔ csökkenő"
-                        aria-label="Sort by load"
-                      >
-                        Load
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold ${loadSortOrder != null ? "text-emerald-400" : "text-zinc-500"}`}>
-                          {loadSortOrder === "asc" ? "↑" : loadSortOrder === "desc" ? "↓" : "↕"}
-                        </span>
-                      </button>
-                    </th>
-                    <th className="hidden px-2.5 py-2 font-medium sm:table-cell">Type</th>
-                    <th className="hidden px-2.5 py-2 font-medium md:table-cell">MD</th>
-                    <th className="px-2.5 py-2 font-medium">Spike</th>
-                    <th className="px-2.5 py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
-                  {sortedTableRows.map(({ userId, load, spike }, idx) => {
-                    const risk = spikeToRiskLevel(spike);
-                    const daySessions = list.filter(
-                      (s) => s.user_id === userId && s.date === selectedDate
-                    );
-                    const loadBreakdown = formatLoadBreakdown(daySessions, load);
-                    const displayName = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
-                    const rowBg = idx % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/40") : "";
-                    return (
-                      <tr
-                        key={userId}
-                        className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg} ${
-                          risk === "danger" ? "bg-red-500/5" : risk === "warning" ? "bg-amber-500/5" : ""
-                        }`}
-                      >
-                        <td className="px-2.5 py-2">
-                          <button
-                            type="button"
-                            onClick={() => setModalUserId(userId)}
-                            className="min-h-[36px] rounded font-medium text-emerald-400 hover:underline text-left"
-                          >
-                            {displayName}
-                          </button>
-                        </td>
-                        <td className="px-2.5 py-2 tabular-nums">
-                          <span className={isHighContrast ? "text-white/70" : "text-zinc-500"}>{loadBreakdown}</span>
-                        </td>
-                        <td className="hidden px-2.5 py-2 sm:table-cell">
-                          <span className="inline-block rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
-                            {formatAggregatedSessionType(daySessions)}
-                          </span>
-                        </td>
-                        <td className="hidden px-2.5 py-2 md:table-cell">
-                          <span className="inline-block rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
-                            {formatAggregatedMatchdayTag(daySessions)}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2 tabular-nums whitespace-nowrap">
-                          {spike != null ? `${(spike * 100).toFixed(0)}%` : "—"}
-                        </td>
-                        <td className="px-2.5 py-2">
-                          <RiskBadge level={risk} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
-              <div
-                className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 transition-opacity duration-200"
-                style={{
-                  background: "linear-gradient(to top, rgba(13,17,23,0.95), transparent)",
-                  opacity: sessionsTableShowFade ? 1 : 0,
-                }}
-                aria-hidden
-              />
-            </div>
-          )}
-          </div>
-        </section>
-
-        {/* Overview – KPI */}
-        <section className="space-y-3">
-          <h2 className={`flex items-center gap-2 border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>
-            <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
-            Overview
-          </h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
-            <LoadKpiCard
-              label="Today's team load"
-              value={totalTeamLoadToday}
-              status="normal"
-            />
-            <LoadKpiCard label="Weekly load (7 days)" value={weeklyLoad} status="normal" />
-            <LoadKpiCard label="Acute load (7 days)" value={acuteLoad} status="normal" />
-            <LoadKpiCard
-              label="Chronic load (28-day avg)"
-              value={chronicHasEnoughData && chronicLoad != null ? Math.round(chronicLoad) : "—"}
-              status="normal"
-              sublabel={!chronicHasEnoughData ? "At least 28 days of data required" : undefined}
-            />
-            <button
-              type="button"
-              onClick={() => setShowAtRiskPopover((v) => !v)}
-              className="text-left"
-            >
-              <LoadKpiCard
-                label="At-risk players"
-                value={atRiskCount}
-                status={atRiskStatus}
-                className={`cursor-pointer transition hover:opacity-90 ${atRiskStatus === "danger" ? "ring-1 ring-inset ring-red-500/40" : atRiskStatus === "warning" ? "ring-1 ring-inset ring-amber-500/40" : ""}`}
-              />
-            </button>
-          </div>
-          {showAtRiskPopover && (
-            <div
-              className={`mt-2 rounded-xl border px-4 py-3 shadow-lg ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-600 bg-zinc-800/90"}`}
-              style={themeId === "neon" ? { ...NEON_CARD_STYLE, borderRadius: CARD_RADIUS } : themeId === "matt" ? { ...MATT_CARD_STYLE, borderRadius: CARD_RADIUS } : { borderRadius: CARD_RADIUS, backgroundColor: "var(--card-bg)" }}
-            >
-              <p className="text-sm font-semibold text-red-400">At-risk players</p>
-              <p className={`mt-1 text-xs ${isHighContrast ? "text-white/70" : "text-zinc-500"}`}>
-                Load spike ≥30% (this week vs last week).
-              </p>
-              {atRiskList.length === 0 ? (
-                <p className={`mt-2 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>No players</p>
-              ) : (
-                <ul className={`mt-2 list-inside space-y-1 text-sm ${isHighContrast ? "text-white/90" : "text-zinc-300"}`}>
-                  {atRiskList.map(({ userId, spike }) => {
-                    const name = displayNameByUserId[userId] ?? emailByUserId[userId] ?? userId;
-                    const pct = Math.round(spike * 100);
-                    const level = spike >= 0.3 ? "danger" : spike >= 0.2 ? "warning" : "normal";
-                    return (
-                      <li key={userId}>
-                        <span className="font-medium">{name}</span>
-                        {" — "}
-                        <span className={level === "danger" ? "text-red-400 font-semibold" : "text-amber-400"}>
-                          +{pct}% load spike
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowAtRiskPopover(false)}
-                className={`mt-2 text-xs ${isHighContrast ? "text-white/80 hover:text-white" : "text-zinc-500 hover:text-zinc-300"}`}
-              >
-                Close
-              </button>
-            </div>
-          )}
-        </section>
-
-        <RecentKioskSessions
-          sessions={recentKioskSessions}
-          loadError={recentKioskSessionsLoadError}
-        />
-
-        {/* Team load */}
-        <section className="space-y-1">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-            <h2 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
-              <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
-              Team load
-            </h2>
-            <div
-              className="inline-flex rounded-[14px] border p-0.5 h-10"
-                style={{
-                  backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
-                  borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
-                }}
-              >
-                {([7, 14, 28] as const).map((n) => (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-zinc-700 pb-2">
+                <div>
+                  <h2 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+                    <BarChart2 className="h-4 w-4 shrink-0" aria-hidden />
+                    Today&apos;s Load by Player
+                  </h2>
+                  <p className={`mt-1 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                    {formatMonthDay(selectedDate)} · Total daily load by player
+                  </p>
+                </div>
+                <div className="flex gap-1 rounded-lg border border-zinc-700 bg-zinc-900/60 p-0.5">
                   <button
-                    key={n}
                     type="button"
-                    onClick={() => setPeriodDays(n)}
-                    className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
-                      periodDays === n
-                        ? "bg-emerald-700/90 text-white"
-                        : "bg-transparent text-gray-400 hover:text-gray-300 hover:bg-white/5 active:bg-white/10"
+                    onClick={() => setDailyChartSortOrder("asc")}
+                    className={`h-8 rounded-md px-2.5 text-xs font-medium transition ${
+                      dailyChartSortOrder === "asc"
+                        ? "bg-emerald-600/30 text-emerald-400"
+                        : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
                     }`}
+                    title="Ascending (low to high)"
                   >
-                    {n} days
+                    Asc
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setDailyChartSortOrder("desc")}
+                    className={`h-8 rounded-md px-2.5 text-xs font-medium transition ${
+                      dailyChartSortOrder === "desc"
+                        ? "bg-emerald-600/30 text-emerald-400"
+                        : "text-zinc-500 hover:bg-zinc-700/80 hover:text-white"
+                    }`}
+                    title="Descending (high to low)"
+                  >
+                    Desc
+                  </button>
+                </div>
               </div>
-          </div>
-          <div
-            className={`rounded-xl p-4 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
-            style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-          >
-            <TeamLoadBarChart data={teamChartData} trend={teamTrend} periodDays={periodDays} />
-          </div>
-        </section>
-
-        {/* Compare two weeks – compact controls, paired charts */}
-        <section
-          className={`space-y-4 rounded-xl border p-4 ${isHighContrast ? "neon-card-text border-white/20" : "border-zinc-700/80"}`}
-          style={{ borderRadius: CARD_RADIUS, ...(themeId === "neon" ? NEON_CARD_STYLE : themeId === "matt" ? MATT_CARD_STYLE : { backgroundColor: "var(--card-bg)" }) }}
-        >
-          <h2 className={`border-b pb-2 text-sm font-bold uppercase tracking-wider ${isHighContrast ? "border-white/20 text-white/90" : "border-zinc-700 text-zinc-200"}`}>Compare two weeks</h2>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3 gap-y-2">
-              <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-                <span className="w-16 shrink-0">Week 1</span>
-                <input
-                  type="date"
-                  value={week1Start}
-                  onChange={(e) => setWeek1Start(e.target.value)}
-                  className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </label>
-              <label className={`flex items-center gap-1.5 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-                <span className="w-16 shrink-0">Week 2</span>
-                <input
-                  type="date"
-                  value={week2Start}
-                  onChange={(e) => setWeek2Start(e.target.value)}
-                  className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </label>
-            </div>
-            <label className={`flex items-center gap-1.5 text-xs ml-0 sm:ml-1 ${isHighContrast ? "text-white/90" : "text-zinc-400"}`}>
-              <span className="w-16 shrink-0">Player</span>
-              <select
-                value={comparePlayerId ?? ""}
-                onChange={(e) => setComparePlayerId(e.target.value || null)}
-                className="h-9 w-[152px] rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1.5 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              <div
+                className={`rounded-xl border p-4 ${isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"}`}
               >
-                <option value="">Team only</option>
-                {allPlayerIds.map((uid) => (
-                  <option key={uid} value={uid}>
-                    {(displayNameByUserId[uid] ?? emailByUserId[uid] ?? uid).slice(0, 40)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="grid gap-4 rounded-lg border border-zinc-800 bg-zinc-900/30 p-3 lg:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 p-3">
-              <TwoWeekComparisonChart
-                data={teamCompareData}
-                week1Label={`Week of ${formatWeekLabel(week1Start)}`}
-                week2Label={`Week of ${formatWeekLabel(week2Start)}`}
-                title="Team – Week 1 vs Week 2"
-              />
-            </div>
-            {comparePlayerId ? (
-              <div className="rounded-lg border border-zinc-800 p-3">
-                <TwoWeekComparisonChart
-                  data={playerCompareData}
-                  week1Label={`Week of ${formatWeekLabel(week1Start)}`}
-                  week2Label={`Week of ${formatWeekLabel(week2Start)}`}
-                  title={`${(displayNameByUserId[comparePlayerId] ?? emailByUserId[comparePlayerId] ?? comparePlayerId).slice(0, 20)} – W1 vs W2`}
-                />
+                {dailyRows.length === 0 ? (
+                  <CompactEmptyState
+                    icon={<Calendar className="h-7 w-7" aria-hidden />}
+                    title="No RPE sessions were submitted for this date."
+                    isHighContrast={isHighContrast}
+                  />
+                ) : sortedPlayerChartData.length === 0 ? (
+                  <CompactEmptyState
+                    icon={<Search className="h-7 w-7" aria-hidden />}
+                    title="No players match this search."
+                    isHighContrast={isHighContrast}
+                  />
+                ) : (
+                  <PlayerLoadBarChart data={isMobile ? sortedPlayerChartData.slice(0, 10) : sortedPlayerChartData} />
+                )}
+                {isMobile && sortedPlayerChartData.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPlayersSheet(true)}
+                    className="mt-3 w-full rounded-lg border border-zinc-600 bg-zinc-800/80 py-2.5 text-sm font-medium text-emerald-400 hover:bg-zinc-700/80"
+                  >
+                    {sortedPlayerChartData.length > 10
+                      ? `View all (${sortedPlayerChartData.length}) players`
+                      : "View list"}
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className={`flex items-center justify-center rounded-lg border border-dashed p-8 text-sm ${isHighContrast ? "border-white/20 text-white/70" : "border-zinc-700 text-zinc-500"}`}>
-                Select a player to compare.
+            </section>
+
+            <section className="space-y-3">
+              <div className="border-b border-zinc-700 pb-2">
+                <h2 className={`text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+                  Player Daily Sessions
+                </h2>
+                <p className={`mt-1 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                  {formatMonthDay(selectedDate)} · One row per submitted player
+                </p>
               </div>
-            )}
+              <div
+                className={`overflow-hidden rounded-xl border ${isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"}`}
+              >
+                {dailyRows.length === 0 ? (
+                  <CompactEmptyState
+                    icon={<Calendar className="h-7 w-7" aria-hidden />}
+                    title="No player sessions were found for this date."
+                    isHighContrast={isHighContrast}
+                  />
+                ) : sortedDailyRows.length === 0 ? (
+                  <CompactEmptyState
+                    icon={<Search className="h-7 w-7" aria-hidden />}
+                    title="No players match this search."
+                    isHighContrast={isHighContrast}
+                  />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-left text-xs">
+                      <thead className={isHighContrast ? "bg-white/8" : "bg-zinc-800/80"}>
+                        <tr className={`border-b ${isHighContrast ? "border-white/20 text-white/80" : "border-zinc-700 text-zinc-400"}`}>
+                          <th className="px-3 py-2.5 font-medium">Player</th>
+                          <th className="px-3 py-2.5 font-medium">Sessions</th>
+                          <th className="px-3 py-2.5 font-medium">Avg RPE</th>
+                          <th className="px-3 py-2.5 font-medium">Total duration</th>
+                          <th className="px-3 py-2.5 font-medium">Total load</th>
+                          <th className="px-3 py-2.5 font-medium">Session type</th>
+                          <th className="px-3 py-2.5 font-medium">Matchday</th>
+                          <th className="px-3 py-2.5 font-medium">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody className={isHighContrast ? "text-white/90" : "text-zinc-300"}>
+                        {sortedDailyRows.map((row, idx) => (
+                          <DailyPlayerTableRow
+                            key={row.userId}
+                            row={row}
+                            index={idx}
+                            isHighContrast={isHighContrast}
+                            onOpen={() => setModalUserId(row.userId)}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        </section>
+        )}
 
-        <RpeAnalyticsDataProvider>
-          <MatchdayAnalysis />
+        {activeView === "kiosk" && (
+          <div className="space-y-6">
+            <RecentKioskSessions
+              sessions={recentKioskSessions}
+              loadError={recentKioskSessionsLoadError}
+            />
+          </div>
+        )}
 
-          <PlayerComparison />
+        {activeView === "team" && (
+          <div className="space-y-6">
+            <section className="space-y-4">
+              <div className="space-y-3 border-b border-zinc-800 pb-4">
+                <div>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+                    Team Trends
+                  </h2>
+                  <p className={`mt-1 text-sm ${isHighContrast ? "text-white/65" : "text-zinc-500"}`}>
+                    Review team load progression, matchday patterns and weekly comparisons.
+                  </p>
+                </div>
+                <TeamTrendsTabs activeView={activeTeamTrendsView} />
+              </div>
 
-          <PlayerSelfBaseline />
+              {activeTeamTrendsView === "load" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className={`text-base font-semibold ${isHighContrast ? "text-white/90" : "text-zinc-100"}`}>
+                        Load Trend
+                      </h3>
+                      <p className={`mt-1 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                        Team total load over the selected recent period.
+                      </p>
+                    </div>
+                    <div
+                      className="inline-flex h-10 rounded-[14px] border p-0.5"
+                      style={{
+                        backgroundColor: isHighContrast ? "rgba(255,255,255,0.06)" : "rgba(15,23,32,0.9)",
+                        borderColor: isHighContrast ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {([7, 14, 28] as const).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setPeriodDays(n)}
+                          className={`min-w-[72px] flex-1 rounded-[10px] text-sm font-medium transition-all duration-200 ${
+                            periodDays === n
+                              ? "bg-emerald-700/90 text-white"
+                              : "bg-transparent text-gray-400 hover:bg-white/5 hover:text-gray-300 active:bg-white/10"
+                          }`}
+                        >
+                          {n} days
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div
+                    className={`rounded-xl border p-4 ${isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"}`}
+                  >
+                    {hasTeamLoadData ? (
+                      <TeamLoadBarChart data={teamChartData} trend={teamTrend} periodDays={periodDays} />
+                    ) : (
+                      <CompactEmptyState
+                        icon={<BarChart2 className="h-7 w-7" aria-hidden />}
+                        title="No team load data is available for this period."
+                        isHighContrast={isHighContrast}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
 
-          <PlayerTeamBaseline />
-        </RpeAnalyticsDataProvider>
+              {activeTeamTrendsView === "matchday" && (
+                <RpeAnalyticsDataProvider>
+                  <MatchdayAnalysis />
+                </RpeAnalyticsDataProvider>
+              )}
+
+              {activeTeamTrendsView === "weeks" && (
+                <section
+                  className={`space-y-4 rounded-xl border p-4 ${
+                    isHighContrast ? "border-white/15 bg-white/[0.04]" : "border-zinc-800/90 bg-zinc-900/45"
+                  }`}
+                >
+                  <div className="border-b border-zinc-800 pb-3">
+                    <h3 className={`text-base font-semibold ${isHighContrast ? "text-white/90" : "text-zinc-100"}`}>
+                      Compare Weeks
+                    </h3>
+                    <p className={`mt-1 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                      Compare two selected weeks for the team and optionally one player.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+                      Week 1
+                      <input
+                        type="date"
+                        value={week1Start}
+                        onChange={(e) => setWeek1Start(e.target.value)}
+                        className="h-10 w-[152px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </label>
+                    <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+                      Week 2
+                      <input
+                        type="date"
+                        value={week2Start}
+                        onChange={(e) => setWeek2Start(e.target.value)}
+                        className="h-10 w-[152px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </label>
+                    <label className={`flex flex-col gap-1 text-xs ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+                      Player
+                      <select
+                        value={comparePlayerId ?? ""}
+                        onChange={(e) => setComparePlayerId(e.target.value || null)}
+                        className="h-10 w-[180px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="">Team only</option>
+                        {allPlayerIds.map((uid) => (
+                          <option key={uid} value={uid}>
+                            {(displayNameByUserId[uid] ?? emailByUserId[uid] ?? uid).slice(0, 40)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {!comparePlayerId && (
+                      <p className={`pb-2 text-xs ${isHighContrast ? "text-white/60" : "text-zinc-500"}`}>
+                        Select a player to add an individual comparison.
+                      </p>
+                    )}
+                  </div>
+                  <div className={`grid gap-4 ${comparePlayerId ? "xl:grid-cols-2" : ""}`}>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/20 p-3">
+                      <TwoWeekComparisonChart
+                        data={teamCompareData}
+                        week1Label={`Week of ${formatWeekLabel(week1Start)}`}
+                        week2Label={`Week of ${formatWeekLabel(week2Start)}`}
+                        title="Team Load — Week 1 vs Week 2"
+                      />
+                    </div>
+                    {comparePlayerId && (
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/20 p-3">
+                        <TwoWeekComparisonChart
+                          data={playerCompareData}
+                          week1Label={`Week of ${formatWeekLabel(week1Start)}`}
+                          week2Label={`Week of ${formatWeekLabel(week2Start)}`}
+                          title={`${(displayNameByUserId[comparePlayerId] ?? emailByUserId[comparePlayerId] ?? comparePlayerId).slice(0, 20)} — Week 1 vs Week 2`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+            </section>
+          </div>
+        )}
+
+        {activeView === "players" && (
+          <div className="space-y-6">
+            <section className="space-y-4">
+              <div className="space-y-3 border-b border-zinc-800 pb-4">
+                <div>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider ${isHighContrast ? "text-white/90" : "text-zinc-200"}`}>
+                    Player Analysis
+                  </h2>
+                  <p className={`mt-1 text-sm ${isHighContrast ? "text-white/65" : "text-zinc-500"}`}>
+                    Compare players and review individual load patterns.
+                  </p>
+                </div>
+                <PlayerAnalysisTabs activeView={activePlayerAnalysisView} />
+              </div>
+
+              {activePlayerAnalysisView === "compare" && (
+                <RpeAnalyticsDataProvider>
+                  <PlayerComparison />
+                </RpeAnalyticsDataProvider>
+              )}
+
+              {activePlayerAnalysisView === "self" && (
+                <RpeAnalyticsDataProvider>
+                  <PlayerSelfBaseline />
+                </RpeAnalyticsDataProvider>
+              )}
+
+              {activePlayerAnalysisView === "team" && (
+                <RpeAnalyticsDataProvider>
+                  <PlayerTeamBaseline />
+                </RpeAnalyticsDataProvider>
+              )}
+
+              {activePlayerAnalysisView === "history" && (
+                <PlayerSessionHistory players={playerRoster} />
+              )}
+            </section>
+          </div>
+        )}
 
       </div>
 
@@ -861,50 +877,17 @@ export function StaffLoadView({
             <div className="mb-3 rounded-xl border border-emerald-500/25 border-t-emerald-500/50 bg-emerald-500/10 px-4 py-2.5 shadow-inner">
               <div className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs font-semibold uppercase tracking-wider text-emerald-200/90">
                 <span>Player</span>
-                <span className="text-right whitespace-nowrap">Duration × RPE = Load</span>
+                <span className="text-right whitespace-nowrap">Sessions · Load</span>
               </div>
             </div>
             <ul className="space-y-2.5">
-            {sortedTableRowsByChartOrder.map((row) => {
-              const sessionsForDay = list.filter((s) => s.date === selectedDate && s.user_id === row.userId);
-              const name = displayNameByUserId[row.userId] ?? emailByUserId[row.userId] ?? row.userId;
-              const maxRpe = sessionsForDay.length
-                ? Math.max(0, ...sessionsForDay.map((s) => s.rpe ?? 0))
+            {sortedDailyRows.map((row) => {
+              const maxRpe = row.sessions.length
+                ? Math.max(0, ...row.sessions.map((s) => s.rpe ?? 0))
                 : 0;
               const zone = maxRpe >= 8 ? "red" : maxRpe >= 5 ? "yellow" : "green";
               const accentBg = zone === "red" ? "bg-red-500/60" : zone === "yellow" ? "bg-amber-500/60" : "bg-emerald-500/60";
               const iconBg = zone === "red" ? "bg-red-500/20 text-red-400" : zone === "yellow" ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400";
-              const formulaContent = sessionsForDay.length === 0 ? (
-                <span className="text-zinc-500">—</span>
-              ) : sessionsForDay.length === 1 ? (
-                (() => {
-                  const s = sessionsForDay[0];
-                  const rpe = s.rpe ?? null;
-                  return (
-                    <>
-                      <span className="text-zinc-400">{s.duration ?? 0}</span>
-                      <span className="text-zinc-500"> × </span>
-                      {rpe != null ? <span className={rpeColorClass(rpe)}>{rpe}</span> : <span className="text-zinc-500">—</span>}
-                      <span className="text-zinc-500"> = </span>
-                      <span className="text-zinc-400">{row.load}</span>
-                    </>
-                  );
-                })()
-              ) : (
-                <>
-                  <span className="text-zinc-500">(</span>
-                  {sessionsForDay.map((s, i) => (
-                    <span key={i}>
-                      {i > 0 && <span className="text-zinc-500"> + </span>}
-                      <span className="text-zinc-400">{s.duration ?? 0}</span>
-                      <span className="text-zinc-500">×</span>
-                      {s.rpe != null ? <span className={rpeColorClass(s.rpe)}>{s.rpe}</span> : <span className="text-zinc-500">—</span>}
-                    </span>
-                  ))}
-                  <span className="text-zinc-500">) = </span>
-                  <span className="text-zinc-400">{row.load}</span>
-                </>
-              );
               return (
                 <li
                   key={row.userId}
@@ -915,16 +898,16 @@ export function StaffLoadView({
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${iconBg} ring-1 ring-white/5`}>
                       <User className="h-4 w-4" aria-hidden />
                     </span>
-                    <span className="min-w-0 break-words text-sm font-semibold leading-snug text-white">{name}</span>
-                    {sessionsForDay.length > 0 && (
-                      <p className="text-[10px] font-medium text-zinc-400">
-                        {formatAggregatedSessionType(sessionsForDay)} ·{" "}
-                        {formatAggregatedMatchdayTag(sessionsForDay)}
+                    <div className="min-w-0">
+                      <span className="block min-w-0 break-words text-sm font-semibold leading-snug text-white">{row.playerName}</span>
+                      <p className="mt-0.5 text-[10px] font-medium text-zinc-400">
+                        {row.sessionTypeLabel} · {row.matchdayTagLabel} · Avg RPE {formatAverage(row.averageRpe)}
                       </p>
-                    )}
+                    </div>
                   </div>
-                  <div className="shrink-0 rounded-lg bg-zinc-800/80 px-2.5 py-1.5 text-right font-mono text-sm tabular-nums ring-1 ring-emerald-500/20">
-                    {formulaContent}
+                  <div className="shrink-0 rounded-lg bg-zinc-800/80 px-2.5 py-1.5 text-right text-xs tabular-nums ring-1 ring-emerald-500/20">
+                    <span className="block text-zinc-400">{row.sessionCount} session{row.sessionCount === 1 ? "" : "s"}</span>
+                    <span className="block font-semibold text-emerald-400">{formatLoadAu(row.totalLoad)}</span>
                   </div>
                 </li>
               );

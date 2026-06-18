@@ -68,7 +68,7 @@ export function updatePlayerSettings(
 export function updatePlayerRpe(
   playerStates: Record<string, KioskPlayerState>,
   playerId: string,
-  rpe: RpeValue
+  rpe: RpeValue | null
 ): Record<string, KioskPlayerState> {
   const current = playerStates[playerId];
   if (!current) return playerStates;

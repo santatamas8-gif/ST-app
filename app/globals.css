@@ -330,4 +330,33 @@ input.rpe-input-track {
     text-align: center;
     justify-content: center;
   }
+
+  .kiosk-player-row-line {
+    min-height: 5.5rem !important;
+    gap: 0.625rem !important;
+  }
+
+  .kiosk-player-fixed {
+    flex-basis: 5.75rem !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    min-height: 4.75rem !important;
+  }
+
+  .kiosk-player-name {
+    display: -webkit-box !important;
+    font-size: 0.8125rem !important;
+    max-width: 5.75rem !important;
+    min-height: 1.8rem !important;
+    overflow: hidden !important;
+    text-align: center !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    line-height: 1.1 !important;
+  }
 }
+
