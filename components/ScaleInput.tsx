@@ -39,6 +39,8 @@ interface ScaleInputProps {
   lowLabel?: string;
   /** Label at high end of scale (e.g. "Excellent") – shown at 10 */
   highLabel?: string;
+  /** Per-value label shown below the slider, indexed by numeric scale value */
+  valueLabels?: Record<number, string>;
   id?: string;
 }
 
@@ -53,13 +55,17 @@ export function ScaleInput({
   legend,
   lowLabel,
   highLabel,
+  valueLabels,
   id,
 }: ScaleInputProps) {
   const name = id ?? label.replace(/\s+/g, "-").toLowerCase();
   const showEndLabels = lowLabel != null || highLabel != null;
   const colorValue = inverted ? min + max - value : value;
   const thumbColor = thumbColorFor(colorValue, min, max);
+  const lowEndColor = thumbColorFor(inverted ? max : min, min, max);
+  const highEndColor = thumbColorFor(inverted ? min : max, min, max);
   const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
+  const currentValueLabel = valueLabels?.[value];
   return (
     <div className="min-w-0 overflow-visible">
       <div className="flex items-center justify-between gap-2">
@@ -92,7 +98,11 @@ export function ScaleInput({
       {showEndLabels ? (
         <div id={`${name}-ends`} className="mt-0.5 flex min-w-0 flex-col overflow-visible md:mt-1.5 md:flex-row md:items-center md:gap-3" aria-hidden>
           {/* Desktop: left label */}
-          <span className="hidden shrink-0 truncate text-xs text-zinc-500 md:block md:w-[8rem]" title={lowLabel ?? undefined}>
+          <span
+            className="hidden shrink-0 truncate text-xs md:block md:w-[8rem]"
+            style={{ color: lowEndColor }}
+            title={lowLabel ?? undefined}
+          >
             {lowLabel ?? ""}
           </span>
           {/* Slider + value bubble (full width on mobile, flex-1 on desktop); py-3 on mobile = larger touch target */}
@@ -122,13 +132,17 @@ export function ScaleInput({
             />
           </div>
           {/* Desktop: right label */}
-          <span className="hidden shrink-0 truncate text-right text-xs text-zinc-500 md:block md:w-[8rem]" title={highLabel ?? undefined}>
+          <span
+            className="hidden shrink-0 truncate text-right text-xs md:block md:w-[8rem]"
+            style={{ color: highEndColor }}
+            title={highLabel ?? undefined}
+          >
             {highLabel ?? ""}
           </span>
           {/* Mobile only: labels row – much closer to slider */}
           <div className="flex justify-between gap-2 -mt-2.5 text-[10px] leading-tight text-zinc-400 md:hidden">
-            <span className="truncate max-w-[45%]" title={lowLabel ?? undefined}>{lowLabel ?? ""}</span>
-            <span className="truncate max-w-[45%] text-right" title={highLabel ?? undefined}>{highLabel ?? ""}</span>
+            <span className="truncate max-w-[45%]" style={{ color: lowEndColor }} title={lowLabel ?? undefined}>{lowLabel ?? ""}</span>
+            <span className="truncate max-w-[45%] text-right" style={{ color: highEndColor }} title={highLabel ?? undefined}>{highLabel ?? ""}</span>
           </div>
         </div>
       ) : (
@@ -142,6 +156,22 @@ export function ScaleInput({
           className="scale-input-track mt-1.5 h-2 w-full appearance-none rounded-full bg-transparent accent-emerald-500 [--track-h:10px] md:[--track-h:8px]"
           style={{ ["--thumb-color" as string]: thumbColor }}
         />
+      )}
+      {currentValueLabel != null && (
+        <div
+          className="mx-auto mt-2.5 flex w-fit max-w-[12rem] items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center shadow-sm"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${thumbColor} 9%, rgb(24 24 27 / 0.88))`,
+            borderColor: `color-mix(in srgb, ${thumbColor} 32%, rgb(63 63 70 / 0.72))`,
+          }}
+          aria-live="polite"
+        >
+          <span className="text-[11px] font-semibold tabular-nums" style={{ color: thumbColor }}>
+            {value}
+          </span>
+          <span className="text-[10px] text-zinc-500/80">·</span>
+          <span className="truncate text-[11px] font-medium leading-snug text-zinc-200">{currentValueLabel}</span>
+        </div>
       )}
       {legend != null && !showEndLabels && (
         <p className="mt-1 text-xs text-zinc-500" aria-hidden>

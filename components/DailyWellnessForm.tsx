@@ -9,12 +9,76 @@ import { ScaleInput } from "@/components/ScaleInput";
 import { BodyMap, type BodyPartsState } from "@/components/BodyMap";
 import { HeartPulse, Moon, Activity, Brain, MoreHorizontal, Pill, Check } from "lucide-react";
 
+const WELLNESS_VALUE_LABELS = {
+  sleepQuality: {
+    1: "Very poor",
+    2: "Poor",
+    3: "Bad",
+    4: "Below average",
+    5: "Okay",
+    6: "Fair",
+    7: "Good",
+    8: "Very good",
+    9: "Great",
+    10: "Excellent",
+  },
+  fatigue: {
+    1: "No energy",
+    2: "Very low energy",
+    3: "Low energy",
+    4: "Tired",
+    5: "Moderate energy",
+    6: "Decent energy",
+    7: "Good energy",
+    8: "Very good energy",
+    9: "High energy",
+    10: "Full of energy",
+  },
+  soreness: {
+    1: "Very sore",
+    2: "Sore",
+    3: "Quite sore",
+    4: "Some soreness",
+    5: "Moderate soreness",
+    6: "Slightly recovered",
+    7: "Mostly recovered",
+    8: "Well recovered",
+    9: "Very recovered",
+    10: "Fully recovered",
+  },
+  stress: {
+    1: "Very stressed",
+    2: "Highly stressed",
+    3: "Stressed",
+    4: "Some stress",
+    5: "Moderate stress",
+    6: "Manageable",
+    7: "Calm",
+    8: "Very calm",
+    9: "Almost no stress",
+    10: "Not stressed at all",
+  },
+  mood: {
+    1: "Very bad",
+    2: "Bad",
+    3: "Low",
+    4: "Not great",
+    5: "Okay",
+    6: "Fine",
+    7: "Good",
+    8: "Very good",
+    9: "Great",
+    10: "Excellent",
+  },
+} satisfies Record<string, Record<number, string>>;
+
 const FIELDS = [
   {
     key: "fatigue",
     label: "How much energy do you have? (fatigue)",
     lowLabel: "No energy",
     highLabel: "Full of energy",
+    valueLabels: WELLNESS_VALUE_LABELS.fatigue,
     invertOnSubmit: false,
   },
   {
@@ -22,6 +86,7 @@ const FIELDS = [
     label: "How recovered do your muscles feel? (soreness)",
     lowLabel: "Very sore",
     highLabel: "Fully recovered",
+    valueLabels: WELLNESS_VALUE_LABELS.soreness,
     invertOnSubmit: false,
   },
   {
@@ -29,6 +94,7 @@ const FIELDS = [
     label: "How stressed are you?",
     lowLabel: "Very stressed",
     highLabel: "Not stressed at all",
+    valueLabels: WELLNESS_VALUE_LABELS.stress,
     invertOnSubmit: false,
   },
   {
@@ -36,6 +102,7 @@ const FIELDS = [
     label: "Mood (1–10)",
     lowLabel: "Very bad",
     highLabel: "Excellent",
+    valueLabels: WELLNESS_VALUE_LABELS.mood,
     invertOnSubmit: false,
   },
 ] as const;
@@ -203,7 +270,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             <Moon className="h-4 w-4 shrink-0" aria-hidden />
             Sleep
           </h3>
-          <div className="space-y-6 pl-0 md:space-y-4">
+          <div className="space-y-7 pl-0 md:space-y-7">
             <div>
               <label htmlFor="bed_time" className="block text-sm font-medium text-zinc-300">
                 Bed time
@@ -240,6 +307,7 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
               label="Sleep quality"
               lowLabel="Very poor"
               highLabel="Excellent"
+              valueLabels={WELLNESS_VALUE_LABELS.sleepQuality}
               value={sleepQuality}
               onChange={setSleepQuality}
               min={1}
@@ -254,19 +322,21 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             <Activity className="h-4 w-4 shrink-0" aria-hidden />
             Body
           </h3>
-          <div className="space-y-6 pl-0 md:space-y-4">
-            {FIELDS.filter((f) => f.key === "fatigue" || f.key === "soreness").map(({ key, label, lowLabel, highLabel }) => (
-              <ScaleInput
-                key={key}
-                id={key}
-                label={label}
-                lowLabel={lowLabel}
-                highLabel={highLabel}
-                value={values[key]}
-                onChange={setters[key]}
-                min={1}
-                max={10}
-              />
+          <div className="space-y-7 pl-0 md:space-y-6">
+            {FIELDS.filter((f) => f.key === "fatigue" || f.key === "soreness").map(({ key, label, lowLabel, highLabel, valueLabels }, index) => (
+              <div key={key} className={index === 0 ? "pb-2" : "border-t border-amber-200/15 pt-7 pb-2 md:pt-6"}>
+                <ScaleInput
+                  id={key}
+                  label={label}
+                  lowLabel={lowLabel}
+                  highLabel={highLabel}
+                  valueLabels={valueLabels}
+                  value={values[key]}
+                  onChange={setters[key]}
+                  min={1}
+                  max={10}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -277,19 +347,21 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             <Brain className="h-4 w-4 shrink-0" aria-hidden />
             Mind
           </h3>
-          <div className="space-y-6 pl-0 md:space-y-4">
-            {FIELDS.filter((f) => f.key === "stress" || f.key === "mood").map(({ key, label, lowLabel, highLabel }) => (
-              <ScaleInput
-                key={key}
-                id={key}
-                label={label}
-                lowLabel={lowLabel}
-                highLabel={highLabel}
-                value={values[key]}
-                onChange={setters[key]}
-                min={1}
-                max={10}
-              />
+          <div className="space-y-7 pl-0 md:space-y-6">
+            {FIELDS.filter((f) => f.key === "stress" || f.key === "mood").map(({ key, label, lowLabel, highLabel, valueLabels }, index) => (
+              <div key={key} className={index === 0 ? "pb-2" : "border-t border-violet-200/15 pt-7 pb-2 md:pt-6"}>
+                <ScaleInput
+                  id={key}
+                  label={label}
+                  lowLabel={lowLabel}
+                  highLabel={highLabel}
+                  valueLabels={valueLabels}
+                  value={values[key]}
+                  onChange={setters[key]}
+                  min={1}
+                  max={10}
+                />
+              </div>
             ))}
           </div>
         </div>
