@@ -70,9 +70,9 @@ export function getRpeMeaning(rpe: number): string {
     case 4:
       return "Moderate";
     case 5:
-      return "Hard";
+      return "Moderate+";
     case 6:
-      return "Hard+";
+      return "Hard";
     case 7:
       return "Very hard";
     case 8:

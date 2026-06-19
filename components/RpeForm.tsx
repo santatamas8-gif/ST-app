@@ -6,6 +6,7 @@ import { Activity } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import { submitSession } from "@/app/actions/sessions";
+import { getRpeMeaning } from "@/lib/kioskRpe/constants";
 import { sessionLoad } from "@/utils/load";
 
 const today = new Date().toISOString().slice(0, 10);
@@ -57,6 +58,7 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
   const canSubmit = durationNum >= 1 && durationNum <= 300 && !loading && !hasSubmittedToday;
   const rpeThumb = rpeThumbColor(rpe, 1, 10);
   const rpePercent = ((rpe - 1) / (10 - 1)) * 100;
+  const rpeMeaning = getRpeMeaning(rpe);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -212,6 +214,26 @@ export function RpeForm({ hasSubmittedToday = false }: RpeFormProps) {
                 className="scale-input-track rpe-input-track mt-1.5 h-2 w-full min-w-0 appearance-none rounded-full bg-transparent [--track-h:10px] sm:[--track-h:8px]"
                 style={{ ["--thumb-color" as string]: rpeThumb }}
               />
+              <div className="mt-3 grid grid-cols-10 gap-1 text-center text-[11px] font-semibold tabular-nums text-zinc-500">
+                {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+                  <span
+                    key={value}
+                    className={
+                      rpe === value
+                        ? "rounded-md bg-zinc-900/90 py-1 text-orange-400 ring-1 ring-orange-500/50"
+                        : "py-1"
+                    }
+                  >
+                    {value}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span className="rounded-lg bg-zinc-900/90 px-2.5 py-1 text-sm font-bold tabular-nums text-orange-400">
+                  {rpe}
+                </span>
+                <span className="text-sm font-semibold text-white">{rpeMeaning}</span>
+              </div>
             </div>
           </div>
         </div>

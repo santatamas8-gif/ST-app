@@ -47,6 +47,10 @@ export function KioskPinGate() {
       const data = (await response.json().catch(() => ({}))) as EnterResponse;
 
       if (response.ok && data.success) {
+        if (window.matchMedia("(max-width: 640px)").matches) {
+          window.location.replace("/kiosk-rpe");
+          return;
+        }
         router.replace("/kiosk-rpe");
         router.refresh();
         return;

@@ -385,6 +385,11 @@ export function Sidebar({ role, userEmail, todoToday, unreadChatCount = 0, canAc
           <Link href="/schedule" prefetch={true} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/schedule")}`} title="Schedule" aria-label="Schedule">
             <Calendar className="h-5 w-5" />
           </Link>
+          {(role === "admin" || role === "staff") && (
+            <Link href="/kiosk-rpe" prefetch={true} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(pathname === "/kiosk-rpe")}`} title="Kiosk RPE" aria-label="Kiosk RPE">
+              <Monitor className="h-5 w-5" />
+            </Link>
+          )}
           <div className="relative" ref={themePopoverRef}>
             <button type="button" onClick={() => setThemePopoverOpen((o) => !o)} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${headerIconClass(false)}`} title="Theme" aria-label="Theme" aria-expanded={themePopoverOpen}>
               <Palette className="h-5 w-5" />

@@ -345,9 +345,14 @@ input.rpe-input-track {
     min-height: 4.75rem !important;
   }
 
+  .kiosk-player-fixed > div:first-child {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+
   .kiosk-player-name {
     display: -webkit-box !important;
-    font-size: 0.8125rem !important;
+    font-size: 0.875rem !important;
     max-width: 5.75rem !important;
     min-height: 1.8rem !important;
     overflow: hidden !important;
@@ -357,6 +362,50 @@ input.rpe-input-track {
     -webkit-box-orient: vertical !important;
     -webkit-line-clamp: 2 !important;
     line-height: 1.1 !important;
+  }
+
+  .kiosk-row-scroll-content {
+    gap: 0.5rem !important;
+  }
+
+  .kiosk-row-rpe-button {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    font-size: 1.125rem !important;
+  }
+
+  .kiosk-row-meaning,
+  .kiosk-row-load {
+    min-height: 2.5rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  .kiosk-row-meaning {
+    min-width: 8.75rem !important;
+  }
+
+  .kiosk-row-status {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .kiosk-row-select {
+    height: 2.5rem !important;
+    font-size: 0.875rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .kiosk-row-duration {
+    width: 4.25rem !important;
+    height: 2.5rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .kiosk-row-min-label {
+    font-size: 0.875rem !important;
   }
 }
 
