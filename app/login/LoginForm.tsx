@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -10,31 +10,33 @@ const REMEMBER_ME_KEY = "stams_remember_me";
 export function LoginForm({ teamLogoUrl }: { teamLogoUrl: string | null }) {
   const supabase = createClient();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem(REMEMBER_EMAIL_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem(REMEMBER_ME_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
-      const remembered = localStorage.getItem(REMEMBER_ME_KEY) === "1";
-      if (saved) setEmail(saved);
-      if (remembered) setRememberMe(true);
-    } catch {
-      // ignore
-    }
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -57,7 +59,18 @@ export function LoginForm({ teamLogoUrl }: { teamLogoUrl: string | null }) {
       // ignore
     }
 
-    window.location.href = "/dashboard";
+    const userId = data.user?.id;
+    let destination = "/dashboard";
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+      if (profile?.role === "player") destination = "/wellness";
+    }
+
+    window.location.href = destination;
   }
 
   return (

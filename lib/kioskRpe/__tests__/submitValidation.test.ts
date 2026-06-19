@@ -58,6 +58,12 @@ describe("validateKioskRpeSubmitRequest invalid cases", () => {
         entries: [validEntry({ playerId: "not-a-uuid" })],
       }).ok
     ).toBe(false);
+    expect(
+      validateKioskRpeSubmitRequest({
+        date: "2026-06-17",
+        entries: [validEntry({ existingSessionId: "not-a-uuid" })],
+      }).ok
+    ).toBe(false);
   });
 
   it("rejects invalid RPE values", () => {
@@ -119,6 +125,18 @@ describe("validateKioskRpeSubmitRequest valid cases", () => {
       entries: [validEntry(), validEntry({ playerId: OTHER_PLAYER, rpe: 5 })],
     });
     expect(many.ok).toBe(true);
+  });
+
+  it("accepts a valid existing session ID for mixed Kiosk batches", () => {
+    const result = validateKioskRpeSubmitRequest({
+      date: "2026-06-17",
+      entries: [validEntry({ existingSessionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" })],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.entries[0].existingSessionId).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    }
   });
 
   it("accepts null matchday tag and all supported values", () => {

@@ -4,6 +4,7 @@ import {
   DEFAULT_SESSION_TYPE,
   parseDurationInput,
 } from "@/lib/kioskRpe/constants";
+import { isExistingSubmissionLocked } from "@/lib/kioskRpe/existingSubmission";
 import type { KioskGlobalSettings, KioskPlayerState, RpeValue } from "@/lib/kioskRpe/types";
 
 export function createDefaultPlayerState(playerId: string): KioskPlayerState {
@@ -72,6 +73,7 @@ export function updatePlayerRpe(
 ): Record<string, KioskPlayerState> {
   const current = playerStates[playerId];
   if (!current) return playerStates;
+  if (isExistingSubmissionLocked(current)) return playerStates;
   return {
     ...playerStates,
     [playerId]: { ...current, rpe },

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import type { SessionRow } from "@/lib/types";
 import { getRecentKioskSessions } from "@/lib/kioskRpe/recentKioskSessions.server";
+import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
 import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
 import { listPlayersForKiosk, type KioskPlayer } from "@/lib/players/listPlayers";
 import { StaffLoadView } from "./components/StaffLoadView";
@@ -78,7 +79,7 @@ export default async function RpePage() {
   }
 
   if (isPlayer) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTeamSessionDateString();
     const hasSubmittedToday = list.some((r) => r.date === today);
     return (
       <PlayerLoadView list={list} hasSubmittedToday={hasSubmittedToday} />

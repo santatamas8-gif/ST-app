@@ -31,6 +31,9 @@ export function buildCompletedSubmitEntries(
       durationMinutes,
       sessionType: state.sessionType,
       matchdayTag: matchdayTagToApi(state.matchdayTag),
+      ...(state.source === "existingSubmission" && state.existingSessionId
+        ? { existingSessionId: state.existingSessionId }
+        : {}),
     });
   }
 

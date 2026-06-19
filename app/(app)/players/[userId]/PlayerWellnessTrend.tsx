@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
   ReferenceLine,
+  LabelList,
 } from "recharts";
 import type { LucideIcon } from "lucide-react";
 import { Clock, Moon, BatteryLow, Activity, Brain, Smile, HeartPulse, Dumbbell } from "lucide-react";
@@ -47,6 +48,15 @@ const METRICS: { key: MetricKey; label: string; max?: number; Icon: LucideIcon }
   { key: "wellness", label: "Wellness score", max: 10, Icon: HeartPulse },
   { key: "load", label: "Load", Icon: Dumbbell },
 ];
+
+const STAFF_COMPACT_METRICS = new Set<MetricKey>([
+  "sleep_duration",
+  "sleep_quality",
+  "fatigue",
+  "soreness",
+  "stress",
+  "mood",
+]);
 
 /** Bar colors: 1–4 red, 5–7 yellow, 8+ green. Wellness etc. are 1–10, higher = better. Load = intensity (1–10) × duration, so result is not 1–10 → no color bands. Sleep (h) uses hour bands. */
 function getBarColor(key: MetricKey, value: number | string): string {
@@ -86,13 +96,34 @@ function formatTooltipValue(key: MetricKey, value: number | string): string {
   return key === "sleep_duration" ? `${formatSleepDuration(n)}h` : String(value);
 }
 
+function formatBarLabelValue(key: MetricKey, value: number | string): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return String(value);
+  if (key === "sleep_duration") return n % 1 === 0 ? String(n) : n.toFixed(1);
+  if (key === "wellness") return n.toFixed(1);
+  return n % 1 === 0 ? String(n) : n.toFixed(1);
+}
+
+type BarValueLabelProps = {
+  x?: number | string;
+  y?: number | string;
+  width?: number | string;
+  value?: number | string;
+};
+
 interface PlayerWellnessTrendProps {
   wellness: WellnessRow[];
   dates: string[];
   loadByDate: Record<string, number>;
+  compactSubmittedBars?: boolean;
 }
 
-export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRecord }: PlayerWellnessTrendProps) {
+export function PlayerWellnessTrend({
+  wellness,
+  dates,
+  loadByDate: loadByDateRecord,
+  compactSubmittedBars = false,
+}: PlayerWellnessTrendProps) {
   const { themeId } = useTheme();
   const isNeon = themeId === "neon";
   const isMatt = themeId === "matt";
@@ -215,7 +246,11 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
         const avg28 = key === "wellness" ? averageWellness(last28Rows) : avg(values28);
         const dataKey = key as keyof (typeof chartData)[0];
         const periodAvg = selectedPeriod === "7" ? avg7 : selectedPeriod === "14" ? avg14 : avg28;
-        const hasAny = chartDataByPeriod.some((r) => r[dataKey] != null);
+        const useCompactSubmittedBars = compactSubmittedBars && STAFF_COMPACT_METRICS.has(key);
+        const metricChartData = useCompactSubmittedBars
+          ? chartDataByPeriod.filter((r) => r[dataKey] != null)
+          : chartDataByPeriod;
+        const hasAny = metricChartData.some((r) => r[dataKey] != null);
         const is7Day = selectedPeriod === "7";
         const is14Day = selectedPeriod === "14";
         const barSize = is7Day ? 60 : is14Day ? 48 : 40;
@@ -246,8 +281,8 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
               {hasAny ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={chartDataByPeriod}
-                    margin={{ top: 2, right: chartRightMargin, left: 0, bottom: 8 }}
+                    data={metricChartData}
+                    margin={{ top: 18, right: chartRightMargin, left: 0, bottom: 8 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                     <XAxis
@@ -265,7 +300,7 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                     <Tooltip
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
-                        const row = payload[0].payload as (typeof chartDataByPeriod)[0];
+                        const row = payload[0].payload as (typeof metricChartData)[0];
                         const fullDate = row.fullDate;
                         const value = row[dataKey];
                         if (value == null) return null;
@@ -297,7 +332,32 @@ export function PlayerWellnessTrend({ wellness, dates, loadByDate: loadByDateRec
                       />
                     )}
                     <Bar dataKey={dataKey} radius={[2, 2, 0, 0]} maxBarSize={barSize}>
-                      {chartDataByPeriod.map((entry, i) => {
+                      <LabelList
+                        dataKey={dataKey}
+                        content={(props) => {
+                          const { x, y, width, value } = props as BarValueLabelProps;
+                          if (value == null || x == null || y == null || width == null) return null;
+                          const numericX = Number(x);
+                          const numericY = Number(y);
+                          const numericWidth = Number(width);
+                          if ([numericX, numericY, numericWidth].some(Number.isNaN)) return null;
+
+                          return (
+                            <text
+                              x={numericX + numericWidth / 2}
+                              y={numericY - 5}
+                              textAnchor="middle"
+                              fill={getBarColor(key, value)}
+                              fontSize={10}
+                              fontWeight={600}
+                              opacity={0.78}
+                            >
+                              {formatBarLabelValue(key, value)}
+                            </text>
+                          );
+                        }}
+                      />
+                      {metricChartData.map((entry, i) => {
                         const val = entry[dataKey];
                         const fill = val != null ? getBarColor(key, val) : "transparent";
                         return (

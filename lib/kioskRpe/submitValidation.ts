@@ -28,6 +28,7 @@ export type KioskRpeSubmitEntry = {
   durationMinutes: number;
   sessionType: KioskSessionType;
   matchdayTag: KioskMatchdayDbValue | null;
+  existingSessionId?: string;
 };
 
 export type KioskRpeSubmitRequest = {
@@ -166,12 +167,22 @@ export function validateKioskRpeSubmitRequest(
       };
     }
 
+    const existingSessionIdRaw = row.existingSessionId ?? row.existing_session_id;
+    let existingSessionId: string | undefined;
+    if (existingSessionIdRaw !== undefined) {
+      if (!isValidPlayerId(existingSessionIdRaw)) {
+        return { ok: false, error: `entries[${i}].existingSessionId is invalid.` };
+      }
+      existingSessionId = existingSessionIdRaw.trim();
+    }
+
     entries.push({
       playerId,
       rpe,
       durationMinutes,
       sessionType: sessionTypeRaw as KioskSessionType,
       matchdayTag: matchdayParsed,
+      ...(existingSessionId ? { existingSessionId } : {}),
     });
   }
 

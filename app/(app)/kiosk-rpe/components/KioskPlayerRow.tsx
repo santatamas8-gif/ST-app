@@ -17,6 +17,7 @@ import {
 } from "@/lib/kioskRpe/constants";
 import type { KioskPlayerSettingsPatch } from "@/lib/kioskRpe/state";
 import type { KioskMatchdayTag, KioskSessionType, RpeValue } from "@/lib/kioskRpe/types";
+import { sessionLoad } from "@/utils/load";
 
 const CARD_RADIUS = "12px";
 
@@ -35,6 +36,8 @@ interface KioskPlayerRowProps {
   durationInput: string;
   isCompleted: boolean;
   readOnly?: boolean;
+  rpeReadOnly?: boolean;
+  muted?: boolean;
   onDurationInputChange: (value: string) => void;
   onSettingsChange: (patch: KioskPlayerSettingsPatch) => void;
   onRpeSelect: (rpe: RpeValue) => void;
@@ -121,6 +124,8 @@ export function KioskPlayerRow({
   durationInput,
   isCompleted,
   readOnly = false,
+  rpeReadOnly = false,
+  muted = false,
   onDurationInputChange,
   onSettingsChange,
   onRpeSelect,
@@ -130,6 +135,10 @@ export function KioskPlayerRow({
 
   const durationInvalid = parseDurationInput(durationInput) === null;
   const rpeMeaning = rpe !== null ? getRpeMeaning(rpe) : null;
+  const parsedDuration = parseDurationInput(durationInput);
+  const loadPreview =
+    rpe !== null && parsedDuration !== null ? sessionLoad(parsedDuration, rpe) : null;
+  const rpeButtonsDisabled = readOnly || rpeReadOnly;
 
   const cardStyle =
     themeId === "neon"
@@ -152,7 +161,7 @@ export function KioskPlayerRow({
 
   return (
     <article
-      className={`kiosk-player-row-card rounded-xl border border-zinc-800/90 p-2.5 sm:p-3 ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
+      className={`kiosk-player-row-card rounded-xl border border-zinc-800/90 p-2.5 transition-opacity sm:p-3 ${muted ? "opacity-75" : ""} ${themeId === "neon" ? "neon-card-text" : themeId === "matt" ? "matt-card-text" : ""}`}
       style={cardStyle}
     >
       <div className="kiosk-player-row-line flex min-w-0 items-center gap-2 sm:gap-3">
@@ -178,7 +187,7 @@ export function KioskPlayerRow({
                     <button
                       key={value}
                       type="button"
-                      disabled={readOnly}
+                      disabled={rpeButtonsDisabled}
                       aria-pressed={selected}
                       aria-label={`Set ${name} RPE to ${value} — ${meaning}`}
                       onClick={() => onRpeSelect(value)}
@@ -265,6 +274,10 @@ export function KioskPlayerRow({
                   min
                 </span>
               </div>
+
+              <MetaChip className="kiosk-row-load min-h-8 min-w-[5.5rem] justify-center border-teal-700/70 bg-teal-950/35 px-2 text-center text-[11px] text-teal-300">
+                {loadPreview === null ? "— AU" : `${Math.round(loadPreview)} AU`}
+              </MetaChip>
             </div>
           </div>
           <div

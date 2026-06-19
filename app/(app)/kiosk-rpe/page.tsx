@@ -1,5 +1,7 @@
 import { getAppUser } from "@/lib/auth";
 import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
+import { getEligibleSameDayPhoneSubmissions } from "@/lib/kioskRpe/existingSubmission.server";
+import type { ExistingSubmissionMap } from "@/lib/kioskRpe/existingSubmission";
 import { getKioskBatchCountForDate } from "@/lib/kioskRpe/recentKioskSessions.server";
 import { getKioskLockState } from "@/lib/kioskLock/cookies.server";
 import { listPlayersForKiosk } from "@/lib/players/listPlayers";
@@ -41,7 +43,26 @@ export default async function KioskRpePage() {
   }
 
   const roster = players ?? [];
-  const rosterKey = roster.map((player) => player.id).join("|");
+  let existingSubmissions: ExistingSubmissionMap = {};
+  try {
+    const existingResult = await getEligibleSameDayPhoneSubmissions({
+      date: sessionDate,
+      players: roster,
+    });
+    if (existingResult.error) {
+      console.error("[kiosk-rpe] Existing phone submissions unavailable", existingResult.error);
+    } else {
+      existingSubmissions = existingResult.data;
+    }
+  } catch (error) {
+    console.error("[kiosk-rpe] Existing phone submissions failed to load", error);
+  }
+
+  const existingKey = Object.values(existingSubmissions)
+    .map((row) => row.id)
+    .sort()
+    .join("|");
+  const rosterKey = `${roster.map((player) => player.id).join("|")}::${existingKey}`;
 
   return (
     <KioskRpeView
@@ -50,6 +71,7 @@ export default async function KioskRpePage() {
       loadError={loadError}
       todayKioskBatchCount={todayKioskBatchCount}
       todayKioskBatchCountUnavailable={todayKioskBatchCountUnavailable}
+      existingSubmissions={existingSubmissions}
     />
   );
 }

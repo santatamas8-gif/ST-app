@@ -6,6 +6,11 @@ import { useTheme } from "@/components/ThemeProvider";
 import { buildKioskSubmitRequest } from "@/lib/kioskRpe/buildSubmitPayload";
 import { getKioskSubmissionConfirmationCopy } from "@/lib/kioskRpe/submissionConfirmation";
 import {
+  createExistingSubmissionPlayerState,
+  isExistingSubmissionLocked,
+  type ExistingSubmissionMap,
+} from "@/lib/kioskRpe/existingSubmission";
+import {
   DEFAULT_DURATION_MINUTES,
   DEFAULT_GLOBAL_SETTINGS,
   parseDurationInput,
@@ -38,6 +43,7 @@ interface KioskRpeViewProps {
   loadError: SafeError | null;
   todayKioskBatchCount: number;
   todayKioskBatchCountUnavailable?: boolean;
+  existingSubmissions?: ExistingSubmissionMap;
 }
 
 export function KioskRpeView({
@@ -45,6 +51,7 @@ export function KioskRpeView({
   loadError,
   todayKioskBatchCount,
   todayKioskBatchCountUnavailable = false,
+  existingSubmissions = {},
 }: KioskRpeViewProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
@@ -52,7 +59,17 @@ export function KioskRpeView({
 
   const [globalSettings, setGlobalSettings] = useState<KioskGlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
   const [globalDurationInput, setGlobalDurationInput] = useState(String(DEFAULT_DURATION_MINUTES));
-  const [playerStates, setPlayerStates] = useState(() => createInitialPlayerStates(players));
+  const [playerStates, setPlayerStates] = useState(() =>
+    createInitialPlayerStates(
+      players,
+      Object.fromEntries(
+        Object.entries(existingSubmissions).map(([playerId, row]) => [
+          playerId,
+          createExistingSubmissionPlayerState(playerId, row, DEFAULT_GLOBAL_SETTINGS),
+        ])
+      )
+    )
+  );
   const [durationInputs, setDurationInputs] = useState(() =>
     createInitialDurationInputs(players)
   );
@@ -293,6 +310,7 @@ export function KioskRpeView({
                 if (!state) return null;
                 const durationInput = durationInputs[player.id] ?? String(state.duration);
                 const isCompleted = isKioskPlayerCompleted(state, durationInput);
+                const existingSubmissionLocked = isExistingSubmissionLocked(state);
                 return (
                   <KioskPlayerRow
                     key={player.id}
@@ -308,6 +326,8 @@ export function KioskRpeView({
                     durationInput={durationInput}
                     isCompleted={isCompleted}
                     readOnly={isReadOnly}
+                    rpeReadOnly={existingSubmissionLocked}
+                    muted={existingSubmissionLocked}
                     onDurationInputChange={(value) => handleDurationInputChange(player.id, value)}
                     onSettingsChange={(patch) => handlePlayerSettingsChange(player.id, patch)}
                     onRpeSelect={(rpe) => handleRpeSelect(player.id, rpe)}

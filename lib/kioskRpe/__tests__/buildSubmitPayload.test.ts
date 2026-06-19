@@ -78,4 +78,16 @@ describe("buildSubmitPayload", () => {
     const entries = buildCompletedSubmitEntries([PLAYER_A], { [PLAYER_A]: state }, { [PLAYER_A]: "30" });
     expect(entries[0].matchdayTag).toBeNull();
   });
+
+  it("includes existing session ID for locked existing submissions", () => {
+    const state = {
+      ...createDefaultPlayerState(PLAYER_A),
+      rpe: 7 as const,
+      source: "existingSubmission" as const,
+      existingSessionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    };
+    const entries = buildCompletedSubmitEntries([PLAYER_A], { [PLAYER_A]: state }, { [PLAYER_A]: "75" });
+
+    expect(entries[0].existingSessionId).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  });
 });

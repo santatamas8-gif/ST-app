@@ -72,7 +72,7 @@ export function PlayerDetailTabs({
         </div>
       </div>
       {activeTab === "wellness" && (
-        <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} />
+        <PlayerWellnessTrend wellness={wellness} dates={dates} loadByDate={loadByDate} compactSubmittedBars />
       )}
       {activeTab === "rpe" && <PlayerLoadBreakdown sessions={sessions} />}
     </div>

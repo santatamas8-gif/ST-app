@@ -32,6 +32,8 @@ export type KioskPlayerState = {
   matchdayTag: KioskMatchdayTag;
   duration: number;
   rpe: number | null;
+  source?: "kiosk" | "existingSubmission";
+  existingSessionId?: string;
 };
 
 export type RpeValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
