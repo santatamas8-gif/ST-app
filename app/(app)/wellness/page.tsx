@@ -17,7 +17,7 @@ export default async function WellnessPage() {
     .from("wellness")
     .select("*")
     .order("date", { ascending: false })
-    .limit(isPlayer ? 28 : 100);
+    .limit(isPlayer ? 28 : 1000);
 
   if (isPlayer) {
     query = query.eq("user_id", user.id);
@@ -43,8 +43,8 @@ export default async function WellnessPage() {
     );
   }
 
-  let emailByUserId: Record<string, string> = {};
-  let displayNameByUserId: Record<string, string> = {};
+  const emailByUserId: Record<string, string> = {};
+  const displayNameByUserId: Record<string, string> = {};
   let totalPlayers: number | null = null;
   let allPlayerIds: string[] = [];
   if (!isPlayer) {
