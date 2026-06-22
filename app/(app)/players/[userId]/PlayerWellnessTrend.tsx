@@ -56,6 +56,8 @@ const STAFF_COMPACT_METRICS = new Set<MetricKey>([
   "soreness",
   "stress",
   "mood",
+  "wellness",
+  "load",
 ]);
 
 /** Bar colors: 1–4 red, 5–7 yellow, 8+ green. Wellness etc. are 1–10, higher = better. Load = intensity (1–10) × duration, so result is not 1–10 → no color bands. Sleep (h) uses hour bands. */

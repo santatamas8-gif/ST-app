@@ -27,7 +27,7 @@ import { RecentKioskSessions } from "./RecentKioskSessions";
 import { StaffRpeTabs } from "./StaffRpeTabs";
 import { PlayerAnalysisTabs } from "./PlayerAnalysisTabs";
 import { TeamTrendsTabs } from "./TeamTrendsTabs";
-import { Activity, BarChart2, Calendar, LayoutDashboard, Search, User, X } from "lucide-react";
+import { Activity, BarChart2, Calendar, Clock3, Dumbbell, Eye, Gauge, LayoutDashboard, Search, Tag, User, X } from "lucide-react";
 import type { RecentKioskSessionSummary } from "@/lib/kioskRpe/recentKioskSessions";
 
 function todayISO() {
@@ -89,6 +89,67 @@ function formatLoadAu(value: number): string {
   return `${Math.round(value).toLocaleString("en-GB")} AU`;
 }
 
+function rpeToneClass(value: number | null): string {
+  if (value == null) return "border-zinc-700 bg-zinc-800/70 text-zinc-300";
+  if (value <= 4) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  if (value <= 7) return "border-amber-500/35 bg-amber-500/10 text-amber-300";
+  return "border-red-500/35 bg-red-500/10 text-red-300";
+}
+
+function loadToneClass(value: number): string {
+  if (value >= 900) return "border-red-500/35 bg-red-500/10 text-red-300";
+  if (value >= 600) return "border-amber-500/35 bg-amber-500/10 text-amber-300";
+  if (value >= 300) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  return "border-zinc-600/60 bg-zinc-800/70 text-zinc-300";
+}
+
+function rowAccentClass(value: number | null): string {
+  if (value == null) return "border-l-zinc-600/60";
+  if (value <= 4) return "border-l-emerald-400/70";
+  if (value <= 7) return "border-l-amber-400/75";
+  return "border-l-red-400/75";
+}
+
+function sessionTypeToneClass(label: string): string {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("match")) return "border-red-500/30 bg-red-500/10 text-red-300";
+  if (normalized.includes("gym")) return "border-blue-500/30 bg-blue-500/10 text-blue-300";
+  if (normalized.includes("pitch")) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  if (normalized.includes("multiple")) return "border-violet-500/30 bg-violet-500/10 text-violet-300";
+  return "border-zinc-600/60 bg-zinc-800/70 text-zinc-300";
+}
+
+function matchdayToneClass(label: string): string {
+  if (label === "Matchday" || label === "MD") return "border-red-500/35 bg-red-500/10 text-red-300";
+  if (label.startsWith("MD-1") || label.startsWith("MD+1")) return "border-orange-500/35 bg-orange-500/10 text-orange-300";
+  if (label.startsWith("MD-2") || label.startsWith("MD+2")) return "border-amber-500/35 bg-amber-500/10 text-amber-300";
+  if (label.includes("Multiple")) return "border-violet-500/30 bg-violet-500/10 text-violet-300";
+  if (label === "No tag" || label === "—") return "border-zinc-600/60 bg-zinc-800/70 text-zinc-400";
+  return "border-emerald-500/25 bg-emerald-500/10 text-emerald-300";
+}
+
+function initialsForName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
+function PlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-emerald-500/25 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300 shadow-sm">
+      {avatarUrl ? (
+        <span
+          className="h-full w-full bg-cover bg-center"
+          style={{ backgroundImage: `url("${avatarUrl}")` }}
+          aria-hidden
+        />
+      ) : (
+        initialsForName(name)
+      )}
+    </span>
+  );
+}
+
 function DailyKpiCard({
   label,
   value,
@@ -141,42 +202,64 @@ function CompactEmptyState({
 
 function DailyPlayerTableRow({
   row,
+  avatarUrl,
   index,
   isHighContrast,
   onOpen,
 }: {
   row: DailyPlayerRow;
+  avatarUrl?: string | null;
   index: number;
   isHighContrast: boolean;
   onOpen: () => void;
 }) {
   const rowBg = index % 2 === 1 ? (isHighContrast ? "bg-white/[0.03]" : "bg-zinc-800/30") : "";
+  const rpeTone = rpeToneClass(row.averageRpe);
+  const loadTone = loadToneClass(row.totalLoad);
+  const sessionTone = sessionTypeToneClass(row.sessionTypeLabel);
+  const matchdayTone = matchdayToneClass(row.matchdayTagLabel);
   return (
     <tr
       className={`border-b ${isHighContrast ? "border-white/10 hover:bg-white/5" : "border-zinc-800/80 hover:bg-zinc-800/50"} ${rowBg}`}
     >
-      <td className="px-3 py-3">
+      <td className={`border-l-2 py-3 pl-3 pr-3 ${rowAccentClass(row.averageRpe)}`}>
         <button
           type="button"
           onClick={onOpen}
-          className="min-h-[36px] rounded text-left font-medium text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="inline-flex min-h-[36px] items-center gap-2 rounded text-left font-medium text-zinc-100 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
         >
+          <PlayerAvatar name={row.playerName} avatarUrl={avatarUrl} />
           {row.playerName}
         </button>
       </td>
-      <td className="px-3 py-3 tabular-nums">{row.sessionCount}</td>
-      <td className="px-3 py-3 tabular-nums">{formatAverage(row.averageRpe)}</td>
-      <td className="px-3 py-3 tabular-nums">{row.totalDuration} min</td>
-      <td className="px-3 py-3 font-medium tabular-nums text-emerald-400">
-        {formatLoadAu(row.totalLoad)}
+      <td className="px-3 py-3 font-medium tabular-nums text-zinc-200">{row.sessionCount}</td>
+      <td className="px-3 py-3">
+        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${rpeTone}`}>
+          <Gauge className="h-3.5 w-3.5" aria-hidden />
+          {formatAverage(row.averageRpe)}
+        </span>
       </td>
       <td className="px-3 py-3">
-        <span className="inline-block rounded bg-zinc-800/80 px-2 py-1 text-[11px] font-medium text-zinc-300">
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700/70 bg-zinc-800/70 px-2.5 py-1 text-[11px] font-medium tabular-nums text-zinc-200">
+          <Clock3 className="h-3.5 w-3.5 text-zinc-400" aria-hidden />
+          {row.totalDuration} min
+        </span>
+      </td>
+      <td className="px-3 py-3">
+        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${loadTone}`}>
+          <Dumbbell className="h-3.5 w-3.5" aria-hidden />
+          {formatLoadAu(row.totalLoad)}
+        </span>
+      </td>
+      <td className="px-3 py-3">
+        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${sessionTone}`}>
+          <Activity className="h-3.5 w-3.5" aria-hidden />
           {row.sessionTypeLabel}
         </span>
       </td>
       <td className="px-3 py-3">
-        <span className="inline-block rounded bg-zinc-800/80 px-2 py-1 text-[11px] font-medium text-zinc-300">
+        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium ${matchdayTone}`}>
+          <Tag className="h-3.5 w-3.5" aria-hidden />
           {row.matchdayTagLabel}
         </span>
       </td>
@@ -184,8 +267,9 @@ function DailyPlayerTableRow({
         <button
           type="button"
           onClick={onOpen}
-          className="min-h-[34px] rounded-lg border border-zinc-700 bg-zinc-800/80 px-2.5 py-1.5 text-xs font-medium text-emerald-400 transition hover:bg-zinc-700/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="inline-flex min-h-[34px] items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
         >
+          <Eye className="h-3.5 w-3.5" aria-hidden />
           View
         </button>
       </td>
@@ -214,7 +298,7 @@ interface StaffLoadViewProps {
   list: SessionRow[];
   emailByUserId: Record<string, string>;
   displayNameByUserId?: Record<string, string>;
-  playerRoster?: DailyOverviewPlayer[];
+  playerRoster?: (DailyOverviewPlayer & { avatarUrl?: string | null })[];
   recentKioskSessions?: RecentKioskSessionSummary[];
   recentKioskSessionsLoadError?: boolean;
 }
@@ -241,6 +325,11 @@ export function StaffLoadView({
   const [isMobile, setIsMobile] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useSearchShortcut(searchInputRef);
+
+  const avatarByUserId = useMemo(
+    () => new Map(playerRoster.map((player) => [player.id, player.avatarUrl ?? null])),
+    [playerRoster]
+  );
 
   useEffect(() => {
     const updateHash = () => setCurrentHash(window.location.hash);
@@ -624,6 +713,7 @@ export function StaffLoadView({
                           <DailyPlayerTableRow
                             key={row.userId}
                             row={row}
+                            avatarUrl={avatarByUserId.get(row.userId) ?? null}
                             index={idx}
                             isHighContrast={isHighContrast}
                             onOpen={() => setModalUserId(row.userId)}

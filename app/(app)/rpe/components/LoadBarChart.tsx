@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
   LabelList,
+  Cell,
 } from "recharts";
 import { formatDayShort } from "@/lib/formatDate";
 
@@ -147,6 +148,13 @@ interface PlayerLoadBarChartProps {
   className?: string;
 }
 
+function playerLoadBarColor(load: number): string {
+  if (load >= 600) return "#f59e0b";
+  if (load >= 400) return "#22c55e";
+  if (load >= 250) return "#14b8a6";
+  return "#38bdf8";
+}
+
 export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartProps) {
   const chartData = data;
 
@@ -187,7 +195,10 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
                   return `${row.playerName ?? row.label}${sessions}`;
                 }}
               />
-              <Bar dataKey="load" fill="#14b8a6" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="load" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.label} fill={playerLoadBarColor(entry.load)} />
+                ))}
                 <LabelList
                   dataKey="load"
                   position="right"
