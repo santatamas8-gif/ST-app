@@ -55,7 +55,7 @@ type EquipmentVariant =
   | "pool-exercise"
   | "jogging";
 
-const STANDALONE_EQUIPMENT_SRC: Partial<Record<EquipmentVariant, string>> = {
+const STANDALONE_EQUIPMENT_SRC = {
   foam: FOAM_ROLLER_SRC,
   "massage-gun": MASSAGE_GUN_SRC,
   massage: MASSAGE_SRC,
@@ -67,12 +67,11 @@ const STANDALONE_EQUIPMENT_SRC: Partial<Record<EquipmentVariant, string>> = {
   steam: STEAM_BATH_SRC,
   "pool-exercise": POOL_EXERCISE_SRC,
   jogging: EASY_JOGGING_SRC,
-};
+} as const satisfies Partial<Record<EquipmentVariant, string>>;
 
-const EQUIPMENT_SPRITES: Record<
-  Exclude<EquipmentVariant, keyof typeof STANDALONE_EQUIPMENT_SRC>,
-  { src: string; row: number; rows: number }
-> = {
+type SpriteEquipmentVariant = Exclude<EquipmentVariant, keyof typeof STANDALONE_EQUIPMENT_SRC>;
+
+const EQUIPMENT_SPRITES: Record<SpriteEquipmentVariant, { src: string; row: number; rows: number }> = {
   boots: { src: COMPRESSION_BOOTS_SRC, row: 1, rows: 2 },
 };
 
@@ -142,7 +141,7 @@ const EQUIPMENT_ICON_SCALE: Partial<Record<EquipmentVariant, number>> = {
 };
 
 function EquipmentIcon({ variant, size = 20 }: { variant: EquipmentVariant; size?: number }) {
-  const standaloneSrc = STANDALONE_EQUIPMENT_SRC[variant];
+  const standaloneSrc = STANDALONE_EQUIPMENT_SRC[variant as keyof typeof STANDALONE_EQUIPMENT_SRC];
   const imageScale = EQUIPMENT_ICON_SCALE[variant] ?? 1;
 
   if (standaloneSrc) {
@@ -162,7 +161,7 @@ function EquipmentIcon({ variant, size = 20 }: { variant: EquipmentVariant; size
     );
   }
 
-  const sprite = EQUIPMENT_SPRITES[variant];
+  const sprite = EQUIPMENT_SPRITES[variant as SpriteEquipmentVariant];
 
   return (
     <span
