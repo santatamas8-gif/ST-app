@@ -5,7 +5,7 @@ import { getKioskLockRequestDecision } from "@/lib/kioskLock/requestPolicy";
 import { updateSession } from "@/lib/supabase/middleware";
 import type { UserRole } from "@/lib/types";
 
-const APP_ROUTES = /^\/(dashboard|admin|wellness|rpe|players|schedule|users|chat|kiosk-rpe)(\/|$)/;
+const APP_ROUTES = /^\/(dashboard|admin|wellness|rpe|recovery-protocol|players|schedule|users|chat|kiosk-rpe)(\/|$)/;
 
 export async function middleware(request: NextRequest) {
   const { response, user, supabase } = await updateSession(request);

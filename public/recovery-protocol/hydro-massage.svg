@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <!-- Therapist -->
+  <circle cx="12" cy="13" r="4" fill="#0f172a" />
+  <path
+    d="M18 30 14 17"
+    stroke="#0f172a"
+    stroke-width="2.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Patient body on table -->
+  <ellipse cx="33" cy="30" rx="19" ry="5.5" fill="#0f172a" />
+  <circle cx="52" cy="22" r="3.5" fill="#0f172a" />
+  <path
+    d="M52 25.5V28"
+    stroke="#0f172a"
+    stroke-width="2.8"
+    stroke-linecap="round"
+  />
+
+  <!-- Table -->
+  <path
+    d="M14 35h36"
+    stroke="#0f172a"
+    stroke-width="2.8"
+    stroke-linecap="round"
+  />
+  <path
+    d="M18 35v5M46 35v5"
+    stroke="#0f172a"
+    stroke-width="2.6"
+    stroke-linecap="round"
+  />
+
+  <!-- Hydro water jets -->
+  <path
+    d="M24 39v6M32 38v7M40 39v6"
+    stroke="#0284c7"
+    stroke-width="2.2"
+    stroke-linecap="round"
+  />
+  <path
+    d="M8 46c7-4 14-4 21 0s14 4 21 0"
+    stroke="#0284c7"
+    stroke-width="2.8"
+    stroke-linecap="round"
+  />
+  <path
+    d="M10 52c6-3 12-3 18 0s12 3 18 0"
+    stroke="#38bdf8"
+    stroke-width="2.4"
+    stroke-linecap="round"
+  />
+</svg>

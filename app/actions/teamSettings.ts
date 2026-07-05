@@ -80,5 +80,6 @@ export async function updateTeamSettings(
   revalidatePath("/dashboard");
   revalidatePath("/chat");
   revalidatePath("/login");
+  revalidatePath("/recovery-protocol");
   return {};
 }
