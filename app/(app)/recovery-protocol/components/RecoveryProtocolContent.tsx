@@ -82,19 +82,15 @@ const FOUNDATION_ICONS: Record<FoundationItem["icon"], LucideIcon> = {
   meal: UtensilsCrossed,
 };
 
-function FoundationPill({ item, enlarged = false }: { item: FoundationItem; enlarged?: boolean }) {
+function FoundationPill({ item }: { item: FoundationItem }) {
   const Icon = FOUNDATION_ICONS[item.icon];
 
   return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className={`flex shrink-0 items-center justify-center rounded-full bg-blue-100 ${enlarged ? "h-9 w-9" : "h-8 w-8"}`}
-      >
-        <Icon className={`text-blue-700 ${enlarged ? "h-[18px] w-[18px]" : "h-4 w-4"}`} aria-hidden />
+    <div className="flex items-center gap-2">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 lg:h-8 lg:w-8">
+        <Icon className="h-3.5 w-3.5 text-blue-700 lg:h-4 lg:w-4" aria-hidden />
       </span>
-      <span
-        className={`font-semibold leading-snug text-slate-800 ${enlarged ? "text-sm sm:text-[15px]" : "text-xs sm:text-[13px]"}`}
-      >
+      <span className="text-[11px] font-semibold leading-snug text-slate-800 sm:text-xs lg:text-[13px]">
         {item.label}
       </span>
     </div>
@@ -102,7 +98,9 @@ function FoundationPill({ item, enlarged = false }: { item: FoundationItem; enla
 }
 
 const RECOVERY_ICON_SIZE = 32;
+const RECOVERY_ICON_SIZE_MOBILE = 24;
 const POINT_SYSTEM_ICON_SIZE = 36;
+const POINT_SYSTEM_ICON_SIZE_MOBILE = 24;
 const FOOTER_ICON_SIZE = 28;
 const footerNoteTextClass = "min-w-0 text-[10px] font-normal leading-none text-slate-400 sm:text-[11px] xl:text-xs";
 const footerNoteIconClass = "text-slate-400";
@@ -339,14 +337,22 @@ function isAvoidRecoveryAction(action: string): boolean {
   return /^avoid\b/i.test(action) || /^no heavy recovery$/i.test(action);
 }
 
-function ProtocolActionItem({ action, compact = false }: { action: string; compact?: boolean }) {
+function ProtocolActionItem({
+  action,
+  compact = false,
+  iconSize = RECOVERY_ICON_SIZE,
+}: {
+  action: string;
+  compact?: boolean;
+  iconSize?: number;
+}) {
   if (compact) {
     return (
-      <li className="flex items-center gap-1">
+      <li className="flex items-center gap-1.5 lg:gap-2">
         <span className="shrink-0">
           <ActionIcon
             render={resolveRecoveryIcon(action)}
-            size={FOOTER_ICON_SIZE}
+            size={iconSize}
             lucideClassName={footerNoteIconClass}
           />
         </span>
@@ -356,11 +362,11 @@ function ProtocolActionItem({ action, compact = false }: { action: string; compa
   }
 
   return (
-    <li className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-700">
+    <li className="flex items-start gap-2 text-xs leading-snug text-slate-700 lg:gap-2.5 lg:text-sm">
       <span className="shrink-0">
-        <RecoveryListIcon label={action} />
+        <RecoveryListIcon label={action} size={iconSize} />
       </span>
-      <span className="min-w-0 pt-1">{action}</span>
+      <span className="min-w-0 pt-0.5 lg:pt-1">{action}</span>
     </li>
   );
 }
@@ -380,35 +386,53 @@ function ProtocolFooterNote({ text }: { text: string }) {
   );
 }
 
-function ProtocolDayCard({ day }: { day: ProtocolDay }) {
+function ProtocolDayCard({ day, compact = false }: { day: ProtocolDay; compact?: boolean }) {
   const mainActions = day.keyActions.filter((action) => !isAvoidRecoveryAction(action));
   const footerActions = day.keyActions.filter(isAvoidRecoveryAction);
+  const iconSize = compact ? RECOVERY_ICON_SIZE_MOBILE : RECOVERY_ICON_SIZE;
 
   return (
     <article
       className={`flex h-full min-w-0 flex-col overflow-hidden rounded-xl border bg-white shadow-sm ${day.accent.cardBorder}`}
     >
       <div className={`flex flex-col ${day.accent.header}`}>
-        <div className="px-3.5 py-2.5 text-center xl:px-4">
-          <span className={`text-lg font-bold tracking-wide sm:text-xl ${day.accent.headerText}`}>{day.label}</span>
+        <div
+          className={`text-center ${compact ? "px-2 py-2" : "px-3 py-2.5 lg:px-3.5 xl:px-4"}`}
+        >
+          <span
+            className={`font-bold tracking-wide ${day.accent.headerText} ${
+              compact ? "text-sm" : "text-base lg:text-lg xl:text-xl"
+            }`}
+          >
+            {day.label}
+          </span>
         </div>
-        <div className="px-3.5 pb-2.5 text-center xl:px-4">
-          <span className="inline-block rounded-md border-2 border-white bg-white px-2.5 py-0.5 text-sm font-bold tabular-nums text-slate-900 shadow-sm">
+        <div className={`text-center ${compact ? "px-2 pb-2" : "px-3 pb-2.5 lg:px-3.5 xl:px-4"}`}>
+          <span
+            className={`inline-block rounded-md border-2 border-white bg-white font-bold tabular-nums text-slate-900 shadow-sm ${
+              compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-0.5 text-xs lg:text-sm"
+            }`}
+          >
             {day.pointGoal} pts
           </span>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col px-3.5 py-3 xl:px-4">
-        <ul className="space-y-2">
+      <div className={`flex flex-1 flex-col ${compact ? "px-2 py-2" : "px-3 py-3 lg:px-3.5 xl:px-4"}`}>
+        <ul className={compact ? "space-y-1.5" : "space-y-2"}>
           {mainActions.map((action) => (
-            <ProtocolActionItem key={action} action={action} />
+            <ProtocolActionItem key={action} action={action} iconSize={iconSize} />
           ))}
         </ul>
         {footerActions.length > 0 && (
-          <ul className="mt-auto space-y-2 border-t border-slate-100 pt-2.5">
+          <ul className={`mt-auto border-t border-slate-100 ${compact ? "space-y-1.5 pt-2" : "space-y-2 pt-2.5"}`}>
             {footerActions.map((action) => (
-              <ProtocolActionItem key={action} action={action} compact />
+              <ProtocolActionItem
+                key={action}
+                action={action}
+                compact
+                iconSize={compact ? 22 : FOOTER_ICON_SIZE}
+              />
             ))}
           </ul>
         )}
@@ -418,33 +442,141 @@ function ProtocolDayCard({ day }: { day: ProtocolDay }) {
   );
 }
 
+// 2 cards visible: viewport minus horizontal scroll padding only.
+const MOBILE_CARD_COLUMN_WIDTH =
+  "auto-cols-[calc((100vw-1rem-0.375rem)/2)] sm:auto-cols-[calc((100vw-1rem-0.75rem)/3)]";
+const MOBILE_COLUMN_GRID = `grid grid-flow-col gap-1.5 ${MOBILE_CARD_COLUMN_WIDTH} gap-y-2 sm:gap-2.5`;
+const MOBILE_SCROLL_EDGE = "scroll-px-2 px-2";
+const MOBILE_PHASE_LABEL_CLASS =
+  "block max-w-full px-0.5 text-center text-[8px] font-bold uppercase leading-[1.1] tracking-tight sm:text-[10px]";
+
+function MobilePhaseTimelineRow() {
+  let phaseCol = 1;
+
+  return (
+    <div className="contents">
+      {PHASE_TIMELINE.map((segment) => {
+        const colStart = phaseCol;
+        phaseCol += segment.span;
+
+        return (
+          <div
+            key={segment.id}
+            className={`flex items-center justify-center rounded-md px-1 py-1.5 ${segment.bar}`}
+            style={{ gridColumn: `${colStart} / span ${segment.span}`, gridRow: 2 }}
+          >
+            <span className={`${MOBILE_PHASE_LABEL_CLASS} ${segment.barText}`}>
+              {segment.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProtocolDaysBoard() {
+  return (
+    <>
+      <div className="space-y-3 lg:hidden">
+        <p className="text-center text-[11px] font-medium text-slate-400 sm:text-xs">Swipe for more days</p>
+        <div
+          className={`overflow-x-auto overscroll-x-contain pb-2 snap-x snap-mandatory ${MOBILE_SCROLL_EDGE}`}
+          aria-label="Matchday protocol days"
+        >
+          <div className={`${MOBILE_COLUMN_GRID} w-max`}>
+            {PROTOCOL_DAYS.map((day, index) => (
+              <div
+                key={day.id}
+                className="min-w-0 snap-start"
+                style={{ gridColumn: index + 1, gridRow: 1 }}
+              >
+                <ProtocolDayCard day={day} compact />
+              </div>
+            ))}
+            <MobilePhaseTimelineRow />
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden space-y-3 lg:block">
+        <div className="grid grid-cols-7 items-stretch gap-2 xl:gap-3">
+          {PROTOCOL_DAYS.map((day) => (
+            <ProtocolDayCard key={day.id} day={day} />
+          ))}
+        </div>
+        <PhaseTimelineStrip />
+      </div>
+    </>
+  );
+}
+
 function PhaseTimelineStrip() {
   return (
-    <div className="hidden overflow-hidden rounded-lg border border-slate-200 lg:grid lg:grid-cols-7">
+    <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-slate-200">
       {PHASE_TIMELINE.map((segment) => (
         <div
           key={segment.id}
-          className={`flex items-center justify-center px-2 py-2.5 ${segment.bar}`}
+          className={`flex items-center justify-center px-1 py-2 lg:px-2 lg:py-2.5 ${segment.bar}`}
           style={{ gridColumn: `span ${segment.span}` }}
         >
-          <span className={`text-xs font-bold uppercase tracking-wider ${segment.barText}`}>{segment.label}</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wide lg:text-xs lg:tracking-wider ${segment.barText}`}>
+            {segment.label}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-function TherapyPointRow({ item }: { item: TherapyPoint }) {
+function PointSystemFoundation({ layout = "desktop" }: { layout?: "mobile" | "desktop" }) {
+  return (
+    <>
+      <h2 id="foundation-heading" className="sr-only">
+        Foundation of recovery
+      </h2>
+      <div
+        className={`flex items-center gap-x-3 sm:gap-x-4 ${
+          layout === "mobile" ? "flex-nowrap" : "flex-wrap gap-y-2.5 lg:gap-x-6"
+        }`}
+      >
+        <span
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100"
+          title="Important"
+        >
+          <CircleAlert className="h-3.5 w-3.5 text-red-600" aria-hidden />
+        </span>
+        {FOUNDATION_ITEMS.map((item) => (
+          <FoundationPill key={item.label} item={item} />
+        ))}
+      </div>
+      <p className="mt-2 px-0.5 text-[10px] leading-relaxed text-slate-500 sm:text-[11px]">{FOUNDATION_WARNING}</p>
+    </>
+  );
+}
+
+function TherapyPointRow({ item, compact = false }: { item: TherapyPoint; compact?: boolean }) {
   const tier = getTherapyPointTier(item.points);
+  const iconSize = compact ? POINT_SYSTEM_ICON_SIZE_MOBILE : POINT_SYSTEM_ICON_SIZE;
 
   return (
-    <div className={`flex items-center gap-3 border-b px-3.5 py-3 last:border-b-0 sm:px-4 ${tier.rowBorder}`}>
-      <RecoveryListIcon label={item.name} size={POINT_SYSTEM_ICON_SIZE} />
-      <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-800 sm:text-[15px]">
+    <div
+      className={`flex items-center border-b last:border-b-0 ${tier.rowBorder} ${
+        compact ? "gap-2 px-2.5 py-2" : "gap-3 px-3.5 py-3 sm:px-4"
+      }`}
+    >
+      <RecoveryListIcon label={item.name} size={iconSize} />
+      <span
+        className={`min-w-0 flex-1 font-medium leading-snug text-slate-800 ${
+          compact ? "text-xs" : "text-sm sm:text-[15px]"
+        }`}
+      >
         {item.name}
       </span>
       <span
-        className={`shrink-0 rounded-md px-2.5 py-1 text-sm font-bold tabular-nums sm:text-[15px] ${tier.pointsBg} ${tier.pointsText}`}
+        className={`shrink-0 rounded-md font-bold tabular-nums ${
+          compact ? "px-1.5 py-0.5 text-xs" : "px-2.5 py-1 text-sm sm:text-[15px]"
+        } ${tier.pointsBg} ${tier.pointsText}`}
       >
         {item.points}
       </span>
@@ -452,11 +584,59 @@ function TherapyPointRow({ item }: { item: TherapyPoint }) {
   );
 }
 
+function PointSystemColumn({ column, compact = false }: { column: TherapyPoint[]; compact?: boolean }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {column.map((item) => (
+        <TherapyPointRow key={item.name} item={item} compact={compact} />
+      ))}
+    </div>
+  );
+}
+
+function PointSystemBoard() {
+  return (
+    <>
+      <div className="space-y-3 pb-2 pt-1 lg:hidden">
+        <p className="text-center text-[11px] font-medium text-slate-400 sm:text-xs">Swipe for more</p>
+        <div
+          className={`overflow-x-auto overscroll-x-contain pb-3 snap-x snap-mandatory ${MOBILE_SCROLL_EDGE}`}
+          aria-label="Therapy point columns"
+        >
+          <div className={`${MOBILE_COLUMN_GRID} w-max`}>
+            {THERAPY_POINT_COLUMNS.map((column, columnIndex) => (
+              <div
+                key={columnIndex}
+                className="min-w-0 snap-start"
+                style={{ gridColumn: columnIndex + 1, gridRow: 1 }}
+              >
+                <PointSystemColumn column={column} compact />
+              </div>
+            ))}
+            <div
+              className="border-t border-slate-200 bg-slate-50/80 px-2 pb-2 pt-2.5"
+              style={{ gridColumn: "1 / span 3", gridRow: 2 }}
+            >
+              <PointSystemFoundation layout="mobile" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden gap-4 px-6 py-6 lg:grid lg:grid-cols-3">
+        {THERAPY_POINT_COLUMNS.map((column, columnIndex) => (
+          <PointSystemColumn key={columnIndex} column={column} />
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function RecoveryProtocolContent({ teamLogoUrl }: { teamLogoUrl: string | null }) {
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-4 rounded-2xl bg-white px-4 py-8 shadow-[0_4px_40px_rgba(0,0,0,0.25)] sm:px-5 sm:py-10 lg:px-6 lg:space-y-5 2xl:max-w-[1920px]">
-      <header className="pb-1 text-center">
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+    <div className="mx-auto w-full max-w-[1800px] space-y-4 overflow-hidden rounded-2xl bg-white px-0 py-6 shadow-[0_4px_40px_rgba(0,0,0,0.25)] sm:px-5 sm:py-8 lg:px-6 lg:space-y-5 lg:py-10 2xl:max-w-[1920px]">
+      <header className="px-3 pb-1 text-center sm:px-0">
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl lg:text-4xl">
           Matchday Recovery Protocol
         </h1>
         {teamLogoUrl && (
@@ -468,74 +648,45 @@ export function RecoveryProtocolContent({ teamLogoUrl }: { teamLogoUrl: string |
         )}
       </header>
 
-      <div className="rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/40 shadow-sm ring-1 ring-slate-100">
-        <section aria-labelledby="protocol-heading" className="space-y-3 overflow-x-auto px-3 pb-4 pt-3 sm:space-y-3 sm:px-4 sm:pt-4 sm:pb-5 lg:px-3 xl:px-4">
+      <div className="overflow-hidden rounded-none border-0 border-slate-200 bg-gradient-to-b from-white to-slate-50/40 sm:rounded-xl sm:border sm:shadow-sm sm:ring-1 sm:ring-slate-100">
+        <section aria-labelledby="protocol-heading" className="space-y-3 px-0 pb-4 pt-3 sm:px-4 sm:pt-4 sm:pb-5 lg:px-3 xl:px-4">
           <h2 id="protocol-heading" className="sr-only">
             Matchday protocol board
           </h2>
 
-          <div className="hidden min-w-0 gap-2 lg:grid lg:grid-cols-7 lg:items-stretch xl:gap-3">
-            {PROTOCOL_DAYS.map((day) => (
-              <ProtocolDayCard key={day.id} day={day} />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
-            {PROTOCOL_DAYS.map((day) => (
-              <ProtocolDayCard key={day.id} day={day} />
-            ))}
-          </div>
-
-          <PhaseTimelineStrip />
+          <ProtocolDaysBoard />
         </section>
 
         <section
           aria-labelledby="point-system-heading"
-          className="mx-4 mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/60 shadow-sm sm:mx-5 sm:mt-5"
+          className="border-t border-slate-200 bg-slate-50/60 pb-1 lg:pb-0"
         >
-          <div className="bg-white px-4 py-4 text-center sm:px-5 sm:py-5">
+          <div className="bg-white px-3 py-3 text-center sm:px-5 sm:py-4 lg:py-5">
             <h2
               id="point-system-heading"
-              className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl"
+              className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl lg:text-3xl"
             >
               Point System
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-3 lg:gap-4 lg:px-6 lg:py-6">
-            {THERAPY_POINT_COLUMNS.map((column, columnIndex) => (
-              <div
-                key={columnIndex}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-              >
-                {column.map((item) => (
-                  <TherapyPointRow key={item.name} item={item} />
-                ))}
-              </div>
-            ))}
-          </div>
+          <PointSystemBoard />
 
-          <div aria-labelledby="foundation-heading" className="border-t border-slate-200 px-4 py-3.5 sm:px-5 sm:py-4 lg:px-6">
-            <h2 id="foundation-heading" className="sr-only">
-              Foundation of recovery
-            </h2>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 sm:gap-x-6">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100"
-                title="Important"
-              >
-                <CircleAlert className="h-[18px] w-[18px] text-red-600" aria-hidden />
-              </span>
-              {FOUNDATION_ITEMS.map((item) => (
-                <FoundationPill key={item.label} item={item} enlarged />
-              ))}
-            </div>
-            <p className="mt-2.5 text-xs leading-snug text-slate-500 sm:text-[13px]">{FOUNDATION_WARNING}</p>
+          <div
+            aria-labelledby="foundation-heading"
+            className="hidden border-t border-slate-200 px-6 py-4 lg:block"
+          >
+            <PointSystemFoundation />
           </div>
         </section>
-      </div>
 
-      <RecoveryPracticalGuide />
+        <section
+          aria-labelledby="practical-guide-heading"
+          className="mx-2 mt-5 rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100 lg:mx-0 lg:mt-0 lg:rounded-none lg:border-0 lg:border-t lg:border-slate-200 lg:bg-transparent lg:shadow-none lg:ring-0"
+        >
+          <RecoveryPracticalGuide embedded />
+        </section>
+      </div>
     </div>
   );
 }
