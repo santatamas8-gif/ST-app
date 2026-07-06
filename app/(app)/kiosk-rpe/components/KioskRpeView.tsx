@@ -44,6 +44,7 @@ interface KioskRpeViewProps {
   todayKioskBatchCount: number;
   todayKioskBatchCountUnavailable?: boolean;
   existingSubmissions?: ExistingSubmissionMap;
+  embedded?: boolean;
 }
 
 export function KioskRpeView({
@@ -52,6 +53,7 @@ export function KioskRpeView({
   todayKioskBatchCount,
   todayKioskBatchCountUnavailable = false,
   existingSubmissions = {},
+  embedded = false,
 }: KioskRpeViewProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
@@ -251,18 +253,20 @@ export function KioskRpeView({
   })();
 
   return (
-    <div className="mx-auto min-w-0 max-w-7xl space-y-6">
-      <header className="flex flex-col gap-0.5">
-        <div className="flex items-center gap-2">
-          <Monitor className="h-6 w-6 shrink-0 text-emerald-400 sm:h-7 sm:w-7" aria-hidden />
-          <h1 className="text-base font-semibold tracking-tight text-white sm:text-lg md:text-xl lg:text-2xl">
-            Kiosk RPE
-          </h1>
-        </div>
-        <p className={`text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
-          Quick post-session RPE collection for the team.
-        </p>
-      </header>
+    <div className={embedded ? "space-y-6" : "mx-auto min-w-0 max-w-7xl space-y-6"}>
+      {!embedded ? (
+        <header className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <Monitor className="h-6 w-6 shrink-0 text-emerald-400 sm:h-7 sm:w-7" aria-hidden />
+            <h1 className="text-base font-semibold tracking-tight text-white sm:text-lg md:text-xl lg:text-2xl">
+              Kiosk RPE
+            </h1>
+          </div>
+          <p className={`text-xs sm:text-sm ${isHighContrast ? "text-white/80" : "text-zinc-500"}`}>
+            Quick post-session RPE collection for the team.
+          </p>
+        </header>
+      ) : null}
 
       <KioskTodayNotice
         todayBatchCount={knownTodayBatchCount}

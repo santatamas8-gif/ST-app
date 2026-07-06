@@ -109,9 +109,24 @@ const FIELDS = [
 
 interface DailyWellnessFormProps {
   hasSubmittedToday?: boolean;
+  kioskMode?: {
+    playerName: string;
+    onBack: () => void;
+    submitWellness: (data: {
+      sleep_quality: number;
+      fatigue: number;
+      soreness: number;
+      stress: number;
+      mood: number;
+      illness?: boolean;
+      bed_time?: string;
+      wake_time?: string;
+      body_parts?: Record<string, { s: number; p: number }>;
+    }) => Promise<{ error?: string; success?: boolean }>;
+  };
 }
 
-export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFormProps) {
+export function DailyWellnessForm({ hasSubmittedToday = false, kioskMode }: DailyWellnessFormProps) {
   const router = useRouter();
   const [bedTime, setBedTime] = useState("");
   const [wakeTime, setWakeTime] = useState("");
@@ -177,7 +192,11 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
             ])
           )
         : undefined;
-    const result = await submitDailyWellness({
+    const submitFn = kioskMode
+      ? kioskMode.submitWellness
+      : async (payload: Parameters<typeof submitDailyWellness>[0]) => submitDailyWellness(payload);
+
+    const result = await submitFn({
       sleep_quality: sleepQuality,
       fatigue,
       soreness,
@@ -194,7 +213,9 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
       return;
     }
     setIsSuccess(true);
-    router.refresh(); // refetch page data so chart and list show the new entry
+    if (!kioskMode) {
+      router.refresh();
+    }
   }
 
   // After successful submit, scroll to the success block (not down to averages)
@@ -217,15 +238,27 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
           <span className="text-2xl text-emerald-400">✔</span>
           <div>
             <p className="font-semibold text-emerald-400">Already submitted today</p>
-            <p className="mt-0.5 text-sm text-zinc-400">You can submit again tomorrow.</p>
+            <p className="mt-0.5 text-sm text-zinc-400">
+              {kioskMode ? `${kioskMode.playerName} can submit again tomorrow.` : "You can submit again tomorrow."}
+            </p>
           </div>
         </div>
-        <Link
-          href="/dashboard"
-          className="mt-4 inline-block rounded-lg bg-zinc-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-600"
-        >
-          Back to dashboard
-        </Link>
+        {kioskMode ? (
+          <button
+            type="button"
+            onClick={kioskMode.onBack}
+            className="mt-4 inline-block rounded-lg bg-zinc-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-600"
+          >
+            Back to players
+          </button>
+        ) : (
+          <Link
+            href="/dashboard"
+            className="mt-4 inline-block rounded-lg bg-zinc-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-600"
+          >
+            Back to dashboard
+          </Link>
+        )}
       </div>
     );
   }
@@ -241,13 +274,25 @@ export function DailyWellnessForm({ hasSubmittedToday = false }: DailyWellnessFo
           <span className="text-2xl text-emerald-400">✔</span>
           <p className="text-lg font-semibold text-emerald-400">Wellness submitted</p>
         </div>
-        <p className="mt-2 text-sm text-zinc-400">Thanks! Your daily check-in is saved.</p>
-        <Link
-          href="/dashboard"
-          className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
-        >
-          Back to dashboard
-        </Link>
+        <p className="mt-2 text-sm text-zinc-400">
+          {kioskMode ? `${kioskMode.playerName}'s daily check-in is saved.` : "Thanks! Your daily check-in is saved."}
+        </p>
+        {kioskMode ? (
+          <button
+            type="button"
+            onClick={kioskMode.onBack}
+            className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Back to players
+          </button>
+        ) : (
+          <Link
+            href="/dashboard"
+            className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Back to dashboard
+          </Link>
+        )}
       </div>
     );
   }

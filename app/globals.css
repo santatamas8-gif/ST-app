@@ -268,6 +268,13 @@ input.rpe-input-track {
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
+@media (min-width: 768px) {
+  .kiosk-wellness-form,
+  .kiosk-wellness-form .wellness-player-form {
+    max-width: none;
+  }
+}
+
 /* Kiosk RPE tablet: some tablets report a narrow mobile viewport, so also key off device width. */
 @media (min-width: 430px), (min-device-width: 700px) and (orientation: portrait) {
   .kiosk-global-fields {
@@ -406,6 +413,14 @@ input.rpe-input-track {
 
   .kiosk-row-min-label {
     font-size: 0.875rem !important;
+  }
+
+  .kiosk-wellness-form {
+    max-width: none;
+  }
+
+  .kiosk-wellness-form .wellness-player-form {
+    max-width: none;
   }
 }
 

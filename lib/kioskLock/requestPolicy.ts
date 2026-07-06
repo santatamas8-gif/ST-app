@@ -6,6 +6,7 @@ export type KioskLockRequestDecision =
 const ALLOWED_LOCKED_PAGE_PATHS = ["/kiosk-rpe", "/auth/callback"] as const;
 const ALLOWED_LOCKED_API_PATHS = [
   "/api/kiosk-rpe/submit",
+  "/api/kiosk-wellness/submit",
   "/api/kiosk-lock/enter",
   "/api/kiosk-lock/exit",
   "/api/health",

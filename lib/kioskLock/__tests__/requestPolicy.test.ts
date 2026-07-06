@@ -60,6 +60,9 @@ describe("getKioskLockRequestDecision with active lock and authenticated user", 
     expect(decide({ pathname: "/api/kiosk-rpe/submit", method: "POST" })).toEqual({
       type: "allow",
     });
+    expect(decide({ pathname: "/api/kiosk-wellness/submit", method: "POST" })).toEqual({
+      type: "allow",
+    });
     expect(decide({ pathname: "/api/kiosk-lock/enter", method: "POST" })).toEqual({
       type: "allow",
     });

@@ -4,12 +4,13 @@ import { getEligibleSameDayPhoneSubmissions } from "@/lib/kioskRpe/existingSubmi
 import type { ExistingSubmissionMap } from "@/lib/kioskRpe/existingSubmission";
 import { getKioskBatchCountForDate } from "@/lib/kioskRpe/recentKioskSessions.server";
 import { getKioskLockState } from "@/lib/kioskLock/cookies.server";
+import { getWellnessSubmittedForDate } from "@/lib/kioskWellness/todaySubmissions.server";
 import { listPlayersForKiosk } from "@/lib/players/listPlayers";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import { redirect } from "next/navigation";
 import { KioskPinGate } from "./components/KioskPinGate";
-import { KioskRpeView } from "./components/KioskRpeView";
+import { KioskShellView } from "./components/KioskShellView";
 
 export default async function KioskRpePage() {
   const user = await getAppUser();
@@ -58,20 +59,39 @@ export default async function KioskRpePage() {
     console.error("[kiosk-rpe] Existing phone submissions failed to load", error);
   }
 
+  let wellnessSubmittedToday = {};
+  try {
+    const wellnessResult = await getWellnessSubmittedForDate(
+      supabase,
+      roster.map((player) => player.id),
+      sessionDate
+    );
+    if (wellnessResult.error) {
+      console.error("[kiosk-rpe] Wellness submissions unavailable", wellnessResult.error);
+    } else {
+      wellnessSubmittedToday = wellnessResult.data;
+    }
+  } catch (error) {
+    console.error("[kiosk-rpe] Wellness submissions failed to load", error);
+  }
+
   const existingKey = Object.values(existingSubmissions)
     .map((row) => row.id)
     .sort()
     .join("|");
-  const rosterKey = `${roster.map((player) => player.id).join("|")}::${existingKey}`;
+  const wellnessKey = Object.keys(wellnessSubmittedToday).sort().join("|");
+  const rosterKey = `${roster.map((player) => player.id).join("|")}::${existingKey}::${wellnessKey}`;
 
   return (
-    <KioskRpeView
+    <KioskShellView
       key={rosterKey}
       players={roster}
       loadError={loadError}
       todayKioskBatchCount={todayKioskBatchCount}
       todayKioskBatchCountUnavailable={todayKioskBatchCountUnavailable}
       existingSubmissions={existingSubmissions}
+      wellnessSubmittedToday={wellnessSubmittedToday}
+      sessionDate={sessionDate}
     />
   );
 }

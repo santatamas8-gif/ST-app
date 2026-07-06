@@ -170,10 +170,10 @@ export const PROTOCOL_DAYS: ProtocolDay[] = [
     id: "md-1",
     label: "MD-1",
     pointGoal: 30,
-    focus: "Freshness / tapering",
+    focus: "Individual routine / tapering",
     keyActions: [
       "Foam roll + mobility",
-      "Feel freshest method",
+      "Individual routine",
       "No heavy recovery",
     ],
     accent: {

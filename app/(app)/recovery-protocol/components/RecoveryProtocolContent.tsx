@@ -14,6 +14,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { RecoveryPracticalGuide } from "./RecoveryPracticalGuide";
+import { RecoveryProtocolSectionFrame } from "./RecoveryProtocolSectionFrame";
 import {
   FOUNDATION_ITEMS,
   FOUNDATION_WARNING,
@@ -33,11 +34,13 @@ const MASSAGE_SRC = "/recovery-protocol/massage.png";
 const HYDRO_MASSAGE_SRC = "/recovery-protocol/hydro-massage.png";
 const DRY_NEEDLING_SRC = "/recovery-protocol/dry-needling.png";
 const CONTRAST_WATER_THERAPY_SRC = "/recovery-protocol/contrast-water-therapy.png";
-const SAUNA_SRC = "/recovery-protocol/sauna.svg";
+const SAUNA_SRC = "/recovery-protocol/sauna.png";
 const GAME_READY_SRC = "/recovery-protocol/game-ready.png";
 const STEAM_BATH_SRC = "/recovery-protocol/steam-bath.png";
 const POOL_EXERCISE_SRC = "/recovery-protocol/pool-exercise.png";
 const EASY_JOGGING_SRC = "/recovery-protocol/easy-jogging.png";
+const RECOVERY_MEAL_SLEEP_SRC = "/recovery-protocol/recovery-meal-sleep.png";
+const INDIVIDUAL_ROUTINE_SRC = "/recovery-protocol/individual-routine.png";
 const COMPRESSION_BOOTS_SRC = "/recovery-protocol/recovery-equipment-icons.png";
 const THERAPY_EQUIPMENT_SRC = "/recovery-protocol/recovery-equipment-icons.png";
 
@@ -53,7 +56,9 @@ type EquipmentVariant =
   | "contrast-water"
   | "game-ready"
   | "pool-exercise"
-  | "jogging";
+  | "jogging"
+  | "recovery-meal-sleep"
+  | "individual-routine";
 
 const STANDALONE_EQUIPMENT_SRC = {
   foam: FOAM_ROLLER_SRC,
@@ -67,6 +72,8 @@ const STANDALONE_EQUIPMENT_SRC = {
   steam: STEAM_BATH_SRC,
   "pool-exercise": POOL_EXERCISE_SRC,
   jogging: EASY_JOGGING_SRC,
+  "recovery-meal-sleep": RECOVERY_MEAL_SLEEP_SRC,
+  "individual-routine": INDIVIDUAL_ROUTINE_SRC,
 } as const satisfies Partial<Record<EquipmentVariant, string>>;
 
 type SpriteEquipmentVariant = Exclude<EquipmentVariant, keyof typeof STANDALONE_EQUIPMENT_SRC>;
@@ -136,6 +143,7 @@ type ActionIconRender =
 const EQUIPMENT_ICON_SCALE: Partial<Record<EquipmentVariant, number>> = {
   "contrast-water": 1.35,
   steam: 1.35,
+  "recovery-meal-sleep": 0.88,
 };
 
 function EquipmentIcon({ variant, size = 20 }: { variant: EquipmentVariant; size?: number }) {
@@ -264,10 +272,16 @@ function resolveRecoveryIcon(text: string): ActionIconRender {
   if (normalized.includes("fluid") || normalized.includes("sodium")) {
     return { kind: "lucide", icon: Droplets };
   }
+  if (normalized.includes("recovery meal") || (normalized.includes("meal") && normalized.includes("sleep"))) {
+    return { kind: "equipment", variant: "recovery-meal-sleep" };
+  }
   if (normalized.includes("meal") || normalized.includes("sleep")) {
     return { kind: "lucide", icon: Moon };
   }
-  if (normalized.includes("activation") || normalized.includes("freshest")) {
+  if (normalized.includes("individual routine")) {
+    return { kind: "equipment", variant: "individual-routine" };
+  }
+  if (normalized.includes("activation")) {
     return { kind: "lucide", icon: Sparkles };
   }
   if (normalized.includes("avoid") || normalized.includes("no heavy")) {
@@ -634,58 +648,59 @@ function PointSystemBoard() {
 
 export function RecoveryProtocolContent({ teamLogoUrl }: { teamLogoUrl: string | null }) {
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-4 overflow-hidden rounded-2xl bg-white px-0 py-6 shadow-[0_4px_40px_rgba(0,0,0,0.25)] sm:px-5 sm:py-8 lg:px-6 lg:space-y-5 lg:py-10 2xl:max-w-[1920px]">
-      <header className="px-3 pb-1 text-center sm:px-0">
-        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl lg:text-4xl">
-          Matchday Recovery Protocol
-        </h1>
-        {teamLogoUrl && (
-          <img
-            src={teamLogoUrl}
-            alt="Team logo"
-            className="mx-auto mt-2 h-8 w-auto max-w-[120px] object-contain sm:h-9 sm:max-w-[140px]"
-          />
-        )}
-      </header>
+    <div className="mx-auto w-full max-w-[1800px] px-2 py-4 sm:px-4 sm:py-6 lg:px-6 lg:py-8 2xl:max-w-[1920px]">
+      <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
+        <RecoveryProtocolSectionFrame>
+          <header className="px-3 pb-1 pt-4 text-center sm:px-4 lg:px-4 lg:pb-2 lg:pt-6 xl:px-5">
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl lg:text-4xl">
+              Matchday Recovery Protocol
+            </h1>
+            {teamLogoUrl && (
+              <img
+                src={teamLogoUrl}
+                alt="Team logo"
+                className="mx-auto mt-2 h-8 w-auto max-w-[120px] object-contain sm:h-9 sm:max-w-[140px]"
+              />
+            )}
+          </header>
 
-      <div className="overflow-hidden rounded-none border-0 border-slate-200 bg-gradient-to-b from-white to-slate-50/40 sm:rounded-xl sm:border sm:shadow-sm sm:ring-1 sm:ring-slate-100">
-        <section aria-labelledby="protocol-heading" className="space-y-3 px-0 pb-4 pt-3 sm:px-4 sm:pt-4 sm:pb-5 lg:px-3 xl:px-4">
-          <h2 id="protocol-heading" className="sr-only">
-            Matchday protocol board
-          </h2>
-
-          <ProtocolDaysBoard />
-        </section>
-
-        <section
-          aria-labelledby="point-system-heading"
-          className="border-t border-slate-200 bg-slate-50/60 pb-1 lg:pb-0"
-        >
-          <div className="bg-white px-3 py-3 text-center sm:px-5 sm:py-4 lg:py-5">
-            <h2
-              id="point-system-heading"
-              className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl lg:text-3xl"
-            >
-              Point System
-            </h2>
-          </div>
-
-          <PointSystemBoard />
-
-          <div
-            aria-labelledby="foundation-heading"
-            className="hidden border-t border-slate-200 px-6 py-4 lg:block"
+          <section
+            aria-labelledby="protocol-heading"
+            className="space-y-3 px-0 pb-4 pt-3 sm:px-4 sm:pt-4 sm:pb-5 lg:px-3 lg:pt-2 lg:pb-5 xl:px-4"
           >
-            <PointSystemFoundation />
-          </div>
-        </section>
+            <h2 id="protocol-heading" className="sr-only">
+              Matchday protocol board
+            </h2>
 
-        <section
-          aria-labelledby="practical-guide-heading"
-          className="mx-2 mt-5 rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100 lg:mx-0 lg:mt-0 lg:rounded-none lg:border-0 lg:border-t lg:border-slate-200 lg:bg-transparent lg:shadow-none lg:ring-0"
-        >
+            <ProtocolDaysBoard />
+          </section>
+        </RecoveryProtocolSectionFrame>
+
+        <RecoveryProtocolSectionFrame>
+          <section aria-labelledby="point-system-heading" className="pb-1 lg:pb-0">
+            <div className="px-3 py-3 text-center sm:px-5 sm:py-4 lg:py-5">
+              <h2
+                id="point-system-heading"
+                className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl lg:text-3xl"
+              >
+                Point System
+              </h2>
+            </div>
+
+            <PointSystemBoard />
+
+            <div
+              aria-labelledby="foundation-heading"
+              className="hidden border-t border-slate-200 px-6 py-4 lg:block"
+            >
+              <PointSystemFoundation />
+            </div>
+          </section>
+        </RecoveryProtocolSectionFrame>
+
+        <RecoveryProtocolSectionFrame>
           <RecoveryPracticalGuide embedded />
-        </section>
+        </RecoveryProtocolSectionFrame>
       </div>
     </div>
   );
