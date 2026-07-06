@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
 import type { AppUser } from "@/lib/types";
 import type { WellnessRow } from "@/lib/types";
 import type { SessionRow } from "@/lib/types";
@@ -86,7 +87,7 @@ export async function getDashboardData(
   const wellnessRows = (wellnessRes.data ?? []) as WellnessRow[];
   const sessionRows = (sessionsRes.data ?? []) as SessionRow[];
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTeamSessionDateString();
   const todayWellness = wellnessRows.filter((r) => r.date === today);
   const todayWellnessAvg =
     todayWellness.length > 0 ? averageWellness(todayWellness) : null;

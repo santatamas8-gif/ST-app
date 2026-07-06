@@ -46,12 +46,10 @@ export function KioskWellnessView({
   }, []);
 
   const handleSelectPlayer = useCallback((player: KioskPlayer) => {
+    if (submittedMap[player.id]) return;
+
     setSelectedPlayer(player);
     setVerifiedInitials("");
-    if (submittedMap[player.id]) {
-      setStep("form");
-      return;
-    }
     setStep("gate");
   }, [submittedMap]);
 

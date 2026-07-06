@@ -1,4 +1,5 @@
 import { getAppUser } from "@/lib/auth";
+import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import type { WellnessRow } from "@/lib/types";
@@ -66,7 +67,7 @@ export default async function WellnessPage() {
   }
 
   if (isPlayer) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTeamSessionDateString();
     const hasSubmittedToday = list.some((r) => r.date === today);
 
     const dates: string[] = [];

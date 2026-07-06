@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
 import { revalidatePath } from "next/cache";
 import type { WellnessFormInput } from "@/lib/types";
 import { sleepDurationHours } from "@/utils/sleep";
@@ -69,7 +70,7 @@ export async function submitDailyWellness(data: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTeamSessionDateString();
 
   const { data: existing } = await supabase
     .from("wellness")
@@ -119,5 +120,6 @@ export async function submitDailyWellness(data: {
   }
   revalidatePath("/wellness");
   revalidatePath("/dashboard");
+  revalidatePath("/kiosk-rpe");
   return { success: true };
 }

@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
 
 /** For players only: whether today's wellness and RPE are submitted. */
 export async function getPlayerCheckInStatus(userId: string): Promise<{
   wellnessDone: boolean;
   rpeDone: boolean;
 }> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTeamSessionDateString();
   const supabase = await createClient();
 
   const [wellnessRes, sessionsRes] = await Promise.all([

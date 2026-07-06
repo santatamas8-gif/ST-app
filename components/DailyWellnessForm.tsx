@@ -212,10 +212,12 @@ export function DailyWellnessForm({ hasSubmittedToday = false, kioskMode }: Dail
       setSubmitError(result.error);
       return;
     }
-    setIsSuccess(true);
-    if (!kioskMode) {
-      router.refresh();
+    if (kioskMode) {
+      kioskMode.onBack();
+      return;
     }
+    setIsSuccess(true);
+    router.refresh();
   }
 
   // After successful submit, scroll to the success block (not down to averages)
