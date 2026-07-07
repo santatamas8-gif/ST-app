@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getPlayersWithProfiles, getSessionDetail } from "@/app/actions/strength";
+import { getPlayersWithProfiles, getSessionDetail, getStrengthExercises } from "@/app/actions/strength";
 import { normalizeAvatarUrl, playerDisplayName } from "@/lib/players/listPlayers";
 import { fetchExerciseImageMap } from "@/lib/strength/exerciseImages";
+import type { StrengthProfile } from "@/lib/strength/types";
 import { createClient } from "@/lib/supabase/server";
 import { SessionDetailView } from "./SessionDetailView";
 
@@ -15,6 +16,7 @@ export default async function SessionDetailPage({
   if (!detail) notFound();
 
   const players = await getPlayersWithProfiles();
+  const allExercises = await getStrengthExercises();
   const playerOptions = players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -32,6 +34,12 @@ export default async function SessionDetailPage({
       .order("exercise_order")
       .order("set_number");
 
+    const { data: previewProfileRow } = await supabase
+      .from("strength_profiles")
+      .select("*")
+      .eq("player_id", firstCard.player_id)
+      .maybeSingle();
+
     const profile = firstCard.profiles as {
       full_name: string | null;
       email: string | null;
@@ -42,6 +50,7 @@ export default async function SessionDetailPage({
     previewCard = {
       playerName: playerDisplayName(profile?.full_name, profile?.email),
       playerAvatarUrl: normalizeAvatarUrl(profile?.avatar_url),
+      previewProfile: (previewProfileRow as StrengthProfile | null) ?? null,
       items: cardItems,
       exerciseImages,
     };
@@ -49,12 +58,13 @@ export default async function SessionDetailPage({
 
   return (
     <SessionDetailView
-      key={`${id}-${detail.cards.length}-${detail.cards[0]?.id ?? "none"}`}
+      key={`${id}-${detail.cards.length}-${detail.cards[0]?.id ?? "none"}-${previewCard?.items.length ?? 0}`}
       sessionId={id}
       session={detail.session}
       exercises={detail.exercises}
       cards={detail.cards}
       players={playerOptions}
+      allExercises={allExercises}
       previewCard={previewCard}
     />
   );

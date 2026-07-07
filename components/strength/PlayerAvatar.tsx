@@ -33,11 +33,11 @@ export function PlayerAvatar({
   const isPrint = variant === "print";
 
   const sizeClass = isPrint
-    ? "player-avatar-print h-[22mm] w-[22mm] text-[11pt]"
+    ? "player-avatar-print h-[28mm] w-[22mm] text-[11pt]"
     : "h-16 w-16 text-base sm:h-[4.5rem] sm:w-[4.5rem] sm:text-lg";
 
   const shellClass = isPrint
-    ? "rounded-full border border-neutral-300 bg-neutral-100 text-neutral-600"
+    ? "rounded border border-neutral-300 bg-neutral-100 text-neutral-600"
     : "rounded-full bg-zinc-700 ring-2 ring-zinc-600 text-zinc-300";
 
   return (
@@ -51,7 +51,7 @@ export function PlayerAvatar({
           <img
             src={url}
             alt=""
-            className="h-full w-full object-cover"
+            className={isPrint ? "h-full w-full object-cover object-[50%_20%]" : "h-full w-full object-cover"}
             onError={() => setImgError(true)}
           />
         </>

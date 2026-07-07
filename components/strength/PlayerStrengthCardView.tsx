@@ -44,8 +44,6 @@ export function PlayerStrengthCardView({
   exerciseImages,
 }: PlayerStrengthCardViewProps) {
   const groups = groupCardItemsByExercise(items, 8, exerciseImages);
-  const left = groups.slice(0, 4);
-  const right = groups.slice(4, 8);
   const sessionLine = sessionType ? `${title} · ${sessionType}` : title;
 
   return (
@@ -59,19 +57,10 @@ export function PlayerStrengthCardView({
         </div>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
-        <div className="space-y-4">
-          {left.map((g) => (
-            <ExerciseBlock key={g.key} group={g} />
-          ))}
-        </div>
-        {right.length > 0 && (
-          <div className="space-y-4">
-            {right.map((g) => (
-              <ExerciseBlock key={g.key} group={g} />
-            ))}
-          </div>
-        )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start sm:gap-x-5 sm:gap-y-4 sm:[grid-auto-flow:column] sm:[grid-template-rows:repeat(4,auto)]">
+        {groups.map((g) => (
+          <ExerciseBlock key={g.key} group={g} />
+        ))}
       </div>
     </div>
   );

@@ -4,13 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUser, isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import {
-  calculateSetWeight,
-  formatDisplayWeight,
-  getFinalDisplayWeight,
-  inferLoadType,
-} from "@/lib/strength/calculation";
-import { getReferenceValue } from "@/lib/strength/referenceLifts";
+import { computeCardItemFields } from "@/lib/strength/cardItemCalc";
+import { getFinalDisplayWeight } from "@/lib/strength/calculation";
 import type {
   PlayerStrengthCard,
   SessionExerciseWithSets,
@@ -26,6 +21,7 @@ import {
   parseExercisesFromWorkbook,
   parseSchemesFromWorkbook,
 } from "@/lib/strength/excelImport";
+import { EXPLOSIVE_EXERCISE_SEED, isExplosiveExercise } from "@/lib/strength/explosiveExercises";
 import exercisesSeed from "@/lib/strength/seed/exercises.json";
 import schemesSeed from "@/lib/strength/seed/schemes.json";
 
@@ -89,6 +85,21 @@ async function requireAdmin() {
   return user;
 }
 
+async function ensureCustomExplosiveExercises(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const names = EXPLOSIVE_EXERCISE_SEED.map((e) => e.name);
+  const { data } = await supabase
+    .from("strength_exercises")
+    .select("name")
+    .in("name", names);
+  const existing = new Set((data ?? []).map((r) => r.name));
+  const missing = EXPLOSIVE_EXERCISE_SEED.filter((e) => !existing.has(e.name));
+  if (missing.length) {
+    await supabase.from("strength_exercises").insert(missing);
+  }
+}
+
 type RawStrengthCardRow = Omit<StrengthSessionCard, "profiles">;
 
 async function enrichCardsWithProfiles(
@@ -133,11 +144,13 @@ export async function seedStrengthDataIfEmpty() {
   if ((schemeCount ?? 0) === 0) {
     await insertSchemesBatch(supabase, schemesSeed as SchemeSeed[]);
   }
+  await ensureCustomExplosiveExercises(supabase);
 }
 
 export async function getStrengthExercises(activeOnly = true) {
   await requireAdmin();
   const supabase = await createClient();
+  await ensureCustomExplosiveExercises(supabase);
   let q = supabase.from("strength_exercises").select("*").order("name");
   if (activeOnly) q = q.eq("active", true);
   const { data, error } = await q;
@@ -436,43 +449,10 @@ export async function generatePlayerCards(sessionId: string, playerIds: string[]
       const items = [];
       for (const se of detail.exercises) {
         const ex = se.exercise;
-        const ref = getReferenceValue(profile, ex.related_to);
-        const loadType = inferLoadType(ex.note, ex.equipment_used);
-        const isBw = loadType === "bodyweight" && ref.value == null;
-
         for (const set of se.sets) {
-          const { rawWeight, roundedWeight } = calculateSetWeight({
-            referenceValue: ref.value,
-            bodyweight: profile.bodyweight,
-            exercisePercent: ex.percent,
-            setPercentage: set.percentage,
-            percentBwUsed: ex.percent_bw_used,
-            rounding: ex.rounding,
-            isBodyweightExercise: isBw,
-          });
-
-          const displayWeight = formatDisplayWeight(roundedWeight, loadType);
-
           items.push({
             card_id: cardId,
-            exercise_id: ex.id,
-            exercise_name_snapshot: ex.name,
-            exercise_image_url_snapshot: ex.image_url,
-            set_number: set.set_number,
-            reps: set.reps,
-            percentage: set.percentage,
-            reference_lift: ref.label,
-            reference_value: ref.value,
-            exercise_percent: ex.percent,
-            percent_bw_used: ex.percent_bw_used,
-            rounding: ex.rounding,
-            raw_weight: rawWeight,
-            calculated_weight: roundedWeight,
-            coach_adjusted_weight: null,
-            display_weight: displayWeight,
-            load_type: loadType,
-            note_snapshot: ex.note,
-            exercise_order: se.exercise_order,
+            ...computeCardItemFields(ex, profile, set, se.exercise_order),
           });
         }
       }
@@ -508,6 +488,135 @@ export async function generatePlayerCards(sessionId: string, playerIds: string[]
     console.error("[generatePlayerCards] unexpected error:", err);
     return { error: message };
   }
+}
+
+export async function saveCardExerciseEdits(
+  sessionId: string,
+  exerciseOrder: number,
+  input: {
+    exerciseId?: string;
+    sets: { set_number: number; reps: number; percentage: number }[];
+  }
+) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: session } = await supabase
+    .from("daily_strength_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .single();
+  if (!session) return { error: "Session not found" };
+  if (session.status === "published") return { error: "Published cards cannot be edited" };
+
+  if (!input.sets.length) return { error: "At least one set is required" };
+
+  const normalizedSets = input.sets.map((set, index) => ({
+    set_number: index + 1,
+    reps: set.reps,
+    percentage: set.percentage,
+  }));
+
+  const { data: sessionExercise } = await supabase
+    .from("daily_strength_session_exercises")
+    .select("id, exercise_id, strength_exercises(*)")
+    .eq("session_id", sessionId)
+    .eq("exercise_order", exerciseOrder)
+    .single();
+  if (!sessionExercise) return { error: "Exercise slot not found" };
+
+  let exercise = sessionExercise.strength_exercises as StrengthExercise;
+  if (input.exerciseId && input.exerciseId !== sessionExercise.exercise_id) {
+    const { data: newExercise, error: exErr } = await supabase
+      .from("strength_exercises")
+      .select("*")
+      .eq("id", input.exerciseId)
+      .single();
+    if (exErr || !newExercise) return { error: "Exercise not found" };
+
+    const { error: updateExErr } = await supabase
+      .from("daily_strength_session_exercises")
+      .update({ exercise_id: input.exerciseId })
+      .eq("id", sessionExercise.id);
+    if (updateExErr) return { error: updateExErr.message };
+    exercise = newExercise as StrengthExercise;
+  }
+
+  const explosive = isExplosiveExercise(exercise.name);
+  for (const set of normalizedSets) {
+    if (!Number.isFinite(set.reps) || set.reps < 1) {
+      return { error: "Reps must be at least 1" };
+    }
+    if (!explosive && (!Number.isFinite(set.percentage) || set.percentage <= 0)) {
+      return { error: "Percentage must be greater than 0" };
+    }
+  }
+
+  const { error: delSetsErr } = await supabase
+    .from("daily_strength_session_sets")
+    .delete()
+    .eq("session_exercise_id", sessionExercise.id);
+  if (delSetsErr) return { error: delSetsErr.message };
+
+  if (normalizedSets.length) {
+    const { error: insertSetsErr } = await supabase.from("daily_strength_session_sets").insert(
+      normalizedSets.map((set) => ({
+        session_exercise_id: sessionExercise.id,
+        set_number: set.set_number,
+        reps: set.reps,
+        percentage: set.percentage,
+      }))
+    );
+    if (insertSetsErr) return { error: insertSetsErr.message };
+  }
+
+  const { data: cards } = await supabase
+    .from("daily_strength_player_cards")
+    .select("id, player_id")
+    .eq("session_id", sessionId);
+  if (!cards?.length) return { error: "No generated cards for this session" };
+
+  const { data: profiles } = await supabase
+    .from("strength_profiles")
+    .select("*")
+    .in(
+      "player_id",
+      cards.map((c) => c.player_id)
+    );
+  const profileByPlayer = new Map((profiles ?? []).map((p) => [p.player_id, p as StrengthProfile]));
+
+  for (const card of cards) {
+    const { error: delErr } = await supabase
+      .from("daily_strength_player_card_items")
+      .delete()
+      .eq("card_id", card.id)
+      .eq("exercise_order", exerciseOrder);
+    if (delErr) return { error: delErr.message };
+  }
+
+  for (const card of cards) {
+    const profile = profileByPlayer.get(card.player_id);
+    if (!profile) return { error: `Missing strength profile for player ${card.player_id}` };
+
+    const rows = normalizedSets.map((set) => ({
+      card_id: card.id,
+      ...computeCardItemFields(exercise, profile, set, exerciseOrder),
+    }));
+
+    if (rows.length) {
+      const { error } = await supabase.from("daily_strength_player_card_items").insert(rows);
+      if (error) return { error: error.message };
+    }
+  }
+
+  await supabase
+    .from("daily_strength_sessions")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  revalidatePath(`/admin/strength/sessions/${sessionId}`);
+  revalidatePath(`/admin/strength/sessions/${sessionId}/print`);
+  return { success: true as const };
 }
 
 export async function updateCoachAdjustedWeight(itemId: string, weight: number | null) {

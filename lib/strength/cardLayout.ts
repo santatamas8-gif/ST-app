@@ -1,14 +1,18 @@
 import type { PlayerCardItem } from "./types";
 import { resolveExerciseImageUrl, type ExerciseImageMap } from "./exerciseImages";
+import { explosivePercentageLabel, isExplosiveExercise } from "./explosiveExercises";
 
 export type ExerciseGroup = {
   key: string;
+  exerciseId: string | null;
+  exerciseOrder: number;
   name: string;
   imageUrl: string | null;
   sets: {
     id?: string;
     set_number: number;
     percentage: number;
+    display_percentage?: string;
     reps: number;
     display_weight: string;
   }[];
@@ -42,6 +46,8 @@ export function groupCardItemsByExercise(
     if (!map.has(key)) {
       map.set(key, {
         key,
+        exerciseId: item.exercise_id,
+        exerciseOrder: item.exercise_order ?? 0,
         name: item.exercise_name_snapshot,
         imageUrl: resolveExerciseImageUrl(item, exerciseImages),
         sets: [],
@@ -52,8 +58,9 @@ export function groupCardItemsByExercise(
       id: item.id,
       set_number: item.set_number,
       percentage: item.percentage,
+      display_percentage: explosivePercentageLabel(item.exercise_name_snapshot) ?? undefined,
       reps: item.reps,
-      display_weight: item.display_weight,
+      display_weight: isExplosiveExercise(item.exercise_name_snapshot) ? "" : item.display_weight,
     });
   }
 

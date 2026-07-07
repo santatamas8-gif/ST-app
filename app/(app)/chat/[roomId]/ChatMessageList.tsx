@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, Fragment } from "react";
+import { useRef, useState, useEffect, Fragment, useMemo } from "react";
 import { MessageCircle, ChevronDown } from "lucide-react";
 import { MessageBubbleWithActions } from "./MessageBubbleWithActions";
 import type { ChatMessageRow } from "@/lib/types";
@@ -103,8 +103,15 @@ export function ChatMessageList({
     }
   }, [messages.length]);
 
-  const firstUnreadId =
-    lastReadAt && messages.find((m) => m.created_at && m.created_at > lastReadAt)?.id;
+  const firstUnreadId = useMemo(
+    () => (lastReadAt ? messages.find((m) => m.created_at && m.created_at > lastReadAt)?.id : undefined),
+    [lastReadAt, messages]
+  );
+  const messageById = useMemo(() => {
+    const byId = new Map<string, ChatMessageRow>();
+    for (const message of messages) byId.set(message.id, message);
+    return byId;
+  }, [messages]);
   let lastDateKey = "";
 
   return (
@@ -139,9 +146,7 @@ export function ChatMessageList({
             const isFirstMessageOfDay = showDate;
             const dateLabel = showDate ? getDateLabel(m.created_at) : "";
             const isFirstUnread = m.id === firstUnreadId;
-            const replyToMsg = m.reply_to_message_id
-              ? messages.find((m2) => m2.id === m.reply_to_message_id)
-              : null;
+            const replyToMsg = m.reply_to_message_id ? messageById.get(m.reply_to_message_id) ?? null : null;
             const replyTo =
               replyToMsg && m.reply_to_message_id
                 ? {

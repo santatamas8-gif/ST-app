@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const REFRESH_DEBOUNCE_MS = 500;
+
 export function ChatRoomRealtime({ roomId }: { roomId: string }) {
   const router = useRouter();
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -20,12 +23,17 @@ export function ChatRoomRealtime({ roomId }: { roomId: string }) {
           filter: `room_id=eq.${roomId}`,
         },
         () => {
-          router.refresh();
+          if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+          refreshTimeoutRef.current = setTimeout(() => {
+            refreshTimeoutRef.current = null;
+            router.refresh();
+          }, REFRESH_DEBOUNCE_MS);
         }
       )
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       supabase.removeChannel(channel);
     };
   }, [roomId, router]);

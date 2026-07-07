@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   generatePlayerCards,
   publishSessionCards,
-  updateCoachAdjustedWeight,
 } from "@/app/actions/strength";
-import { getFinalDisplayWeight } from "@/lib/strength/calculation";
-import { PlayerStrengthCardView } from "@/components/strength/PlayerStrengthCardView";
-import type { PlayerCardItem, SessionExerciseWithSets, StrengthSessionCard } from "@/lib/strength/types";
+import { EditableStrengthCard } from "@/components/strength/EditableStrengthCard";
+import type { PlayerCardItem, SessionExerciseWithSets, StrengthExercise, StrengthProfile, StrengthSessionCard } from "@/lib/strength/types";
 
 type CardRow = Pick<StrengthSessionCard, "id" | "player_id" | "status" | "profiles">;
 
@@ -23,15 +21,18 @@ export function SessionDetailView({
   cards,
   players,
   previewCard,
+  allExercises,
 }: {
   sessionId: string;
   session: { date: string; title: string; session_type: string; status: string };
   exercises: SessionExerciseWithSets[];
   cards: CardRow[];
   players: PlayerOption[];
+  allExercises: StrengthExercise[];
   previewCard: {
     playerName: string;
     playerAvatarUrl: string | null;
+    previewProfile: StrengthProfile | null;
     items: PlayerCardItem[];
     exerciseImages?: Record<string, string | null>;
   } | null;
@@ -42,7 +43,6 @@ export function SessionDetailView({
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"error" | "success" | null>(null);
-  const [items, setItems] = useState(previewCard?.items ?? []);
 
   const eligiblePlayerIds = useMemo(
     () => new Set(players.filter((p) => p.hasProfile).map((p) => p.id)),
@@ -53,10 +53,6 @@ export function SessionDetailView({
     () => selectedPlayers.filter((id) => eligiblePlayerIds.has(id)),
     [selectedPlayers, eligiblePlayerIds]
   );
-
-  useEffect(() => {
-    setItems(previewCard?.items ?? []);
-  }, [previewCard]);
 
   function togglePlayer(id: string) {
     if (!eligiblePlayerIds.has(id)) return;
@@ -126,21 +122,6 @@ export function SessionDetailView({
     } finally {
       setPublishing(false);
     }
-  }
-
-  async function handleWeightAdjust(itemId: string, value: string) {
-    const num = value === "" ? null : Number(value);
-    const item = items.find((it) => it.id === itemId);
-    if (!item) return;
-    await updateCoachAdjustedWeight(itemId, num);
-    const display = getFinalDisplayWeight(item.calculated_weight, num, item.load_type);
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === itemId
-          ? { ...it, coach_adjusted_weight: num, display_weight: display }
-          : it
-      )
-    );
   }
 
   return (
@@ -260,51 +241,23 @@ export function SessionDetailView({
               </li>
             ))}
           </ul>
-          {previewCard && items.length > 0 && (
+          {previewCard && previewCard.items.length > 0 && (
             <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4">
               <p className="mb-4 text-sm text-zinc-400">
-                Preview: {previewCard.playerName} (coach can override weights below)
+                Preview: {previewCard.playerName}
+                {session.status !== "published" && " — edits apply to all players"}
               </p>
-              {session.status !== "published" && (
-                <div className="mb-4 overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-zinc-500">
-                        <th className="pb-2">Exercise</th>
-                        <th className="pb-2">Set</th>
-                        <th className="pb-2">Calc.</th>
-                        <th className="pb-2">Coach adj.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((it) => (
-                        <tr key={it.id} className="border-t border-zinc-800">
-                          <td className="py-1.5 pr-2">{it.exercise_name_snapshot}</td>
-                          <td className="py-1.5 pr-2">{it.set_number}</td>
-                          <td className="py-1.5 pr-2 tabular-nums">{it.calculated_weight ?? "BW"}</td>
-                          <td className="py-1.5">
-                            <input
-                              type="number"
-                              step="0.5"
-                              placeholder="—"
-                              defaultValue={it.coach_adjusted_weight ?? ""}
-                              onBlur={(e) => handleWeightAdjust(it.id, e.target.value)}
-                              className="w-20 rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-white"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <PlayerStrengthCardView
+              <EditableStrengthCard
+                sessionId={sessionId}
+                editable={session.status !== "published"}
                 playerName={previewCard.playerName}
                 playerAvatarUrl={previewCard.playerAvatarUrl}
                 date={session.date}
                 title={session.title}
                 sessionType={session.session_type}
-                items={items}
+                items={previewCard.items}
+                exercises={allExercises}
+                previewProfile={previewCard.previewProfile}
                 exerciseImages={previewCard.exerciseImages}
               />
             </div>

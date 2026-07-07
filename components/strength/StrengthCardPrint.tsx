@@ -47,8 +47,6 @@ function PrintExerciseBlock({
 
 function PrintPlayerPage({ card }: { card: PlayerStrengthCard }) {
   const groups = groupCardItemsByExercise(card.items, 8, card.exerciseImages);
-  const left = groups.slice(0, 4);
-  const right = groups.slice(4, 8);
   const sessionLine = card.session.session_type
     ? `${card.session.title} · ${card.session.session_type}`
     : card.session.title;
@@ -68,27 +66,15 @@ function PrintPlayerPage({ card }: { card: PlayerStrengthCard }) {
         </div>
       </header>
 
-      <div className="print-columns">
-        <div className="print-column">
-          {left.map((g) => (
-            <PrintExerciseBlock
-              key={g.key}
-              name={g.name}
-              imageUrl={g.imageUrl}
-              sets={g.sets}
-            />
-          ))}
-        </div>
-        <div className="print-column">
-          {right.map((g) => (
-            <PrintExerciseBlock
-              key={g.key}
-              name={g.name}
-              imageUrl={g.imageUrl}
-              sets={g.sets}
-            />
-          ))}
-        </div>
+      <div className="print-exercise-grid">
+        {groups.map((g) => (
+          <PrintExerciseBlock
+            key={g.key}
+            name={g.name}
+            imageUrl={g.imageUrl}
+            sets={g.sets}
+          />
+        ))}
       </div>
     </section>
   );
@@ -100,7 +86,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
       <style jsx global>{`
         @page {
           size: A4;
-          margin: 10mm;
+          margin: 8mm;
         }
 
         /* Screen preview: centered full A4 sheets */
@@ -129,16 +115,20 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         }
 
         .print-page {
-          width: 190mm;
-          min-height: 277mm;
+          width: 194mm;
+          height: 281mm;
+          min-height: 281mm;
+          max-height: 281mm;
           margin: 0 auto 24px;
-          padding: 0;
+          padding: 6mm 0 2mm;
           box-sizing: border-box;
           background: #fff;
           color: #111;
           display: flex;
           flex-direction: column;
           box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12);
+          page-break-inside: avoid;
+          break-inside: avoid-page;
         }
 
         .print-page:last-child {
@@ -148,9 +138,9 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         .print-header {
           display: flex;
           align-items: center;
-          gap: 6mm;
-          margin-bottom: 8mm;
-          padding-bottom: 5mm;
+          gap: 7mm;
+          margin-bottom: 10mm;
+          padding-bottom: 6mm;
           border-bottom: 1.5px solid #ccc;
           flex-shrink: 0;
         }
@@ -161,7 +151,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         }
 
         .print-player-name {
-          font-size: 20pt;
+          font-size: 22pt;
           font-weight: 700;
           margin: 0 0 2mm;
           line-height: 1.15;
@@ -170,7 +160,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
 
         .print-date {
           font-size: 12pt;
-          margin: 0 0 1.5mm;
+          margin: 0 0 1.2mm;
           color: #222;
         }
 
@@ -180,30 +170,30 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           color: #444;
         }
 
-        .print-columns {
+        .print-exercise-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 5mm 7mm;
-          flex: 1;
-          align-content: start;
-          width: 100%;
-        }
-
-        .print-column {
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
+          grid-template-rows: repeat(4, auto);
+          grid-auto-flow: column;
+          align-items: start;
           gap: 5mm;
+          flex: 1;
+          width: 100%;
+          margin-top: 10mm;
         }
 
         .print-exercise-block {
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
           break-inside: avoid;
           page-break-inside: avoid;
-          padding-bottom: 4mm;
+          padding-bottom: 3mm;
           border-bottom: 1px solid #ddd;
         }
 
-        .print-column .print-exercise-block:last-child {
+        .print-exercise-grid .print-exercise-block:nth-child(4),
+        .print-exercise-grid .print-exercise-block:last-child {
           border-bottom: none;
           padding-bottom: 0;
         }
@@ -211,7 +201,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         .print-exercise-name {
           font-size: 11pt;
           font-weight: 700;
-          margin: 0 0 3mm;
+          margin: 0 0 2mm;
           line-height: 1.2;
           color: #000;
         }
@@ -219,17 +209,18 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         .print-exercise-body {
           display: flex;
           align-items: flex-start;
-          gap: 4mm;
+          gap: 3.5mm;
+          flex: 1;
         }
 
         .print-exercise-image {
           flex-shrink: 0;
-          width: 26mm;
+          width: 38mm;
         }
 
         .print-exercise-image-inner {
-          width: 26mm !important;
-          height: 26mm !important;
+          width: 38mm !important;
+          height: 38mm !important;
           aspect-ratio: 1 / 1;
         }
 
@@ -239,16 +230,16 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         }
 
         .player-avatar-print {
-          height: 22mm !important;
-          width: 22mm !important;
-          font-size: 11pt !important;
+          height: 26mm !important;
+          width: 26mm !important;
+          font-size: 12pt !important;
         }
 
         .strength-set-table-print {
           width: 100%;
           border-collapse: collapse;
-          font-size: 10pt;
-          line-height: 1.35;
+          font-size: 10.5pt;
+          line-height: 1.3;
         }
 
         .strength-set-table-print th,
@@ -296,7 +287,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
             overflow: visible !important;
             padding: 0 !important;
             margin: 0 !important;
-            width: auto !important;
+            width: 100% !important;
             min-height: 0 !important;
             background: #fff !important;
           }
@@ -311,12 +302,10 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           }
 
           .print-cards-root {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0;
+            position: static;
+            width: 100%;
+            min-height: auto;
+            margin: 0 auto;
             padding: 0;
             background: #fff;
             box-shadow: none;
@@ -328,15 +317,23 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           }
 
           .print-page {
-            width: 190mm;
-            min-height: 277mm;
-            max-height: 277mm;
+            width: 194mm;
+            height: 281mm;
+            min-height: 281mm;
+            max-height: 281mm;
             margin: 0 auto;
             padding: 0;
+            page-break-before: always;
+            break-before: page;
             page-break-after: always;
             break-after: page;
             box-shadow: none;
             overflow: hidden;
+          }
+
+          .print-page:first-child {
+            page-break-before: auto;
+            break-before: auto;
           }
 
           .print-page:last-child {

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createDailySession, saveSessionExercises } from "@/app/actions/strength";
 import type { StrengthExercise } from "@/lib/strength/types";
 import { SESSION_TYPES } from "@/lib/strength/types";
@@ -40,6 +40,18 @@ export function CreateSessionView({
   const [globalSchemeId, setGlobalSchemeId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exerciseSearch, setExerciseSearch] = useState("");
+
+  const filteredExercises = useMemo(() => {
+    const q = exerciseSearch.trim().toLowerCase();
+    if (!q) return exercises;
+    return exercises.filter((ex) => {
+      const name = ex.name.toLowerCase();
+      const category = ex.category.toLowerCase();
+      const related = ex.related_to.toLowerCase();
+      return name.includes(q) || category.includes(q) || related.includes(q);
+    });
+  }, [exerciseSearch, exercises]);
 
   function toggleExercise(id: string) {
     setSelectedIds((prev) => {
@@ -255,8 +267,18 @@ export function CreateSessionView({
               </select>
             </label>
           </div>
+          <label className="mb-3 block text-sm text-zinc-400">
+            Search exercises
+            <input
+              type="text"
+              value={exerciseSearch}
+              onChange={(e) => setExerciseSearch(e.target.value)}
+              placeholder="Search by name, category, related lift…"
+              className="mt-2 w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-white placeholder:text-zinc-500"
+            />
+          </label>
           <div className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-zinc-700/50 p-2">
-            {exercises.map((ex) => (
+            {filteredExercises.map((ex) => (
               <label
                 key={ex.id}
                 className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-3 py-2 ${
@@ -274,6 +296,9 @@ export function CreateSessionView({
                 <span className="text-xs text-zinc-500">{ex.category}</span>
               </label>
             ))}
+            {filteredExercises.length === 0 && (
+              <p className="px-3 py-2 text-sm text-zinc-500">No exercises found.</p>
+            )}
           </div>
         </div>
 

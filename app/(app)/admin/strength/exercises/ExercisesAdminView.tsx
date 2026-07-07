@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { importFromExcel } from "@/app/actions/strength";
 import { ExerciseImageEditor } from "@/components/strength/ExerciseImageEditor";
@@ -10,6 +10,18 @@ export function ExercisesAdminView({ exercises }: { exercises: StrengthExercise[
   const [list, setList] = useState(exercises);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredExercises = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((ex) => {
+      const name = ex.name.toLowerCase();
+      const category = ex.category.toLowerCase();
+      const related = ex.related_to.toLowerCase();
+      return name.includes(q) || category.includes(q) || related.includes(q);
+    });
+  }, [list, search]);
 
   async function handleImport(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,6 +58,22 @@ export function ExercisesAdminView({ exercises }: { exercises: StrengthExercise[
         </div>
       </div>
 
+      <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4">
+        <label className="block text-sm text-zinc-400">
+          Search exercise
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, category, or related lift…"
+            className="mt-2 min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-white placeholder:text-zinc-500"
+          />
+        </label>
+        <p className="mt-2 text-xs text-zinc-500">
+          Showing {filteredExercises.length} / {list.length} exercises
+        </p>
+      </div>
+
       <form onSubmit={handleImport} className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4">
         <p className="mb-3 text-sm text-zinc-400">
           Import from Strength-Card-Builder-Aleksa.xlsm (Exercises sheet)
@@ -71,7 +99,7 @@ export function ExercisesAdminView({ exercises }: { exercises: StrengthExercise[
       {message && <p className="text-sm text-amber-400">{message}</p>}
 
       <div className="space-y-3">
-        {list.map((ex) => (
+        {filteredExercises.map((ex) => (
           <div
             key={ex.id}
             className="flex flex-col gap-4 rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4 sm:flex-row sm:items-start"
@@ -103,6 +131,11 @@ export function ExercisesAdminView({ exercises }: { exercises: StrengthExercise[
             </div>
           </div>
         ))}
+        {filteredExercises.length === 0 && (
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-6 text-center text-sm text-zinc-400">
+            No exercises match this search.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ export function ExerciseImage({
         <img
           src={url}
           alt={alt}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain object-center"
           onError={() => setImgError(true)}
         />
       </div>
