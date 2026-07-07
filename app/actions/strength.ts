@@ -85,6 +85,12 @@ async function requireAdmin() {
   return user;
 }
 
+/** Supabase nested selects may type as T or T[] depending on relationship metadata. */
+function asJoinedRow<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 async function ensureCustomExplosiveExercises(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
@@ -331,21 +337,29 @@ export async function getSessionDetail(sessionId: string) {
     .eq("session_id", sessionId)
     .order("exercise_order");
 
-  const exercises: SessionExerciseWithSets[] = (sessionExercises ?? []).map((se) => ({
-    id: se.id,
-    session_id: se.session_id,
-    exercise_id: se.exercise_id,
-    exercise_order: se.exercise_order,
-    exercise: se.strength_exercises as StrengthExercise,
-    sets: (se.daily_strength_session_sets ?? [])
-      .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
-      .map((s: { id: string; set_number: number; reps: number; percentage: number }) => ({
-        id: s.id,
-        set_number: s.set_number,
-        reps: s.reps,
-        percentage: s.percentage,
-      })),
-  }));
+  const exercises: SessionExerciseWithSets[] = (sessionExercises ?? [])
+    .map((se) => {
+      const exercise = asJoinedRow(
+        se.strength_exercises as StrengthExercise | StrengthExercise[] | null
+      );
+      if (!exercise) return null;
+      return {
+        id: se.id,
+        session_id: se.session_id,
+        exercise_id: se.exercise_id,
+        exercise_order: se.exercise_order,
+        exercise,
+        sets: (se.daily_strength_session_sets ?? [])
+          .sort((a: { set_number: number }, b: { set_number: number }) => a.set_number - b.set_number)
+          .map((s: { id: string; set_number: number; reps: number; percentage: number }) => ({
+            id: s.id,
+            set_number: s.set_number,
+            reps: s.reps,
+            percentage: s.percentage,
+          })),
+      };
+    })
+    .filter((row): row is SessionExerciseWithSets => row != null);
 
   const { data: rawCards, error: cardsError } = await supabase
     .from("daily_strength_player_cards")
@@ -525,7 +539,12 @@ export async function saveCardExerciseEdits(
     .single();
   if (!sessionExercise) return { error: "Exercise slot not found" };
 
-  let exercise = sessionExercise.strength_exercises as StrengthExercise;
+  const joinedExercise = asJoinedRow(
+    sessionExercise.strength_exercises as StrengthExercise | StrengthExercise[] | null
+  );
+  if (!joinedExercise) return { error: "Exercise not found" };
+
+  let exercise = joinedExercise;
   if (input.exerciseId && input.exerciseId !== sessionExercise.exercise_id) {
     const { data: newExercise, error: exErr } = await supabase
       .from("strength_exercises")
