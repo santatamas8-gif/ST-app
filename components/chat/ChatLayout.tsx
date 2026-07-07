@@ -9,7 +9,7 @@ import type { ChatRoomRow } from "@/lib/types";
 
 type LastMessageByRoom = Record<string, { body: string | null; created_at: string }>;
 
-const SIDEBAR_REFRESH_DEBOUNCE_MS = 1200;
+const SIDEBAR_REFRESH_DEBOUNCE_MS = 2000;
 
 export function ChatLayout({
   rooms,

@@ -62,14 +62,14 @@ export async function getDashboardData(
 
   let wellnessQuery = supabase
     .from("wellness")
-    .select("*")
+    .select("user_id, date, sleep_quality, soreness, fatigue, stress, mood, sleep_duration")
     .gte("date", from28)
     .lte("date", to28)
     .order("date", { ascending: true });
 
   let sessionsQuery = supabase
     .from("sessions")
-    .select("*")
+    .select("user_id, date, load")
     .gte("date", from28)
     .lte("date", to28)
     .order("date", { ascending: true });

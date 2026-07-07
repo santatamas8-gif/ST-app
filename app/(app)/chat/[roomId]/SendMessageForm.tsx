@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { X, Plus, Send } from "lucide-react";
 import { sendMessage } from "@/app/actions/chat";
@@ -11,7 +10,6 @@ const DESKTOP_TEXTAREA_MIN_H = 40;
 const DESKTOP_TEXTAREA_MAX_H = 120;
 
 export function SendMessageForm({ roomId }: { roomId: string }) {
-  const router = useRouter();
   const { replyingTo, setReplyingTo } = useReply();
   const [body, setBody] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
@@ -42,7 +40,6 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
     setBody("");
     setAttachmentUrl(null);
     setReplyingTo(null);
-    router.refresh();
   }
 
   async function processFile(file: File) {

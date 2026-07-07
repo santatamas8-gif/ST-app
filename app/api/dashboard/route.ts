@@ -4,12 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import { getDashboardData } from "@/lib/dashboard";
 import { getStaffAttentionToday } from "@/lib/staffAttention";
 
+const DASHBOARD_CACHE_HEADERS = {
+  "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+};
+
 export async function GET() {
   const user = await getAppUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    const supabase = await createClient();
     const data = await getDashboardData(user);
     const metrics = {
       todayWellness: data.metrics.todayWellnessAvg ?? null,
@@ -28,7 +33,6 @@ export async function GET() {
 
     let playersWithStatus: { id: string; email: string; full_name: string | null; status: string; avatar_url: string | null; status_notes: string | null }[] = [];
     if (isStaff) {
-      const supabase = await createClient();
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, email, full_name, avatar_url")
@@ -64,8 +68,7 @@ export async function GET() {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const supabaseForSchedule = await createClient();
-    const { data: todayRows } = await supabaseForSchedule
+    const { data: todayRows } = await supabase
       .from("schedule")
       .select("id, activity_type, sort_order, start_time, end_time, notes, opponent, team_a, team_b")
       .eq("date", today)
@@ -93,15 +96,14 @@ export async function GET() {
         ? { activity_type: todayScheduleItems[0].activity_type }
         : null;
 
-    const supabaseForProfile = await createClient();
-    const { data: profile } = await supabaseForProfile
+    const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")
       .eq("id", user.id)
       .maybeSingle();
     const userDisplayName = (profile?.full_name && profile.full_name.trim()) || user.email || "User";
 
-    const { data: teamRow } = await supabaseForProfile
+    const { data: teamRow } = await supabase
       .from("team_settings")
       .select("team_name, team_logo_url")
       .limit(1)
@@ -111,18 +113,21 @@ export async function GET() {
       team_logo_url: teamRow?.team_logo_url ?? null,
     };
 
-    return NextResponse.json({
-      role: user.role,
-      userDisplayName,
-      teamSettings,
-      metrics,
-      chart7: data.chart7,
-      chart28: data.chart28,
-      attentionToday,
-      todayScheduleItem,
-      todayScheduleItems,
-      playersWithStatus,
-    });
+    return NextResponse.json(
+      {
+        role: user.role,
+        userDisplayName,
+        teamSettings,
+        metrics,
+        chart7: data.chart7,
+        chart28: data.chart28,
+        attentionToday,
+        todayScheduleItem,
+        todayScheduleItems,
+        playersWithStatus,
+      },
+      { headers: DASHBOARD_CACHE_HEADERS }
+    );
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error";
     const code = e instanceof Error ? (e as { code?: string }).code ?? "DASHBOARD_ERROR" : "DASHBOARD_ERROR";

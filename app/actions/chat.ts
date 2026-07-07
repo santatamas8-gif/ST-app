@@ -247,78 +247,54 @@ export async function setLastRead(roomId: string): Promise<void> {
     { user_id: user.id, room_id: roomId, last_read_at: new Date().toISOString() },
     { onConflict: "user_id,room_id" }
   );
-  revalidatePath("/chat");
-  revalidatePath(`/chat/${roomId}`);
 }
 
-export async function getUnreadTotal(): Promise<number> {
-  const user = await getAppUser();
-  if (!user) return 0;
-
+async function getUnreadCountsByRoom(userId: string): Promise<Record<string, number>> {
   const supabase = await createClient();
   const { data: memberRows } = await supabase
     .from("chat_room_members")
     .select("room_id")
-    .eq("user_id", user.id);
-  const roomIds = (memberRows ?? []).map((r) => r.room_id);
-  if (roomIds.length === 0) return 0;
-
-  const { data: readRows } = await supabase
-    .from("chat_room_reads")
-    .select("room_id, last_read_at")
-    .eq("user_id", user.id);
-  const lastReadByRoom: Record<string, string> = {};
-  for (const r of readRows ?? []) {
-    lastReadByRoom[r.room_id] = r.last_read_at;
-  }
-
-  const { data: messages } = await supabase
-    .from("chat_messages")
-    .select("id, room_id, created_at, user_id")
-    .in("room_id", roomIds);
-  let count = 0;
-  for (const m of messages ?? []) {
-    if (m.user_id === user.id) continue;
-    const last = lastReadByRoom[m.room_id] ?? "1970-01-01T00:00:00Z";
-    if (m.created_at && m.created_at > last) count++;
-  }
-  return count;
-}
-
-/** Unread count per room id (for rooms the user is a member of). */
-export async function getUnreadByRoom(): Promise<Record<string, number>> {
-  const user = await getAppUser();
-  if (!user) return {};
-
-  const supabase = await createClient();
-  const { data: memberRows } = await supabase
-    .from("chat_room_members")
-    .select("room_id")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
   const roomIds = (memberRows ?? []).map((r) => r.room_id);
   if (roomIds.length === 0) return {};
 
   const { data: readRows } = await supabase
     .from("chat_room_reads")
     .select("room_id, last_read_at")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
   const lastReadByRoom: Record<string, string> = {};
   for (const r of readRows ?? []) {
     lastReadByRoom[r.room_id] = r.last_read_at;
   }
 
-  const { data: messages } = await supabase
-    .from("chat_messages")
-    .select("id, room_id, created_at, user_id")
-    .in("room_id", roomIds);
-  const countByRoom: Record<string, number> = {};
-  for (const rid of roomIds) countByRoom[rid] = 0;
-  for (const m of messages ?? []) {
-    if (m.user_id === user.id) continue;
-    const last = lastReadByRoom[m.room_id] ?? "1970-01-01T00:00:00Z";
-    if (m.created_at && m.created_at > last) countByRoom[m.room_id]++;
-  }
-  return countByRoom;
+  const entries = await Promise.all(
+    roomIds.map(async (roomId) => {
+      const last = lastReadByRoom[roomId] ?? "1970-01-01T00:00:00.000Z";
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("room_id", roomId)
+        .gt("created_at", last)
+        .neq("user_id", userId);
+      return [roomId, count ?? 0] as const;
+    })
+  );
+
+  return Object.fromEntries(entries);
+}
+
+export async function getUnreadTotal(): Promise<number> {
+  const user = await getAppUser();
+  if (!user) return 0;
+  const byRoom = await getUnreadCountsByRoom(user.id);
+  return Object.values(byRoom).reduce((sum, n) => sum + n, 0);
+}
+
+/** Unread count per room id (for rooms the user is a member of). */
+export async function getUnreadByRoom(): Promise<Record<string, number>> {
+  const user = await getAppUser();
+  if (!user) return {};
+  return getUnreadCountsByRoom(user.id);
 }
 
 /** Last message (body snippet + created_at) per room id, for rooms the user is in. */
@@ -372,25 +348,16 @@ export async function getLikesForRoom(roomId: string): Promise<Record<string, { 
   const supabase = await createClient();
   const { data: messages } = await supabase
     .from("chat_messages")
-    .select("id")
+    .select("id, message_likes(user_id)")
     .eq("room_id", roomId);
-  const messageIds = (messages ?? []).map((m) => m.id);
-  if (messageIds.length === 0) return {};
 
-  const { data: likes } = await supabase
-    .from("message_likes")
-    .select("message_id, user_id")
-    .in("message_id", messageIds);
-
-  const countByMessage: Record<string, number> = {};
-  const userLikedSet = new Set<string>();
-  for (const l of likes ?? []) {
-    countByMessage[l.message_id] = (countByMessage[l.message_id] ?? 0) + 1;
-    if (l.user_id === user.id) userLikedSet.add(l.message_id);
-  }
   const result: Record<string, { count: number; userLiked: boolean }> = {};
-  for (const id of messageIds) {
-    result[id] = { count: countByMessage[id] ?? 0, userLiked: userLikedSet.has(id) };
+  for (const m of messages ?? []) {
+    const likes = (m as { message_likes?: { user_id: string }[] }).message_likes ?? [];
+    result[m.id] = {
+      count: likes.length,
+      userLiked: likes.some((l) => l.user_id === user.id),
+    };
   }
   return result;
 }

@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { getSessionsList, seedStrengthDataIfEmpty } from "@/app/actions/strength";
+import { getSessionsList } from "@/app/actions/strength";
 
 export default async function StrengthAdminPage() {
-  await seedStrengthDataIfEmpty();
   const sessions = await getSessionsList();
 
   return (

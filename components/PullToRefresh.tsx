@@ -1,23 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const PULL_THRESHOLD = 70;
 const MOBILE_MAX_WIDTH = 768;
+const REFRESH_PATHS = new Set(["/dashboard", "/wellness", "/rpe"]);
 
 /**
  * On mobile, when user pulls down at the top of the page, refreshes the route.
- * Renders a small indicator when pulling; only active on viewport width <= MOBILE_MAX_WIDTH.
+ * Limited to dashboard/wellness/rpe to avoid expensive global layout refetches.
  */
 export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pulling, setPulling] = useState(false);
   const [pullY, setPullY] = useState(0);
   const startY = useRef(0);
   const isAtTop = useRef(true);
   const isMobile = useRef(false);
   const currentPullY = useRef(0);
+  const refreshEnabled = pathname != null && REFRESH_PATHS.has(pathname);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -27,13 +30,13 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
     window.addEventListener("resize", checkMobile);
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (!isMobile.current) return;
+      if (!isMobile.current || !refreshEnabled) return;
       startY.current = e.touches[0].clientY;
       isAtTop.current = typeof window !== "undefined" && window.scrollY <= 8;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isMobile.current || !isAtTop.current) return;
+      if (!isMobile.current || !refreshEnabled || !isAtTop.current) return;
       const y = e.touches[0].clientY;
       const delta = y - startY.current;
       if (delta > 0) {
@@ -44,6 +47,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
     };
 
     const handleTouchEnd = () => {
+      if (!refreshEnabled) return;
       const y = currentPullY.current;
       currentPullY.current = 0;
       setPulling(false);
@@ -63,7 +67,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       document.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [router]);
+  }, [router, refreshEnabled]);
 
   return (
     <>

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
   return data.role as UserRole;
 }
 
-export async function getAppUser() {
+export const getAppUser = cache(async () => {
   try {
     const user = await getAuthUser();
     if (!user) return null;
@@ -52,7 +53,7 @@ export async function getAppUser() {
   } catch {
     return null;
   }
-}
+});
 
 export function isAdmin(role: UserRole): boolean {
   return role === "admin";

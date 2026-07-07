@@ -38,7 +38,10 @@ export async function getStaffAttentionToday(): Promise<StaffAttentionToday | nu
   if (!players?.length) return { missingWellness: [], atRisk: [] };
 
   const [wellnessRes, sessionsRes] = await Promise.all([
-    supabase.from("wellness").select("*").eq("date", today),
+    supabase
+      .from("wellness")
+      .select("user_id, sleep_quality, soreness, fatigue, stress, mood, sleep_duration, illness, body_parts")
+      .eq("date", today),
     supabase.from("sessions").select("user_id, load").eq("date", today),
   ]);
 

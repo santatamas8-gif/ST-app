@@ -123,7 +123,7 @@ export default function DashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const res = await fetch("/api/dashboard", { cache: "no-store" });
+      const res = await fetch("/api/dashboard");
       const json = (await res.json()) as DashboardData & { errorCode?: string; error?: string };
       if (!res.ok) {
         const msg = json?.error ?? `Dashboard API error: ${res.status}`;

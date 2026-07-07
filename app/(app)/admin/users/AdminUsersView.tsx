@@ -43,7 +43,6 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProfileRow | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const filtered = useMemo(() => {
     let rows = list;
@@ -107,7 +106,6 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
       return { error: (data.error as string) || "Delete failed." };
     }
     setDeleteTarget(null);
-    setDeleteConfirmText("");
     router.refresh();
     return {};
   }
@@ -482,9 +480,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
       {deleteTarget && (
         <DeleteConfirmModal
           user={deleteTarget}
-          confirmText={deleteConfirmText}
-          onConfirmTextChange={setDeleteConfirmText}
-          onClose={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+          onClose={() => setDeleteTarget(null)}
           onConfirm={() => handleDelete(deleteTarget.id)}
         />
       )}
@@ -793,23 +789,17 @@ function CreateUserModal({
 
 function DeleteConfirmModal({
   user,
-  confirmText,
-  onConfirmTextChange,
   onClose,
   onConfirm,
 }: {
   user: ProfileRow;
-  confirmText: string;
-  onConfirmTextChange: (v: string) => void;
   onClose: () => void;
   onConfirm: () => Promise<{ error?: string }>;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canDelete = confirmText === "DELETE";
 
   async function handleConfirm() {
-    if (!canDelete) return;
     setError(null);
     setLoading(true);
     const result = await onConfirm();
@@ -837,22 +827,12 @@ function DeleteConfirmModal({
         <p className="mt-2 text-sm text-amber-400">
           This will permanently remove the user and their data. They will not be able to log in.
         </p>
-        <p className="mt-2 text-sm text-zinc-500">
-          Type <strong className="text-white">DELETE</strong> to confirm.
-        </p>
-        <input
-          type="text"
-          value={confirmText}
-          onChange={(e) => onConfirmTextChange(e.target.value)}
-          placeholder="DELETE"
-          className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-        />
         {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
         <div className="mt-6 flex gap-2">
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!canDelete || loading}
+            disabled={loading}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Deleting…" : "Delete"}
@@ -860,7 +840,8 @@ function DeleteConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-600"
+            disabled={loading}
+            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-600 disabled:opacity-50"
           >
             Cancel
           </button>

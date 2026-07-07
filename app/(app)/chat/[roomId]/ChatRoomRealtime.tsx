@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const REFRESH_DEBOUNCE_MS = 500;
+const REFRESH_DEBOUNCE_MS = 1000;
 
 export function ChatRoomRealtime({ roomId }: { roomId: string }) {
   const router = useRouter();

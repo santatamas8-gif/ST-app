@@ -156,7 +156,6 @@ export async function seedStrengthDataIfEmpty() {
 export async function getStrengthExercises(activeOnly = true) {
   await requireAdmin();
   const supabase = await createClient();
-  await ensureCustomExplosiveExercises(supabase);
   let q = supabase.from("strength_exercises").select("*").order("name");
   if (activeOnly) q = q.eq("active", true);
   const { data, error } = await q;
