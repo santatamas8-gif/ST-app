@@ -118,3 +118,19 @@ export interface PlayerStrengthCard {
 }
 
 export const SESSION_TYPES = ["Lower Body", "Upper Body", "Full Body"] as const;
+
+export type StrengthSessionCardProfile = {
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
+
+export type StrengthSessionCard = {
+  id: string;
+  session_id: string;
+  player_id: string;
+  status: string;
+  created_at?: string;
+  published_at?: string | null;
+  profiles: StrengthSessionCardProfile | null;
+};

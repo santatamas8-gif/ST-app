@@ -10,14 +10,9 @@ import {
 } from "@/app/actions/strength";
 import { getFinalDisplayWeight } from "@/lib/strength/calculation";
 import { PlayerStrengthCardView } from "@/components/strength/PlayerStrengthCardView";
-import type { PlayerCardItem, SessionExerciseWithSets } from "@/lib/strength/types";
+import type { PlayerCardItem, SessionExerciseWithSets, StrengthSessionCard } from "@/lib/strength/types";
 
-type CardRow = {
-  id: string;
-  player_id: string;
-  status: string;
-  profiles: { full_name: string | null; email: string | null };
-};
+type CardRow = Pick<StrengthSessionCard, "id" | "player_id" | "status" | "profiles">;
 
 type PlayerOption = { id: string; name: string; hasProfile: boolean };
 

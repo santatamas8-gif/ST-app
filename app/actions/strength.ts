@@ -16,6 +16,7 @@ import type {
   SessionExerciseWithSets,
   StrengthExercise,
   StrengthProfile,
+  StrengthSessionCard,
 } from "@/lib/strength/types";
 import { playerDisplayName, normalizeAvatarUrl } from "@/lib/players/listPlayers";
 import { isRenderableImageUrl } from "@/lib/strength/imageUrl";
@@ -88,16 +89,13 @@ async function requireAdmin() {
   return user;
 }
 
-type CardRow = {
-  player_id: string;
-  [key: string]: unknown;
-};
+type RawStrengthCardRow = Omit<StrengthSessionCard, "profiles">;
 
 async function enrichCardsWithProfiles(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  cards: CardRow[]
-) {
-  if (!cards.length) return cards.map((c) => ({ ...c, profiles: null }));
+  cards: RawStrengthCardRow[]
+): Promise<StrengthSessionCard[]> {
+  if (!cards.length) return [];
 
   const playerIds = [...new Set(cards.map((c) => c.player_id))];
   const { data: profiles, error } = await supabase
@@ -345,7 +343,10 @@ export async function getSessionDetail(sessionId: string) {
     console.error("[getSessionDetail] cards query error:", cardsError.message, cardsError);
   }
 
-  const cards = await enrichCardsWithProfiles(supabase, rawCards ?? []);
+  const cards = await enrichCardsWithProfiles(
+    supabase,
+    (rawCards ?? []) as RawStrengthCardRow[]
+  );
 
   return { session, exercises, cards };
 }
@@ -614,7 +615,7 @@ export async function getMyStrengthCard(cardId: string): Promise<PlayerStrengthC
   }
   if (!card) return null;
 
-  const [enriched] = await enrichCardsWithProfiles(supabase, [card]);
+  const [enriched] = await enrichCardsWithProfiles(supabase, [card as RawStrengthCardRow]);
 
   const { data: items } = await supabase
     .from("daily_strength_player_card_items")
@@ -633,13 +634,13 @@ export async function getMyStrengthCard(cardId: string): Promise<PlayerStrengthC
   } | null;
 
   return {
-    id: enriched.id as string,
-    session_id: enriched.session_id as string,
-    player_id: enriched.player_id as string,
+    id: enriched.id,
+    session_id: enriched.session_id,
+    player_id: enriched.player_id,
     status: enriched.status as "draft" | "published",
-    created_at: enriched.created_at as string,
-    published_at: enriched.published_at as string | null,
-    session: enriched.daily_strength_sessions as PlayerStrengthCard["session"],
+    created_at: enriched.created_at,
+    published_at: enriched.published_at ?? null,
+    session: card.daily_strength_sessions as PlayerStrengthCard["session"],
     player_name: playerDisplayName(profile?.full_name, profile?.email),
     player_avatar_url: normalizeAvatarUrl(profile?.avatar_url),
     items: cardItems,
@@ -664,7 +665,7 @@ async function loadPlayerCard(
   }
   if (!card) return null;
 
-  const [enriched] = await enrichCardsWithProfiles(supabase, [card]);
+  const [enriched] = await enrichCardsWithProfiles(supabase, [card as RawStrengthCardRow]);
 
   const { data: items } = await supabase
     .from("daily_strength_player_card_items")
@@ -683,13 +684,13 @@ async function loadPlayerCard(
   } | null;
 
   return {
-    id: enriched.id as string,
-    session_id: enriched.session_id as string,
-    player_id: enriched.player_id as string,
+    id: enriched.id,
+    session_id: enriched.session_id,
+    player_id: enriched.player_id,
     status: enriched.status as "draft" | "published",
-    created_at: enriched.created_at as string,
-    published_at: enriched.published_at as string | null,
-    session: enriched.daily_strength_sessions as PlayerStrengthCard["session"],
+    created_at: enriched.created_at,
+    published_at: enriched.published_at ?? null,
+    session: card.daily_strength_sessions as PlayerStrengthCard["session"],
     player_name: playerDisplayName(profile?.full_name, profile?.email),
     player_avatar_url: normalizeAvatarUrl(profile?.avatar_url),
     items: cardItems,
