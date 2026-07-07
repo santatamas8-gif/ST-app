@@ -31,6 +31,8 @@ function normalizeAvatarUrl(url: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+export { normalizeAvatarUrl };
+
 /**
  * Load all player profiles for Kiosk RPE (role = player).
  * Sorted alphabetically by display name (client-side).

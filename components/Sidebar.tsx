@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { KioskExitButton } from "@/app/(app)/kiosk-rpe/components/KioskExitButton";
 import { useTheme } from "@/components/ThemeProvider";
@@ -31,6 +31,8 @@ const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRo
   { href: "/recovery-protocol", label: "Recovery Protocol", icon: RefreshCw },
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/admin/users", label: "Users", icon: UserCog, roles: ["admin"] },
+  { href: "/admin/strength", label: "Strength Cards", icon: Dumbbell, roles: ["admin"] },
+  { href: "/strength-card", label: "Strength Card", icon: Dumbbell, roles: ["player"] },
   { href: "/kiosk-rpe", label: "Kiosk RPE", icon: Monitor, roles: ["admin", "staff"] },
 ];
 
