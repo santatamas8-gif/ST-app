@@ -31,7 +31,7 @@ export function ExerciseImage({
 
   if (canRender) {
     return (
-      <div className={`${shellClass} ${className}`}>
+      <div className={`${shellClass} ${className} flex items-center justify-center`}>
         {/* Native img: admin URLs may be any https host; avoids next/image config errors. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

@@ -1,12 +1,13 @@
 import type { PlayerCardItem } from "@/lib/strength/types";
 import { groupCardItemsByExercise, type ExerciseGroup } from "@/lib/strength/cardLayout";
 import { ExerciseImage } from "./ExerciseImage";
-import { PlayerAvatar } from "./PlayerAvatar";
+import { STRENGTH_CARD_EXERCISE_IMAGE_CLASS, StrengthCardHeader } from "./StrengthCardHeader";
 import { StrengthSetTable } from "./StrengthSetTable";
 
 interface PlayerStrengthCardViewProps {
   playerName: string;
   playerAvatarUrl?: string | null;
+  teamLogoUrl?: string | null;
   date: string;
   title: string;
   sessionType?: string;
@@ -24,7 +25,7 @@ function ExerciseBlock({ group }: { group: ExerciseGroup }) {
         <ExerciseImage
           src={group.imageUrl}
           alt={group.name}
-          className="aspect-square h-[72px] w-[72px] shrink-0 sm:h-20 sm:w-20"
+          className={STRENGTH_CARD_EXERCISE_IMAGE_CLASS}
         />
         <div className="min-w-0 flex-1 overflow-x-auto">
           <StrengthSetTable sets={group.sets} variant="screen" />
@@ -37,6 +38,7 @@ function ExerciseBlock({ group }: { group: ExerciseGroup }) {
 export function PlayerStrengthCardView({
   playerName,
   playerAvatarUrl,
+  teamLogoUrl,
   date,
   title,
   sessionType,
@@ -48,14 +50,13 @@ export function PlayerStrengthCardView({
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center gap-4 border-b border-zinc-700/60 pb-4">
-        <PlayerAvatar name={playerName} avatarUrl={playerAvatarUrl} variant="screen" />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold tracking-tight text-white sm:text-xl">{playerName}</h2>
-          <p className="mt-1 text-sm text-zinc-400">{date}</p>
-          <p className="mt-0.5 text-sm text-zinc-500">{sessionLine}</p>
-        </div>
-      </header>
+      <StrengthCardHeader
+        playerName={playerName}
+        playerAvatarUrl={playerAvatarUrl}
+        teamLogoUrl={teamLogoUrl}
+        date={date}
+        sessionLine={sessionLine}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start sm:gap-x-5 sm:gap-y-4 sm:[grid-auto-flow:column] sm:[grid-template-rows:repeat(4,auto)]">
         {groups.map((g) => (

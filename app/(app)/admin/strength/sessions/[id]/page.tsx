@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPlayersWithProfiles, getSessionDetail, getStrengthExercises } from "@/app/actions/strength";
+import { getPublicTeamLogo } from "@/app/actions/teamSettings";
 import { normalizeAvatarUrl, playerDisplayName } from "@/lib/players/listPlayers";
 import { fetchExerciseImageMap } from "@/lib/strength/exerciseImages";
 import type { StrengthProfile } from "@/lib/strength/types";
@@ -12,7 +13,7 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const detail = await getSessionDetail(id);
+  const [detail, { team_logo_url }] = await Promise.all([getSessionDetail(id), getPublicTeamLogo()]);
   if (!detail) notFound();
 
   const players = await getPlayersWithProfiles();
@@ -66,6 +67,7 @@ export default async function SessionDetailPage({
       players={playerOptions}
       allExercises={allExercises}
       previewCard={previewCard}
+      teamLogoUrl={team_logo_url}
     />
   );
 }

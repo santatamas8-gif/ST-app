@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getMyStrengthCard } from "@/app/actions/strength";
+import { getPublicTeamLogo } from "@/app/actions/teamSettings";
 import { getAppUser } from "@/lib/auth";
 import { PlayerStrengthCardView } from "@/components/strength/PlayerStrengthCardView";
 
@@ -14,7 +15,7 @@ export default async function StrengthCardDetailPage({
   if (user.role !== "player") redirect("/forbidden");
 
   const { id } = await params;
-  const card = await getMyStrengthCard(id);
+  const [card, { team_logo_url }] = await Promise.all([getMyStrengthCard(id), getPublicTeamLogo()]);
   if (!card) notFound();
 
   return (
@@ -25,6 +26,7 @@ export default async function StrengthCardDetailPage({
       <PlayerStrengthCardView
         playerName={card.player_name}
         playerAvatarUrl={card.player_avatar_url}
+        teamLogoUrl={team_logo_url}
         date={card.session.date}
         title={card.session.title}
         sessionType={card.session.session_type}

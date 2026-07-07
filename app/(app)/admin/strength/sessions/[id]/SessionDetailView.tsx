@@ -22,6 +22,7 @@ export function SessionDetailView({
   players,
   previewCard,
   allExercises,
+  teamLogoUrl,
 }: {
   sessionId: string;
   session: { date: string; title: string; session_type: string; status: string };
@@ -29,6 +30,7 @@ export function SessionDetailView({
   cards: CardRow[];
   players: PlayerOption[];
   allExercises: StrengthExercise[];
+  teamLogoUrl?: string | null;
   previewCard: {
     playerName: string;
     playerAvatarUrl: string | null;
@@ -252,6 +254,7 @@ export function SessionDetailView({
                 editable={session.status !== "published"}
                 playerName={previewCard.playerName}
                 playerAvatarUrl={previewCard.playerAvatarUrl}
+                teamLogoUrl={teamLogoUrl}
                 date={session.date}
                 title={session.title}
                 sessionType={session.session_type}

@@ -11,7 +11,7 @@ import {
 import { isExplosiveExercise } from "@/lib/strength/explosiveExercises";
 import type { PlayerCardItem, StrengthExercise, StrengthProfile } from "@/lib/strength/types";
 import { ExerciseImage } from "./ExerciseImage";
-import { PlayerAvatar } from "./PlayerAvatar";
+import { STRENGTH_CARD_EXERCISE_IMAGE_CLASS, StrengthCardHeader } from "./StrengthCardHeader";
 
 type SetDraft = {
   set_number: number;
@@ -46,6 +46,7 @@ interface EditableStrengthCardProps {
   editable: boolean;
   playerName: string;
   playerAvatarUrl?: string | null;
+  teamLogoUrl?: string | null;
   date: string;
   title: string;
   sessionType?: string;
@@ -60,6 +61,7 @@ export function EditableStrengthCard({
   editable,
   playerName,
   playerAvatarUrl,
+  teamLogoUrl,
   date,
   title,
   sessionType,
@@ -242,7 +244,7 @@ export function EditableStrengthCard({
                 : group.imageUrl
             }
             alt={isEditing ? draftExercise?.name ?? group.name : group.name}
-            className="aspect-square h-[72px] w-[72px] shrink-0 sm:h-20 sm:w-20"
+            className={STRENGTH_CARD_EXERCISE_IMAGE_CLASS}
           />
           <div className="min-w-0 flex-1 overflow-x-auto">
             <table className="w-full min-w-[200px] text-sm">
@@ -366,19 +368,20 @@ export function EditableStrengthCard({
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center gap-4 border-b border-zinc-700/60 pb-4">
-        <PlayerAvatar name={playerName} avatarUrl={playerAvatarUrl} variant="screen" />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-bold tracking-tight text-white sm:text-xl">{playerName}</h2>
-          <p className="mt-1 text-sm text-zinc-400">{date}</p>
-          <p className="mt-0.5 text-sm text-zinc-500">{sessionLine}</p>
-          {editable && (
-            <p className="mt-2 text-xs text-amber-400/90">
+      <StrengthCardHeader
+        playerName={playerName}
+        playerAvatarUrl={playerAvatarUrl}
+        teamLogoUrl={teamLogoUrl}
+        date={date}
+        sessionLine={sessionLine}
+        hint={
+          editable ? (
+            <p className="text-xs text-amber-400/90">
               Tap Edit on any exercise to fix reps, %, sets or swap the exercise — then OK to finalize.
             </p>
-          )}
-        </div>
-      </header>
+          ) : null
+        }
+      />
 
       {error && (
         <p className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-sm text-red-300" role="alert">

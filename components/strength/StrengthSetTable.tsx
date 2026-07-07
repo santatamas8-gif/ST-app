@@ -28,9 +28,11 @@ export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableP
         <tbody>
           {sets.map((s) => (
             <tr key={s.id ?? s.set_number}>
-              <td>{s.display_percentage ?? formatSetPercentage(s.percentage)}</td>
-              <td>{s.display_weight}</td>
-              <td>{s.reps}</td>
+              <td className="print-col-pct">
+                {s.display_percentage ?? formatSetPercentage(s.percentage)}
+              </td>
+              <td className="print-col-weight">{s.display_weight || "—"}</td>
+              <td className="print-col-reps">{s.reps}</td>
             </tr>
           ))}
         </tbody>
@@ -50,10 +52,10 @@ export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableP
       <tbody>
         {sets.map((s) => (
           <tr key={s.id ?? s.set_number} className="border-b border-zinc-800/60 last:border-0">
-            <td className="py-2 pr-4 tabular-nums text-zinc-300">
+            <td className="py-2 pr-4 tabular-nums whitespace-nowrap text-zinc-300">
               {s.display_percentage ?? formatSetPercentage(s.percentage)}
             </td>
-            <td className="py-2 pr-4 font-medium tabular-nums text-white">{s.display_weight}</td>
+            <td className="py-2 pr-4 font-medium tabular-nums whitespace-nowrap text-white">{s.display_weight}</td>
             <td className="py-2 tabular-nums text-zinc-300">{s.reps}</td>
           </tr>
         ))}

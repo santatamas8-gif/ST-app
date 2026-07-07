@@ -3,11 +3,12 @@
 import type { PlayerStrengthCard } from "@/lib/strength/types";
 import { groupCardItemsByExercise } from "@/lib/strength/cardLayout";
 import { ExerciseImage } from "./ExerciseImage";
-import { PlayerAvatar } from "./PlayerAvatar";
+import { StrengthCardHeader } from "./StrengthCardHeader";
 import { StrengthSetTable } from "./StrengthSetTable";
 
 interface StrengthCardPrintProps {
   cards: PlayerStrengthCard[];
+  teamLogoUrl?: string | null;
 }
 
 function PrintExerciseBlock({
@@ -45,7 +46,13 @@ function PrintExerciseBlock({
   );
 }
 
-function PrintPlayerPage({ card }: { card: PlayerStrengthCard }) {
+function PrintPlayerPage({
+  card,
+  teamLogoUrl,
+}: {
+  card: PlayerStrengthCard;
+  teamLogoUrl?: string | null;
+}) {
   const groups = groupCardItemsByExercise(card.items, 8, card.exerciseImages);
   const sessionLine = card.session.session_type
     ? `${card.session.title} · ${card.session.session_type}`
@@ -53,18 +60,14 @@ function PrintPlayerPage({ card }: { card: PlayerStrengthCard }) {
 
   return (
     <section className="print-page" aria-label={`Strength card for ${card.player_name}`}>
-      <header className="print-header">
-        <PlayerAvatar
-          name={card.player_name}
-          avatarUrl={card.player_avatar_url}
-          variant="print"
-        />
-        <div className="print-header-text">
-          <h1 className="print-player-name">{card.player_name}</h1>
-          <p className="print-date">{card.session.date}</p>
-          <p className="print-session">{sessionLine}</p>
-        </div>
-      </header>
+      <StrengthCardHeader
+        playerName={card.player_name}
+        playerAvatarUrl={card.player_avatar_url}
+        teamLogoUrl={teamLogoUrl}
+        date={card.session.date}
+        sessionLine={sessionLine}
+        variant="print"
+      />
 
       <div className="print-exercise-grid">
         {groups.map((g) => (
@@ -80,7 +83,7 @@ function PrintPlayerPage({ card }: { card: PlayerStrengthCard }) {
   );
 }
 
-export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
+export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps) {
   return (
     <div className="print-cards-root">
       <style jsx global>{`
@@ -135,39 +138,60 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           margin-bottom: 0;
         }
 
-        .print-header {
-          display: flex;
-          align-items: center;
-          gap: 7mm;
-          margin-bottom: 10mm;
-          padding-bottom: 6mm;
+        .print-card-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          align-items: end;
+          gap: 4mm;
+          margin-bottom: 4mm;
+          padding-bottom: 4mm;
           border-bottom: 1.5px solid #ccc;
           flex-shrink: 0;
         }
 
+        .print-team-logo-wrap {
+          display: flex;
+          justify-content: flex-start;
+          align-items: flex-end;
+          align-self: end;
+        }
+
+        .print-team-logo {
+          height: 20mm;
+          width: auto;
+          max-width: 58mm;
+          object-fit: contain;
+          object-position: left bottom;
+        }
+
+        .print-card-header-center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 3mm;
+        }
+
+        .print-card-header-spacer {
+          min-width: 0;
+        }
+
         .print-header-text {
-          flex: 1;
           min-width: 0;
         }
 
         .print-player-name {
-          font-size: 22pt;
+          font-size: 20pt;
           font-weight: 700;
-          margin: 0 0 2mm;
+          margin: 0 0 1.5mm;
           line-height: 1.15;
           color: #000;
         }
 
         .print-date {
-          font-size: 12pt;
-          margin: 0 0 1.2mm;
-          color: #222;
-        }
-
-        .print-session {
           font-size: 11pt;
           margin: 0;
-          color: #444;
+          color: #222;
         }
 
         .print-exercise-grid {
@@ -176,10 +200,10 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           grid-template-rows: repeat(4, auto);
           grid-auto-flow: column;
           align-items: start;
-          gap: 5mm;
+          gap: 4mm;
           flex: 1;
           width: 100%;
-          margin-top: 10mm;
+          margin-top: 3mm;
         }
 
         .print-exercise-block {
@@ -190,6 +214,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           page-break-inside: avoid;
           padding-bottom: 3mm;
           border-bottom: 1px solid #ddd;
+          min-width: 0;
         }
 
         .print-exercise-grid .print-exercise-block:nth-child(4),
@@ -199,29 +224,30 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
         }
 
         .print-exercise-name {
-          font-size: 11pt;
+          font-size: 9pt;
           font-weight: 700;
-          margin: 0 0 2mm;
-          line-height: 1.2;
+          margin: 0 0 1.2mm;
+          line-height: 1.15;
           color: #000;
         }
 
         .print-exercise-body {
           display: flex;
           align-items: flex-start;
-          gap: 3.5mm;
+          gap: 2mm;
           flex: 1;
+          min-width: 0;
         }
 
         .print-exercise-image {
           flex-shrink: 0;
-          width: 38mm;
+          width: 48mm;
         }
 
         .print-exercise-image-inner {
-          width: 38mm !important;
-          height: 38mm !important;
-          aspect-ratio: 1 / 1;
+          width: 48mm !important;
+          height: 32mm !important;
+          aspect-ratio: 3 / 2;
         }
 
         .print-exercise-table {
@@ -233,35 +259,69 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
           height: 26mm !important;
           width: 26mm !important;
           font-size: 12pt !important;
+          border: none !important;
+          background: transparent !important;
+        }
+
+        .player-avatar-print img {
+          border-radius: 50%;
         }
 
         .strength-set-table-print {
           width: 100%;
+          max-width: 100%;
           border-collapse: collapse;
-          font-size: 10.5pt;
-          line-height: 1.3;
+          font-size: 8.5pt;
+          line-height: 1.15;
+          table-layout: fixed;
         }
 
         .strength-set-table-print th,
         .strength-set-table-print td {
           text-align: left;
-          padding: 1.5px 6px 1.5px 0;
+          padding: 1px 2px;
           color: #111;
-          vertical-align: top;
+          vertical-align: middle;
+          white-space: nowrap;
+          border-bottom: 1px solid #d4d4d4;
+        }
+
+        .strength-set-table-print th:not(:last-child),
+        .strength-set-table-print td:not(:last-child) {
+          border-right: 1px solid #e8e8e8;
         }
 
         .strength-set-table-print th {
           font-weight: 700;
-          font-size: 9pt;
+          font-size: 7pt;
           text-transform: uppercase;
-          letter-spacing: 0.03em;
+          letter-spacing: 0.02em;
           color: #333;
-          border-bottom: 1.5px solid #999;
-          padding-bottom: 3px;
+          border-bottom: 1.5px solid #888;
+          padding-bottom: 1.5px;
+          background: #f5f5f5;
         }
 
-        .strength-set-table-print td:nth-child(2) {
+        .strength-set-table-print tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .strength-set-table-print .print-col-pct {
+          width: 28%;
+        }
+
+        .strength-set-table-print .print-col-weight {
           font-weight: 700;
+          width: 48%;
+        }
+
+        .strength-set-table-print .print-col-reps {
+          width: 24%;
+          text-align: center;
+        }
+
+        .strength-set-table-print th:last-child {
+          text-align: center;
         }
 
         @media print {
@@ -348,7 +408,7 @@ export function StrengthCardPrint({ cards }: StrengthCardPrintProps) {
       `}</style>
 
       {cards.map((card) => (
-        <PrintPlayerPage key={card.id} card={card} />
+        <PrintPlayerPage key={card.id} card={card} teamLogoUrl={teamLogoUrl} />
       ))}
     </div>
   );

@@ -33,11 +33,13 @@ export function PlayerAvatar({
   const isPrint = variant === "print";
 
   const sizeClass = isPrint
-    ? "player-avatar-print h-[28mm] w-[22mm] text-[11pt]"
+    ? "player-avatar-print h-[26mm] w-[26mm] text-[11pt]"
     : "h-16 w-16 text-base sm:h-[4.5rem] sm:w-[4.5rem] sm:text-lg";
 
   const shellClass = isPrint
-    ? "rounded border border-neutral-300 bg-neutral-100 text-neutral-600"
+    ? showImage
+      ? "rounded-full"
+      : "rounded-full border border-neutral-200 bg-neutral-100 text-neutral-600"
     : "rounded-full bg-zinc-700 ring-2 ring-zinc-600 text-zinc-300";
 
   return (

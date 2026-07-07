@@ -4,7 +4,13 @@ import Link from "next/link";
 import { StrengthCardPrint } from "@/components/strength/StrengthCardPrint";
 import type { PlayerStrengthCard } from "@/lib/strength/types";
 
-export function PrintPageClient({ cards }: { cards: PlayerStrengthCard[] }) {
+export function PrintPageClient({
+  cards,
+  teamLogoUrl,
+}: {
+  cards: PlayerStrengthCard[];
+  teamLogoUrl?: string | null;
+}) {
   return (
     <>
       <div className="strength-print-toolbar no-print">
@@ -22,7 +28,7 @@ export function PrintPageClient({ cards }: { cards: PlayerStrengthCard[] }) {
           Print
         </button>
       </div>
-      <StrengthCardPrint cards={cards} />
+      <StrengthCardPrint cards={cards} teamLogoUrl={teamLogoUrl} />
     </>
   );
 }
