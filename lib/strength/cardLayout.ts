@@ -1,6 +1,7 @@
 import type { PlayerCardItem } from "./types";
 import { resolveExerciseImageUrl, type ExerciseImageMap } from "./exerciseImages";
 import { explosivePercentageLabel, isExplosiveExercise } from "./explosiveExercises";
+import { isRepsOnlyPullUpExercise } from "./pullUpExercises";
 
 export type ExerciseGroup = {
   key: string;
@@ -8,6 +9,7 @@ export type ExerciseGroup = {
   exerciseOrder: number;
   name: string;
   imageUrl: string | null;
+  repsOnlyPullUp: boolean;
   sets: {
     id?: string;
     set_number: number;
@@ -50,6 +52,7 @@ export function groupCardItemsByExercise(
         exerciseOrder: item.exercise_order ?? 0,
         name: item.exercise_name_snapshot,
         imageUrl: resolveExerciseImageUrl(item, exerciseImages),
+        repsOnlyPullUp: isRepsOnlyPullUpExercise(item.exercise_name_snapshot),
         sets: [],
       });
       order.push(key);

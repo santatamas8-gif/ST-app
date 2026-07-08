@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createDailySession, saveSessionExercises } from "@/app/actions/strength";
+import {
+  DEFAULT_PULL_UP_SET_PERCENTAGE,
+  isRepsOnlyPullUpExercise,
+} from "@/lib/strength/pullUpExercises";
 import type { StrengthExercise } from "@/lib/strength/types";
 import { SESSION_TYPES } from "@/lib/strength/types";
 
@@ -66,9 +70,13 @@ export function CreateSessionView({
       }
       if (prev.length >= 8) return prev;
       const order = prev.length + 1;
+      const ex = exercises.find((e) => e.id === id);
+      const manualPct = isRepsOnlyPullUpExercise(ex?.name)
+        ? DEFAULT_PULL_UP_SET_PERCENTAGE
+        : 70;
       const defaultSets = globalSchemeId
         ? applyScheme(globalSchemeId)
-        : [{ set_number: 1, reps: 8, percentage: 70 }];
+        : [{ set_number: 1, reps: 8, percentage: manualPct }];
       setDrafts((d) => ({
         ...d,
         [id]: { exercise_id: id, exercise_order: order, sets: defaultSets },
@@ -138,7 +146,7 @@ export function CreateSessionView({
           ...ex,
           sets: [
             ...ex.sets,
-            { set_number: n, reps: last?.reps ?? 8, percentage: last?.percentage ?? 70 },
+            { set_number: n, reps: last?.reps ?? 8, percentage: last?.percentage ?? (isRepsOnlyPullUpExercise(exercises.find((e) => e.id === exerciseId)?.name) ? DEFAULT_PULL_UP_SET_PERCENTAGE : 70) },
           ],
         },
       };
@@ -302,7 +310,9 @@ export function CreateSessionView({
           </div>
         </div>
 
-        {selectedExercises.map((ex, idx) => (
+        {selectedExercises.map((ex, idx) => {
+          const repsOnlyPullUp = isRepsOnlyPullUpExercise(ex.name);
+          return (
           <div
             key={ex.id}
             className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4"
@@ -311,6 +321,9 @@ export function CreateSessionView({
               <h3 className="font-medium text-white">
                 {idx + 1}. {ex.name}
               </h3>
+              {repsOnlyPullUp ? (
+                <span className="text-xs text-zinc-500">Pull up — reps only (set % fixed)</span>
+              ) : (
               <label className="text-xs text-zinc-400">
                 Scheme:
                 <select
@@ -326,6 +339,7 @@ export function CreateSessionView({
                   ))}
                 </select>
               </label>
+              )}
             </div>
             <div className="space-y-2">
               {(drafts[ex.id]?.sets ?? []).map((set, si) => (
@@ -339,15 +353,22 @@ export function CreateSessionView({
                     min={1}
                   />
                   <span className="text-xs text-zinc-500">reps</span>
-                  <input
-                    type="number"
-                    value={set.percentage}
-                    onChange={(e) => updateSet(ex.id, si, "percentage", Number(e.target.value))}
-                    className="w-16 rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1.5 text-sm text-white"
-                    min={1}
-                    max={100}
-                  />
-                  <span className="text-xs text-zinc-500">%</span>
+                  {!repsOnlyPullUp && (
+                    <>
+                      <input
+                        type="number"
+                        value={set.percentage}
+                        onChange={(e) => updateSet(ex.id, si, "percentage", Number(e.target.value))}
+                        className="w-16 rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1.5 text-sm text-white"
+                        min={1}
+                        max={100}
+                      />
+                      <span className="text-xs text-zinc-500">%</span>
+                    </>
+                  )}
+                  {repsOnlyPullUp && (
+                    <span className="text-xs text-zinc-500 tabular-nums">@ {set.percentage}%</span>
+                  )}
                   {(drafts[ex.id]?.sets.length ?? 0) > 1 && (
                     <button
                       type="button"
@@ -368,7 +389,8 @@ export function CreateSessionView({
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 

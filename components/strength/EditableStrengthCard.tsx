@@ -9,6 +9,7 @@ import {
   groupCardItemsByExercise,
 } from "@/lib/strength/cardLayout";
 import { isExplosiveExercise } from "@/lib/strength/explosiveExercises";
+import { isRepsOnlyPullUpExercise, DEFAULT_PULL_UP_SET_PERCENTAGE } from "@/lib/strength/pullUpExercises";
 import type { PlayerCardItem, StrengthExercise, StrengthProfile } from "@/lib/strength/types";
 import { ExerciseImage } from "./ExerciseImage";
 import { STRENGTH_CARD_EXERCISE_IMAGE_CLASS, StrengthCardHeader } from "./StrengthCardHeader";
@@ -162,6 +163,9 @@ export function EditableStrengthCard({
     setDraft((prev) => {
       if (!prev || prev.sets.length >= 10) return prev;
       const last = prev.sets[prev.sets.length - 1];
+      const ex = exercises.find((e) => e.id === prev.exerciseId);
+      const pullUp = isRepsOnlyPullUpExercise(ex?.name);
+      const defaultPct = pullUp ? DEFAULT_PULL_UP_SET_PERCENTAGE : 70;
       return {
         ...prev,
         sets: renumberSets([
@@ -169,7 +173,7 @@ export function EditableStrengthCard({
           {
             set_number: prev.sets.length + 1,
             reps: last?.reps ?? 6,
-            percentage: last?.percentage ?? 70,
+            percentage: last?.percentage ?? defaultPct,
           },
         ]),
       };
@@ -180,6 +184,7 @@ export function EditableStrengthCard({
     const isEditing = editable && editingOrder === group.exerciseOrder;
     const displayName = isEditing ? draftExercise?.name ?? group.name : group.name;
     const explosive = isExplosiveExercise(displayName);
+    const repsOnlyPullUp = group.repsOnlyPullUp || isRepsOnlyPullUpExercise(displayName);
 
     return (
       <article
@@ -251,7 +256,8 @@ export function EditableStrengthCard({
               <thead>
                 <tr className="border-b border-zinc-700/50 text-left text-xs uppercase tracking-wide text-zinc-500">
                   <th className="pb-2 pr-3 font-medium">Set</th>
-                  <th className="pb-2 pr-3 font-medium">%</th>
+                  {!explosive && !repsOnlyPullUp && <th className="pb-2 pr-3 font-medium">%</th>}
+                  {explosive && <th className="pb-2 pr-3 font-medium">%</th>}
                   <th className="pb-2 pr-3 font-medium">Weight</th>
                   <th className="pb-2 pr-3 font-medium">Reps</th>
                   {isEditing && <th className="pb-2 font-medium" />}
@@ -276,20 +282,27 @@ export function EditableStrengthCard({
                   return (
                     <tr key={`${set.set_number}-${index}`} className="border-b border-zinc-800/60 last:border-0">
                       <td className="py-2 pr-3 tabular-nums text-zinc-500">{set.set_number}</td>
-                      <td className="py-2 pr-3">
-                        {isEditing && !explosive ? (
-                          <input
-                            type="number"
-                            step="0.1"
-                            min={1}
-                            value={set.percentage}
-                            onChange={(e) => updateSet(index, "percentage", e.target.value)}
-                            className="w-16 rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1 tabular-nums text-white"
-                          />
-                        ) : (
+                      {!explosive && !repsOnlyPullUp && (
+                        <td className="py-2 pr-3">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.1"
+                              min={1}
+                              value={set.percentage}
+                              onChange={(e) => updateSet(index, "percentage", e.target.value)}
+                              className="w-16 rounded border border-zinc-600 bg-zinc-800/80 px-2 py-1 tabular-nums text-white"
+                            />
+                          ) : (
+                            <span className="tabular-nums text-zinc-300">{displayPct}</span>
+                          )}
+                        </td>
+                      )}
+                      {explosive && (
+                        <td className="py-2 pr-3">
                           <span className="tabular-nums text-zinc-300">{displayPct}</span>
-                        )}
-                      </td>
+                        </td>
+                      )}
                       <td className="py-2 pr-3 font-medium tabular-nums text-white">
                         {weight}
                       </td>

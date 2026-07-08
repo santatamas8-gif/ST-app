@@ -15,9 +15,11 @@ function PrintExerciseBlock({
   name,
   imageUrl,
   sets,
+  repsOnlyPullUp,
 }: {
   name: string;
   imageUrl: string | null;
+  repsOnlyPullUp: boolean;
   sets: {
     id?: string;
     set_number: number;
@@ -39,7 +41,7 @@ function PrintExerciseBlock({
           />
         </div>
         <div className="print-exercise-table">
-          <StrengthSetTable sets={sets} variant="print" />
+          <StrengthSetTable sets={sets} variant="print" repsOnlyPullUp={repsOnlyPullUp} />
         </div>
       </div>
     </article>
@@ -75,6 +77,7 @@ function PrintPlayerPage({
             key={g.key}
             name={g.name}
             imageUrl={g.imageUrl}
+            repsOnlyPullUp={g.repsOnlyPullUp}
             sets={g.sets}
           />
         ))}
@@ -318,6 +321,14 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         .strength-set-table-print .print-col-reps {
           width: 24%;
           text-align: center;
+        }
+
+        .strength-set-table-print--reps-only .print-col-weight {
+          width: 62%;
+        }
+
+        .strength-set-table-print--reps-only .print-col-reps {
+          width: 38%;
         }
 
         .strength-set-table-print th:last-child {

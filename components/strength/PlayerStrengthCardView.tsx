@@ -28,7 +28,7 @@ function ExerciseBlock({ group }: { group: ExerciseGroup }) {
           className={STRENGTH_CARD_EXERCISE_IMAGE_CLASS}
         />
         <div className="min-w-0 flex-1 overflow-x-auto">
-          <StrengthSetTable sets={group.sets} variant="screen" />
+          <StrengthSetTable sets={group.sets} variant="screen" repsOnlyPullUp={group.repsOnlyPullUp} />
         </div>
       </div>
     </article>

@@ -22,6 +22,10 @@ import {
   parseSchemesFromWorkbook,
 } from "@/lib/strength/excelImport";
 import { EXPLOSIVE_EXERCISE_SEED, isExplosiveExercise } from "@/lib/strength/explosiveExercises";
+import {
+  DEFAULT_PULL_UP_SET_PERCENTAGE,
+  isRepsOnlyPullUpExercise,
+} from "@/lib/strength/pullUpExercises";
 import exercisesSeed from "@/lib/strength/seed/exercises.json";
 import schemesSeed from "@/lib/strength/seed/schemes.json";
 
@@ -524,12 +528,6 @@ export async function saveCardExerciseEdits(
 
   if (!input.sets.length) return { error: "At least one set is required" };
 
-  const normalizedSets = input.sets.map((set, index) => ({
-    set_number: index + 1,
-    reps: set.reps,
-    percentage: set.percentage,
-  }));
-
   const { data: sessionExercise } = await supabase
     .from("daily_strength_session_exercises")
     .select("id, exercise_id, strength_exercises(*)")
@@ -558,6 +556,34 @@ export async function saveCardExerciseEdits(
       .eq("id", sessionExercise.id);
     if (updateExErr) return { error: updateExErr.message };
     exercise = newExercise as StrengthExercise;
+  }
+
+  let normalizedSets = input.sets.map((set, index) => ({
+    set_number: index + 1,
+    reps: set.reps,
+    percentage: set.percentage,
+  }));
+
+  if (isRepsOnlyPullUpExercise(exercise.name)) {
+    const { data: existingSets } = await supabase
+      .from("daily_strength_session_sets")
+      .select("set_number, percentage")
+      .eq("session_exercise_id", sessionExercise.id)
+      .order("set_number", { ascending: true });
+
+    const pctBySet = new Map(
+      (existingSets ?? []).map((s) => [s.set_number, s.percentage])
+    );
+    const fallbackPct =
+      existingSets?.length && existingSets[existingSets.length - 1]
+        ? existingSets[existingSets.length - 1].percentage
+        : DEFAULT_PULL_UP_SET_PERCENTAGE;
+
+    normalizedSets = input.sets.map((set, index) => ({
+      set_number: index + 1,
+      reps: set.reps,
+      percentage: pctBySet.get(index + 1) ?? fallbackPct,
+    }));
   }
 
   const explosive = isExplosiveExercise(exercise.name);

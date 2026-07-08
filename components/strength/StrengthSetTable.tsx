@@ -12,15 +12,23 @@ type SetRow = {
 interface StrengthSetTableProps {
   sets: SetRow[];
   variant?: "screen" | "print";
+  /** Hide % column — pull-up exercises use fixed set % (reps-only editing). */
+  repsOnlyPullUp?: boolean;
 }
 
-export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableProps) {
+export function StrengthSetTable({
+  sets,
+  variant = "screen",
+  repsOnlyPullUp = false,
+}: StrengthSetTableProps) {
   if (variant === "print") {
     return (
-      <table className="strength-set-table-print">
+      <table
+        className={`strength-set-table-print${repsOnlyPullUp ? " strength-set-table-print--reps-only" : ""}`}
+      >
         <thead>
           <tr>
-            <th>%</th>
+            {!repsOnlyPullUp && <th>%</th>}
             <th>Weight</th>
             <th>Reps</th>
           </tr>
@@ -28,9 +36,11 @@ export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableP
         <tbody>
           {sets.map((s) => (
             <tr key={s.id ?? s.set_number}>
-              <td className="print-col-pct">
-                {s.display_percentage ?? formatSetPercentage(s.percentage)}
-              </td>
+              {!repsOnlyPullUp && (
+                <td className="print-col-pct">
+                  {s.display_percentage ?? formatSetPercentage(s.percentage)}
+                </td>
+              )}
               <td className="print-col-weight">{s.display_weight || "—"}</td>
               <td className="print-col-reps">{s.reps}</td>
             </tr>
@@ -44,7 +54,7 @@ export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableP
     <table className="w-full min-w-[200px] text-sm">
       <thead>
         <tr className="border-b border-zinc-700/50 text-left text-xs uppercase tracking-wide text-zinc-500">
-          <th className="pb-2 pr-4 font-medium">%</th>
+          {!repsOnlyPullUp && <th className="pb-2 pr-4 font-medium">%</th>}
           <th className="pb-2 pr-4 font-medium">Weight</th>
           <th className="pb-2 font-medium">Reps</th>
         </tr>
@@ -52,10 +62,14 @@ export function StrengthSetTable({ sets, variant = "screen" }: StrengthSetTableP
       <tbody>
         {sets.map((s) => (
           <tr key={s.id ?? s.set_number} className="border-b border-zinc-800/60 last:border-0">
-            <td className="py-2 pr-4 tabular-nums whitespace-nowrap text-zinc-300">
-              {s.display_percentage ?? formatSetPercentage(s.percentage)}
+            {!repsOnlyPullUp && (
+              <td className="py-2 pr-4 tabular-nums whitespace-nowrap text-zinc-300">
+                {s.display_percentage ?? formatSetPercentage(s.percentage)}
+              </td>
+            )}
+            <td className="py-2 pr-4 font-medium tabular-nums whitespace-nowrap text-white">
+              {s.display_weight}
             </td>
-            <td className="py-2 pr-4 font-medium tabular-nums whitespace-nowrap text-white">{s.display_weight}</td>
             <td className="py-2 tabular-nums text-zinc-300">{s.reps}</td>
           </tr>
         ))}
