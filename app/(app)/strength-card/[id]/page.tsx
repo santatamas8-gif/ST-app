@@ -18,6 +18,9 @@ export default async function StrengthCardDetailPage({
   const [card, { team_logo_url }] = await Promise.all([getMyStrengthCard(id), getPublicTeamLogo()]);
   if (!card) notFound();
 
+  const session = card.session;
+  if (!session?.date || !session?.title) notFound();
+
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <Link href="/strength-card" className="text-sm text-zinc-400 hover:text-white">

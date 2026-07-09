@@ -28,7 +28,8 @@ export default async function StrengthCardListPage() {
               date: string;
               title: string;
               session_type: string;
-            };
+            } | null;
+            if (!session) return null;
             return (
               <Link
                 key={card.id}

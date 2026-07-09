@@ -17,6 +17,8 @@ interface PlayerAvatarProps {
   name: string;
   avatarUrl: string | null | undefined;
   variant?: "screen" | "print";
+  /** Strength cards use a rectangular photo; profiles keep the default circle. */
+  shape?: "circle" | "rect";
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export function PlayerAvatar({
   name,
   avatarUrl,
   variant = "screen",
+  shape = "circle",
   className = "",
 }: PlayerAvatarProps) {
   const [imgError, setImgError] = useState(false);
@@ -31,20 +34,37 @@ export function PlayerAvatar({
   const showImage = Boolean(url) && !imgError;
   const monogram = playerMonogram(name);
   const isPrint = variant === "print";
+  const isRect = shape === "rect";
 
-  const sizeClass = isPrint
-    ? "player-avatar-print h-[26mm] w-[26mm] text-[11pt]"
-    : "h-16 w-16 text-base sm:h-[4.5rem] sm:w-[4.5rem] sm:text-lg";
+  const sizeClass = isRect
+    ? isPrint
+      ? "player-avatar-print player-avatar-print--rect h-[34mm] w-[26mm] text-[11pt]"
+      : "h-[5.5rem] w-[4.25rem] text-base sm:h-24 sm:w-[4.75rem] sm:text-lg"
+    : isPrint
+      ? "player-avatar-print h-[26mm] w-[26mm] text-[11pt]"
+      : "h-16 w-16 text-base sm:h-[4.5rem] sm:w-[4.5rem] sm:text-lg";
 
-  const shellClass = isPrint
-    ? showImage
-      ? "rounded-full"
-      : "rounded-full border border-neutral-200 bg-neutral-100 text-neutral-600"
-    : "rounded-full bg-zinc-700 ring-2 ring-zinc-600 text-zinc-300";
+  const shellClass = isRect
+    ? isPrint
+      ? showImage
+        ? "rounded-md border border-neutral-200 bg-neutral-50"
+        : "rounded-md border border-neutral-200 bg-neutral-100 text-neutral-600"
+      : "rounded-lg bg-zinc-800/50 ring-1 ring-zinc-600 text-zinc-300"
+    : isPrint
+      ? showImage
+        ? "rounded-full"
+        : "rounded-full border border-neutral-200 bg-neutral-100 text-neutral-600"
+      : "rounded-full bg-zinc-700 ring-2 ring-zinc-600 text-zinc-300";
+
+  const imageClass = isRect
+    ? "max-h-full max-w-full object-contain object-center"
+    : isPrint
+      ? "h-full w-full object-cover object-[50%_20%]"
+      : "h-full w-full object-cover";
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden ${sizeClass} ${shellClass} ${className}`}
+      className={`relative shrink-0 overflow-hidden ${sizeClass} ${shellClass} ${className} flex items-center justify-center`}
       aria-hidden={!name}
     >
       {showImage ? (
@@ -53,7 +73,7 @@ export function PlayerAvatar({
           <img
             src={url}
             alt=""
-            className={isPrint ? "h-full w-full object-cover object-[50%_20%]" : "h-full w-full object-cover"}
+            className={imageClass}
             onError={() => setImgError(true)}
           />
         </>

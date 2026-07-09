@@ -26,7 +26,12 @@ export function StrengthCardHeader({
       <header className="print-card-header">
         <StrengthCardLogo teamLogoUrl={teamLogoUrl} variant="print" />
         <div className="print-card-header-center">
-          <PlayerAvatar name={playerName} avatarUrl={playerAvatarUrl} variant="print" />
+          <PlayerAvatar
+            name={playerName}
+            avatarUrl={playerAvatarUrl}
+            variant="print"
+            shape="rect"
+          />
           <div className="print-header-text">
             <h1 className="print-player-name">{playerName}</h1>
             <p className="print-date">{date}</p>
@@ -44,7 +49,12 @@ export function StrengthCardHeader({
           <StrengthCardLogo teamLogoUrl={teamLogoUrl} variant="screen" />
         </div>
         <div className="flex flex-col items-center text-center">
-          <PlayerAvatar name={playerName} avatarUrl={playerAvatarUrl} variant="screen" />
+          <PlayerAvatar
+            name={playerName}
+            avatarUrl={playerAvatarUrl}
+            variant="screen"
+            shape="rect"
+          />
           <h2 className="mt-3 text-lg font-bold tracking-tight text-white sm:text-xl">{playerName}</h2>
           <p className="mt-1 text-sm text-zinc-400">{date}</p>
           <p className="mt-0.5 text-sm text-zinc-500">{sessionLine}</p>
@@ -58,4 +68,4 @@ export function StrengthCardHeader({
 
 /** Landscape frame fits side-by-side exercise photos without cropping. */
 export const STRENGTH_CARD_EXERCISE_IMAGE_CLASS =
-  "aspect-[3/2] h-[72px] w-[108px] shrink-0 sm:h-[80px] sm:w-[120px]";
+  "aspect-[3/2] h-[80px] w-[120px] shrink-0 sm:h-[88px] sm:w-[132px]";

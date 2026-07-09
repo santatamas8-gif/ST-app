@@ -202,8 +202,8 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           grid-template-columns: 1fr 1fr;
           grid-template-rows: repeat(4, auto);
           grid-auto-flow: column;
-          align-items: start;
-          gap: 4mm;
+          align-items: stretch;
+          gap: 3mm 4mm;
           flex: 1;
           width: 100%;
           margin-top: 3mm;
@@ -215,15 +215,11 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           justify-content: flex-start;
           break-inside: avoid;
           page-break-inside: avoid;
-          padding-bottom: 3mm;
-          border-bottom: 1px solid #ddd;
           min-width: 0;
-        }
-
-        .print-exercise-grid .print-exercise-block:nth-child(4),
-        .print-exercise-grid .print-exercise-block:last-child {
-          border-bottom: none;
-          padding-bottom: 0;
+          padding: 2mm;
+          border: 1px solid #d4d4d4;
+          border-radius: 1.5mm;
+          background: #fafafa;
         }
 
         .print-exercise-name {
@@ -244,13 +240,24 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
 
         .print-exercise-image {
           flex-shrink: 0;
-          width: 48mm;
+          width: 58mm;
         }
 
         .print-exercise-image-inner {
-          width: 48mm !important;
-          height: 32mm !important;
+          width: 58mm !important;
+          height: 39mm !important;
           aspect-ratio: 3 / 2;
+          padding: 1mm !important;
+          box-sizing: border-box;
+        }
+
+        .print-exercise-image-inner img {
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+          object-position: center !important;
         }
 
         .print-exercise-table {
@@ -259,15 +266,22 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         }
 
         .player-avatar-print {
-          height: 26mm !important;
-          width: 26mm !important;
           font-size: 12pt !important;
           border: none !important;
           background: transparent !important;
         }
 
-        .player-avatar-print img {
-          border-radius: 50%;
+        .player-avatar-print--rect {
+          height: 34mm !important;
+          width: 26mm !important;
+          border-radius: 2mm !important;
+          background: #fafafa !important;
+        }
+
+        .player-avatar-print--rect img {
+          object-fit: contain !important;
+          object-position: center !important;
+          border-radius: 0 !important;
         }
 
         .strength-set-table-print {
