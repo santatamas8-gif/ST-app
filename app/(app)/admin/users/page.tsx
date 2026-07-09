@@ -62,6 +62,7 @@ export default async function AdminUsersPage() {
       list={list}
       loadError={loadError}
       currentUserId={user?.id ?? null}
+      canManageUsers={user?.role === "admin"}
       envCheck={envCheck}
     />
   );

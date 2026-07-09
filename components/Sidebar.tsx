@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell } from "lucide-react";
 import type { UserRole } from "@/lib/types";
+import { PLAYER_STRENGTH_CARD_ENABLED } from "@/lib/strength/playerCardEnabled";
 import { KioskExitButton } from "@/app/(app)/kiosk-rpe/components/KioskExitButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -32,7 +33,9 @@ const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRo
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/admin/users", label: "Users", icon: UserCog, roles: ["admin"] },
   { href: "/admin/strength", label: "Strength Cards", icon: Dumbbell, roles: ["admin"] },
-  { href: "/strength-card", label: "Strength Card", icon: Dumbbell, roles: ["player"] },
+  ...(PLAYER_STRENGTH_CARD_ENABLED
+    ? [{ href: "/strength-card", label: "Strength Card", icon: Dumbbell, roles: ["player"] as UserRole[] }]
+    : []),
   { href: "/kiosk-rpe", label: "Kiosk RPE", icon: Monitor, roles: ["admin", "staff"] },
 ];
 

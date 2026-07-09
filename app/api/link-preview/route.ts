@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAppUser } from "@/lib/auth";
 
 const URL_REGEX = /^https?:\/\/[^\s/]+(\/[^\s]*)?$/i;
 
@@ -21,6 +22,11 @@ function extractMeta(html: string): { title?: string; image?: string; descriptio
 }
 
 export async function GET(request: NextRequest) {
+  const user = await getAppUser();
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const url = request.nextUrl.searchParams.get("url");
   if (!url || !URL_REGEX.test(url)) {
     return Response.json({ error: "Invalid URL" }, { status: 400 });

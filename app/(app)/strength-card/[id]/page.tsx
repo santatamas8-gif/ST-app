@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getMyStrengthCard } from "@/app/actions/strength";
 import { getPublicTeamLogo } from "@/app/actions/teamSettings";
 import { getAppUser } from "@/lib/auth";
+import { PLAYER_STRENGTH_CARD_ENABLED } from "@/lib/strength/playerCardEnabled";
 import { PlayerStrengthCardView } from "@/components/strength/PlayerStrengthCardView";
 
 export default async function StrengthCardDetailPage({
@@ -12,6 +13,7 @@ export default async function StrengthCardDetailPage({
 }) {
   const user = await getAppUser();
   if (!user) redirect("/login");
+  if (!PLAYER_STRENGTH_CARD_ENABLED && user.role === "player") redirect("/dashboard");
   if (user.role !== "player") redirect("/forbidden");
 
   const { id } = await params;

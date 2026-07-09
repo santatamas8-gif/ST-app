@@ -95,6 +95,25 @@ function asJoinedRow<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+async function resolvePublishedSessionForCard(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessionId: string,
+  joined: unknown
+): Promise<{ date: string; title: string; session_type: string } | null> {
+  const fromJoin = asJoinedRow<{ date: string; title: string; session_type: string }>(joined as
+    | { date: string; title: string; session_type: string }
+    | { date: string; title: string; session_type: string }[]
+    | null);
+  if (fromJoin?.date && fromJoin?.title) return fromJoin;
+
+  const { data } = await supabase
+    .from("daily_strength_sessions")
+    .select("date, title, session_type")
+    .eq("id", sessionId)
+    .maybeSingle();
+  return data;
+}
+
 async function ensureCustomExplosiveExercises(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
@@ -956,14 +975,35 @@ export async function getMyPublishedStrengthCards() {
   if (!user) return [];
 
   const supabase = await createClient();
-  const { data: cards } = await supabase
+  const { data: cards, error: cardsError } = await supabase
     .from("daily_strength_player_cards")
-    .select("*, daily_strength_sessions(*)")
+    .select("id, session_id, status, published_at, created_at")
     .eq("player_id", user.id)
     .eq("status", "published")
     .order("published_at", { ascending: false });
 
-  return cards ?? [];
+  if (cardsError) {
+    console.error("[getMyPublishedStrengthCards] cards error:", cardsError.message, cardsError);
+    return [];
+  }
+  if (!cards?.length) return [];
+
+  const sessionIds = [...new Set(cards.map((c) => c.session_id))];
+  const { data: sessions, error: sessionsError } = await supabase
+    .from("daily_strength_sessions")
+    .select("id, date, title, session_type")
+    .in("id", sessionIds);
+
+  if (sessionsError) {
+    console.error("[getMyPublishedStrengthCards] sessions error:", sessionsError.message, sessionsError);
+  }
+
+  const sessionById = new Map((sessions ?? []).map((s) => [s.id, s]));
+
+  return cards.map((card) => ({
+    ...card,
+    daily_strength_sessions: sessionById.get(card.session_id) ?? null,
+  }));
 }
 
 export async function getMyStrengthCard(cardId: string): Promise<PlayerStrengthCard | null> {
@@ -1002,6 +1042,20 @@ export async function getMyStrengthCard(cardId: string): Promise<PlayerStrengthC
     avatar_url: string | null;
   } | null;
 
+  const resolved = await resolvePublishedSessionForCard(
+    supabase,
+    card.session_id,
+    card.daily_strength_sessions
+  );
+  const session: PlayerStrengthCard["session"] = {
+    id: card.session_id,
+    date: resolved?.date ?? card.published_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    title: resolved?.title ?? "Strength session",
+    session_type: resolved?.session_type ?? "",
+    created_by: null,
+    status: "published",
+  };
+
   return {
     id: enriched.id,
     session_id: enriched.session_id,
@@ -1009,7 +1063,7 @@ export async function getMyStrengthCard(cardId: string): Promise<PlayerStrengthC
     status: enriched.status as "draft" | "published",
     created_at: enriched.created_at,
     published_at: enriched.published_at ?? null,
-    session: card.daily_strength_sessions as PlayerStrengthCard["session"],
+    session,
     player_name: playerDisplayName(profile?.full_name, profile?.email),
     player_avatar_url: normalizeAvatarUrl(profile?.avatar_url),
     items: cardItems,

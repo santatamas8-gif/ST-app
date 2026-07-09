@@ -2,10 +2,12 @@ import Link from "next/link";
 import { getMyPublishedStrengthCards } from "@/app/actions/strength";
 import { redirect } from "next/navigation";
 import { getAppUser } from "@/lib/auth";
+import { PLAYER_STRENGTH_CARD_ENABLED } from "@/lib/strength/playerCardEnabled";
 
 export default async function StrengthCardListPage() {
   const user = await getAppUser();
   if (!user) redirect("/login");
+  if (!PLAYER_STRENGTH_CARD_ENABLED && user.role === "player") redirect("/dashboard");
   if (user.role !== "player") redirect("/forbidden");
 
   const cards = await getMyPublishedStrengthCards();
@@ -29,16 +31,22 @@ export default async function StrengthCardListPage() {
               title: string;
               session_type: string;
             } | null;
-            if (!session) return null;
+            const title = session?.title ?? "Strength session";
+            const date =
+              session?.date ??
+              (card.published_at ? card.published_at.slice(0, 10) : null) ??
+              "—";
+            const sessionType = session?.session_type ?? "";
             return (
               <Link
                 key={card.id}
                 href={`/strength-card/${card.id}`}
                 className="block rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4 transition hover:border-emerald-600/40"
               >
-                <h2 className="font-semibold text-white">{session.title}</h2>
+                <h2 className="font-semibold text-white">{title}</h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  {session.date} · {session.session_type}
+                  {date}
+                  {sessionType ? ` · ${sessionType}` : ""}
                 </p>
               </Link>
             );

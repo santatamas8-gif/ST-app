@@ -115,6 +115,8 @@ export function SessionDetailView({
         setMessage(result.error);
         setMessageType("error");
       } else {
+        setMessage("Published — players can now see their cards in Strength Card");
+        setMessageType("success");
         router.refresh();
       }
     } catch (err) {

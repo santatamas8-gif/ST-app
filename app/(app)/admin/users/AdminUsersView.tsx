@@ -26,6 +26,8 @@ interface AdminUsersViewProps {
   list: ProfileRow[];
   loadError: { code: string; message: string } | null;
   currentUserId?: string | null;
+  /** True only for role=admin; staff primary-admin recovery gets read-only list */
+  canManageUsers?: boolean;
   envCheck?: {
     supabaseHost: string;
     buildEnv: string;
@@ -34,7 +36,7 @@ interface AdminUsersViewProps {
   } | null;
 }
 
-export function AdminUsersView({ list, loadError, currentUserId = null, envCheck = null }: AdminUsersViewProps) {
+export function AdminUsersView({ list, loadError, currentUserId = null, canManageUsers = false, envCheck = null }: AdminUsersViewProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -121,9 +123,20 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             Users
           </h1>
           <p className="mt-1 text-sm text-zinc-400 sm:text-base">
-            Create staff and player accounts. Edit names and roles. All UI in English.
+            {canManageUsers
+              ? "Create staff and player accounts. Edit names and roles. All UI in English."
+              : "View user list (read-only). Use Reclaim admin if you need full admin access."}
           </p>
         </div>
+
+        {!canManageUsers && (
+          <div
+            className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 text-sm text-amber-200/90"
+            style={{ borderRadius: CARD_RADIUS }}
+          >
+            Read-only view. Only admins can create, edit, or delete users.
+          </div>
+        )}
 
         {loadError && (
           <div
@@ -209,6 +222,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
             <option value="staff">Staff</option>
             <option value="player">Player</option>
           </select>
+          {canManageUsers && (
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
@@ -216,6 +230,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
           >
             Create user
           </button>
+          )}
         </div>
 
         {/* Mobile: card list */}
@@ -278,13 +293,13 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                   </p>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {editingNameId === u.id ? (
+                  {canManageUsers && editingNameId === u.id ? (
                     <NameEditRow
                       currentName={u.full_name ?? ""}
                       onSave={(name) => handleNameChange(u.id, name)}
                       onCancel={() => setEditingNameId(null)}
                     />
-                  ) : (
+                  ) : canManageUsers ? (
                     <button
                       type="button"
                       onClick={() => setEditingNameId(u.id)}
@@ -292,15 +307,15 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                     >
                       Edit name
                     </button>
-                  )}
-                  {editingId === u.id ? (
+                  ) : null}
+                  {canManageUsers && editingId === u.id ? (
                     <RoleEditRow
                       currentRole={u.role as UserRole}
                       onSave={(newRole) => handleRoleChange(u.id, newRole)}
                       onCancel={() => setEditingId(null)}
                       lockToAdmin={currentUserId === u.id && u.role === "admin"}
                     />
-                  ) : !(u.isPrimaryAdmin && u.role === "admin") ? (
+                  ) : canManageUsers && !(u.isPrimaryAdmin && u.role === "admin") ? (
                     <button
                       type="button"
                       onClick={() => setEditingId(u.id)}
@@ -309,6 +324,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                       Edit role
                     </button>
                   ) : null}
+                  {canManageUsers && (
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(u)}
@@ -324,6 +340,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               </div>
             ))
@@ -382,7 +399,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                   {filtered.map((u) => (
                     <tr key={u.id} className="transition-colors hover:bg-zinc-800/50">
                       <td className="px-4 py-3 align-middle">
-                        {editingNameId === u.id ? (
+                        {canManageUsers && editingNameId === u.id ? (
                           <NameEditRow
                             currentName={u.full_name ?? ""}
                             onSave={(name) => handleNameChange(u.id, name)}
@@ -398,6 +415,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                             </span>
                             <span className="flex flex-wrap items-center gap-2">
                               <span>{u.full_name || "—"}</span>
+                              {canManageUsers && (
                               <button
                                 type="button"
                                 onClick={() => setEditingNameId(u.id)}
@@ -405,6 +423,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                               >
                                 Edit name
                               </button>
+                              )}
                             </span>
                           </span>
                         )}
@@ -425,6 +444,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                         <FormattedDate dateStr={u.created_at} />
                       </td>
                       <td className="px-4 py-3 align-middle">
+                        {canManageUsers ? (
                         <div className="flex flex-wrap items-center gap-2">
                           {editingId === u.id ? (
                             <RoleEditRow
@@ -460,6 +480,9 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
                             Delete
                           </button>
                         </div>
+                        ) : (
+                          <span className="text-xs text-zinc-500">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -470,7 +493,7 @@ export function AdminUsersView({ list, loadError, currentUserId = null, envCheck
         </div>
       </div>
 
-      {createOpen && (
+      {canManageUsers && createOpen && (
         <CreateUserModal
           onClose={() => setCreateOpen(false)}
           onSubmit={handleCreate}
