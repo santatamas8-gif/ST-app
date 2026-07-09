@@ -663,6 +663,222 @@ export async function saveCardExerciseEdits(
   return { success: true as const };
 }
 
+export async function addCardExercise(
+  sessionId: string,
+  input: {
+    exerciseId?: string;
+    sets: { set_number: number; reps: number; percentage: number }[];
+  }
+) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: session } = await supabase
+    .from("daily_strength_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .single();
+  if (!session) return { error: "Session not found" };
+  if (session.status === "published") return { error: "Published cards cannot be edited" };
+  if (!input.exerciseId) return { error: "Select an exercise" };
+  if (!input.sets.length) return { error: "At least one set is required" };
+
+  const { count: exerciseCount, error: countErr } = await supabase
+    .from("daily_strength_session_exercises")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+  if (countErr) return { error: countErr.message };
+  if ((exerciseCount ?? 0) >= 8) return { error: "A session can have at most 8 exercises" };
+
+  const { data: exerciseRow, error: exerciseErr } = await supabase
+    .from("strength_exercises")
+    .select("*")
+    .eq("id", input.exerciseId)
+    .single();
+  if (exerciseErr || !exerciseRow) return { error: "Exercise not found" };
+  const exercise = exerciseRow as StrengthExercise;
+
+  const { data: existingOrders } = await supabase
+    .from("daily_strength_session_exercises")
+    .select("exercise_order")
+    .eq("session_id", sessionId)
+    .order("exercise_order", { ascending: false })
+    .limit(1);
+  const exerciseOrder = (existingOrders?.[0]?.exercise_order ?? 0) + 1;
+
+  let normalizedSets = input.sets.map((set, index) => ({
+    set_number: index + 1,
+    reps: set.reps,
+    percentage: set.percentage,
+  }));
+
+  if (isRepsOnlyPullUpExercise(exercise.name)) {
+    normalizedSets = input.sets.map((set, index) => ({
+      set_number: index + 1,
+      reps: set.reps,
+      percentage: DEFAULT_PULL_UP_SET_PERCENTAGE,
+    }));
+  }
+
+  const explosive = isExplosiveExercise(exercise.name);
+  for (const set of normalizedSets) {
+    if (!Number.isFinite(set.reps) || set.reps < 1) {
+      return { error: "Reps must be at least 1" };
+    }
+    if (!explosive && (!Number.isFinite(set.percentage) || set.percentage <= 0)) {
+      return { error: "Percentage must be greater than 0" };
+    }
+  }
+
+  const { data: sessionExercise, error: sessionExerciseErr } = await supabase
+    .from("daily_strength_session_exercises")
+    .insert({
+      session_id: sessionId,
+      exercise_id: input.exerciseId,
+      exercise_order: exerciseOrder,
+    })
+    .select("id")
+    .single();
+  if (sessionExerciseErr || !sessionExercise) {
+    return { error: sessionExerciseErr?.message ?? "Failed to add exercise" };
+  }
+
+  const { error: setErr } = await supabase.from("daily_strength_session_sets").insert(
+    normalizedSets.map((set) => ({
+      session_exercise_id: sessionExercise.id,
+      set_number: set.set_number,
+      reps: set.reps,
+      percentage: set.percentage,
+    }))
+  );
+  if (setErr) return { error: setErr.message };
+
+  const { data: cards } = await supabase
+    .from("daily_strength_player_cards")
+    .select("id, player_id")
+    .eq("session_id", sessionId);
+
+  if (cards?.length) {
+    const { data: profiles } = await supabase
+      .from("strength_profiles")
+      .select("*")
+      .in(
+        "player_id",
+        cards.map((c) => c.player_id)
+      );
+    const profileByPlayer = new Map((profiles ?? []).map((p) => [p.player_id, p as StrengthProfile]));
+
+    for (const card of cards) {
+      const profile = profileByPlayer.get(card.player_id);
+      if (!profile) return { error: `Missing strength profile for player ${card.player_id}` };
+
+      const rows = normalizedSets.map((set) => ({
+        card_id: card.id,
+        ...computeCardItemFields(exercise, profile, set, exerciseOrder),
+      }));
+
+      if (rows.length) {
+        const { error } = await supabase.from("daily_strength_player_card_items").insert(rows);
+        if (error) return { error: error.message };
+      }
+    }
+  }
+
+  await supabase
+    .from("daily_strength_sessions")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  revalidatePath(`/admin/strength/sessions/${sessionId}`);
+  revalidatePath(`/admin/strength/sessions/${sessionId}/print`);
+  return { success: true as const };
+}
+
+export async function removeCardExercise(sessionId: string, exerciseOrder: number) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: session } = await supabase
+    .from("daily_strength_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .single();
+  if (!session) return { error: "Session not found" };
+  if (session.status === "published") return { error: "Published cards cannot be edited" };
+
+  const { data: sessionExercise } = await supabase
+    .from("daily_strength_session_exercises")
+    .select("id")
+    .eq("session_id", sessionId)
+    .eq("exercise_order", exerciseOrder)
+    .single();
+  if (!sessionExercise) return { error: "Exercise slot not found" };
+
+  const { error: deleteSetsErr } = await supabase
+    .from("daily_strength_session_sets")
+    .delete()
+    .eq("session_exercise_id", sessionExercise.id);
+  if (deleteSetsErr) return { error: deleteSetsErr.message };
+
+  const { error: deleteExerciseErr } = await supabase
+    .from("daily_strength_session_exercises")
+    .delete()
+    .eq("id", sessionExercise.id);
+  if (deleteExerciseErr) return { error: deleteExerciseErr.message };
+
+  const { data: laterExercises } = await supabase
+    .from("daily_strength_session_exercises")
+    .select("id, exercise_order")
+    .eq("session_id", sessionId)
+    .gt("exercise_order", exerciseOrder)
+    .order("exercise_order", { ascending: true });
+
+  for (const row of laterExercises ?? []) {
+    const { error } = await supabase
+      .from("daily_strength_session_exercises")
+      .update({ exercise_order: row.exercise_order - 1 })
+      .eq("id", row.id);
+    if (error) return { error: error.message };
+  }
+
+  const { data: cards } = await supabase
+    .from("daily_strength_player_cards")
+    .select("id")
+    .eq("session_id", sessionId);
+
+  for (const card of cards ?? []) {
+    const { error: deleteItemsErr } = await supabase
+      .from("daily_strength_player_card_items")
+      .delete()
+      .eq("card_id", card.id)
+      .eq("exercise_order", exerciseOrder);
+    if (deleteItemsErr) return { error: deleteItemsErr.message };
+
+    const { data: laterItems } = await supabase
+      .from("daily_strength_player_card_items")
+      .select("id, exercise_order")
+      .eq("card_id", card.id)
+      .gt("exercise_order", exerciseOrder);
+
+    for (const item of laterItems ?? []) {
+      const { error } = await supabase
+        .from("daily_strength_player_card_items")
+        .update({ exercise_order: item.exercise_order - 1 })
+        .eq("id", item.id);
+      if (error) return { error: error.message };
+    }
+  }
+
+  await supabase
+    .from("daily_strength_sessions")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  revalidatePath(`/admin/strength/sessions/${sessionId}`);
+  revalidatePath(`/admin/strength/sessions/${sessionId}/print`);
+  return { success: true as const };
+}
+
 export async function updateCoachAdjustedWeight(itemId: string, weight: number | null) {
   await requireAdmin();
   const supabase = await createClient();

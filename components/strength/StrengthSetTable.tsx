@@ -41,7 +41,9 @@ export function StrengthSetTable({
                   {s.display_percentage ?? formatSetPercentage(s.percentage)}
                 </td>
               )}
-              <td className="print-col-weight">{s.display_weight || "—"}</td>
+              <td className="print-col-weight">
+                {repsOnlyPullUp ? "" : (s.display_weight || "—")}
+              </td>
               <td className="print-col-reps">{s.reps}</td>
             </tr>
           ))}
@@ -68,7 +70,7 @@ export function StrengthSetTable({
               </td>
             )}
             <td className="py-2 pr-4 font-medium tabular-nums whitespace-nowrap text-white">
-              {s.display_weight}
+              {repsOnlyPullUp ? "" : s.display_weight}
             </td>
             <td className="py-2 tabular-nums text-zinc-300">{s.reps}</td>
           </tr>
