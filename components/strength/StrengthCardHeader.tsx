@@ -30,7 +30,7 @@ export function StrengthCardHeader({
             name={playerName}
             avatarUrl={playerAvatarUrl}
             variant="print"
-            shape="rect"
+            shape="circle"
           />
           <div className="print-header-text">
             <h1 className="print-player-name">{playerName}</h1>

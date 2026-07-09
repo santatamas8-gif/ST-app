@@ -28,9 +28,9 @@ export function StrengthSetTable({
       >
         <thead>
           <tr>
-            {!repsOnlyPullUp && <th>%</th>}
-            <th>Weight</th>
-            <th>Reps</th>
+            {!repsOnlyPullUp && <th className="print-col-pct">%</th>}
+            <th className="print-col-weight">Weight</th>
+            <th className="print-col-reps">Reps</th>
           </tr>
         </thead>
         <tbody>
