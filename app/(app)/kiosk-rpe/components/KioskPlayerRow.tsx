@@ -1,7 +1,7 @@
 "use client";
 
 import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
