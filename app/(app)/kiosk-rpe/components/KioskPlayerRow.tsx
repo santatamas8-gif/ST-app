@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
@@ -68,7 +68,7 @@ function PlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | n
         <img
           src={avatarUrl!}
           alt=""
-          className="h-full w-full object-cover"
+          className={PROFILE_AVATAR_IMG_CLASS}
           onError={() => setImgError(true)}
         />
       ) : (

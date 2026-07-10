@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PROFILE_AVATAR_BG_CLASS } from "@/lib/players/profileAvatarStyles";
 import { useTheme } from "@/components/ThemeProvider";
 
 function playerMonogram(name: string): string {
@@ -41,7 +42,7 @@ export function KioskPlayerAvatar({ name, avatarUrl, size = "card" }: KioskPlaye
       {showImage ? (
         <>
           <div
-            className="h-full w-full bg-cover bg-center"
+            className={PROFILE_AVATAR_BG_CLASS}
             style={{ backgroundImage: `url(${avatarUrl})` }}
             role="img"
             aria-label={name}

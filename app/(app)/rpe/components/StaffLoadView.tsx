@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
+import { PROFILE_AVATAR_BG_CLASS } from "@/lib/players/profileAvatarStyles";
 import type { SessionRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import {
@@ -139,7 +140,7 @@ function PlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | 
     <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-emerald-500/25 bg-emerald-500/10 text-[11px] font-semibold text-emerald-300 shadow-sm">
       {avatarUrl ? (
         <span
-          className="h-full w-full bg-cover bg-center"
+          className={PROFILE_AVATAR_BG_CLASS}
           style={{ backgroundImage: `url("${avatarUrl}")` }}
           aria-hidden
         />

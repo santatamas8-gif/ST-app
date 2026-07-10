@@ -12,6 +12,7 @@ import { ScheduleIcon } from "@/components/ScheduleIcon";
 import { getScheduleActivityBg } from "@/components/scheduleColors";
 import { updateTeamSettings } from "@/app/actions/teamSettings";
 import { formatDayShort } from "@/lib/formatDate";
+import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import {
   LineChart,
   Line,
@@ -995,7 +996,7 @@ export function StaffDashboard({
                                 <img
                                   src={avatarUrl}
                                   alt=""
-                                  className="h-full w-full object-cover"
+                                  className={PROFILE_AVATAR_IMG_CLASS}
                                 />
                               ) : (
                                 <div
@@ -1039,7 +1040,7 @@ export function StaffDashboard({
                                   <img
                                     src={avatarUrl}
                                     alt=""
-                                    className="h-full w-full object-cover"
+                                    className={PROFILE_AVATAR_IMG_CLASS}
                                   />
                                 ) : (
                                   <div
@@ -1272,7 +1273,7 @@ export function StaffDashboard({
                           >
                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-zinc-700 ring-2 ring-zinc-600">
                               {avatarUrl ? (
-                                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                                <img src={avatarUrl} alt="" className={PROFILE_AVATAR_IMG_CLASS} />
                               ) : (
                                 <div className={`flex h-full w-full items-center justify-center text-sm font-semibold ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                                   {monogram}

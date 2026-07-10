@@ -46,6 +46,13 @@ export function SessionDetailView({
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"error" | "success" | null>(null);
 
+  const cardPlayerIds = useMemo(() => new Set(cards.map((c) => c.player_id)), [cards]);
+
+  const playersWithoutCards = useMemo(
+    () => players.filter((p) => p.hasProfile && !cardPlayerIds.has(p.id)),
+    [players, cardPlayerIds]
+  );
+
   const eligiblePlayerIds = useMemo(
     () => new Set(players.filter((p) => p.hasProfile).map((p) => p.id)),
     [players]
@@ -63,17 +70,31 @@ export function SessionDetailView({
     );
   }
 
+  const hasDraftCards = cards.some((c) => c.status === "draft");
+  const isInitialGenerate = cards.length === 0;
+  const showAddMissedSection = !isInitialGenerate && playersWithoutCards.length > 0;
+  const pickerPlayers = isInitialGenerate ? players : playersWithoutCards;
+
   async function handleGenerate() {
+    const targets = isInitialGenerate
+      ? eligibleSelected
+      : eligibleSelected.filter((id) => !cardPlayerIds.has(id));
+
     console.log("[SessionDetailView] generate clicked", {
       sessionId,
       selectedPlayers,
       eligibleSelected,
+      targets,
       exercisesCount: exercises.length,
       setsCount: exercises.reduce((n, ex) => n + ex.sets.length, 0),
     });
 
-    if (eligibleSelected.length === 0) {
-      setMessage("Select at least one player with a strength profile");
+    if (targets.length === 0) {
+      setMessage(
+        isInitialGenerate
+          ? "Select at least one player with a strength profile"
+          : "Select at least one player who does not have a card yet"
+      );
       setMessageType("error");
       return;
     }
@@ -83,7 +104,7 @@ export function SessionDetailView({
     setMessageType(null);
 
     try {
-      const result = await generatePlayerCards(sessionId, eligibleSelected);
+      const result = await generatePlayerCards(sessionId, targets);
       console.log("[SessionDetailView] generate result", result);
 
       if (result.error) {
@@ -92,7 +113,11 @@ export function SessionDetailView({
         return;
       }
 
-      setMessage("Cards generated successfully");
+      setMessage(
+        isInitialGenerate
+          ? "Cards generated successfully"
+          : `Cards generated for ${targets.length} player${targets.length === 1 ? "" : "s"}`
+      );
       setMessageType("success");
       router.refresh();
     } catch (err) {
@@ -149,14 +174,18 @@ export function SessionDetailView({
               Print
             </Link>
           )}
-          {cards.length > 0 && session.status !== "published" && (
+          {cards.length > 0 && (session.status !== "published" || hasDraftCards) && (
             <button
               type="button"
               onClick={handlePublish}
               disabled={publishing}
               className="min-h-[44px] rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
             >
-              {publishing ? "Publishing…" : "Publish to players"}
+              {publishing
+                ? "Publishing…"
+                : session.status === "published"
+                  ? "Publish new cards"
+                  : "Publish to players"}
             </button>
           )}
         </div>
@@ -175,19 +204,28 @@ export function SessionDetailView({
         </ul>
       </section>
 
-      {session.status !== "published" && (
+      {(isInitialGenerate && session.status !== "published") || showAddMissedSection ? (
         <section className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 p-4">
-          <h2 className="font-semibold text-white">Generate cards</h2>
+          <h2 className="font-semibold text-white">
+            {isInitialGenerate ? "Generate cards" : "Add missed players"}
+          </h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Select players with strength profiles
+            {isInitialGenerate
+              ? "Select players with strength profiles"
+              : "These players were not included when cards were generated. Select who should receive this session program."}
             {eligibleSelected.length > 0 && (
               <span className="ml-2 text-emerald-400">
                 ({eligibleSelected.length} selected)
               </span>
             )}
           </p>
+          {session.status === "published" && showAddMissedSection && (
+            <p className="mt-2 text-xs text-amber-400">
+              After generating, use &quot;Publish new cards&quot; so the player can see their card.
+            </p>
+          )}
           <div className="mt-3 max-h-48 space-y-1 overflow-y-auto">
-            {players.map((p) => (
+            {pickerPlayers.map((p) => (
               <label
                 key={p.id}
                 className={`flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2 ${
@@ -223,15 +261,21 @@ export function SessionDetailView({
             disabled={generating || eligibleSelected.length === 0}
             className="mt-4 min-h-[44px] rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {generating ? "Generating…" : "Generate cards"}
+            {generating
+              ? "Generating…"
+              : isInitialGenerate
+                ? "Generate cards"
+                : "Generate cards for selected players"}
           </button>
           {eligibleSelected.length === 0 && (
             <p className="mt-2 text-xs text-zinc-500">
-              Select at least one player with a strength profile to enable generation.
+              {isInitialGenerate
+                ? "Select at least one player with a strength profile to enable generation."
+                : "Select at least one player without a card yet."}
             </p>
           )}
         </section>
-      )}
+      ) : null}
 
       {cards.length > 0 && (
         <section className="space-y-4">

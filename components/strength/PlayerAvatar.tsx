@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import { User } from "lucide-react";
 
 function playerMonogram(name: string): string {
@@ -60,7 +60,7 @@ export function PlayerAvatar({
     ? "max-h-full max-w-full object-contain object-center"
     : isPrint
       ? "h-full w-full object-cover object-[50%_20%]"
-      : "h-full w-full object-cover";
+      : PROFILE_AVATAR_IMG_CLASS;
 
   return (
     <div
