@@ -158,7 +158,7 @@ export async function getMessages(roomId: string): Promise<ChatMessageRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("chat_messages")
-    .select("id, room_id, user_id, body, attachment_url, reply_to_message_id, created_at")
+    .select("id, room_id, user_id, body, attachment_url, attachment_name, reply_to_message_id, created_at")
     .eq("room_id", roomId)
     .order("created_at", { ascending: true });
 
@@ -166,11 +166,18 @@ export async function getMessages(roomId: string): Promise<ChatMessageRow[]> {
   return (data ?? []) as ChatMessageRow[];
 }
 
+function sanitizeAttachmentName(name: string | null | undefined): string | null {
+  const base = (name ?? "").trim().replace(/[/\\]/g, "").replace(/\s+/g, " ");
+  if (!base) return null;
+  return base.slice(0, 200);
+}
+
 export async function sendMessage(
   roomId: string,
   body: string,
   attachmentUrl?: string | null,
-  replyToMessageId?: string | null
+  replyToMessageId?: string | null,
+  attachmentName?: string | null
 ): Promise<{ error?: string }> {
   const user = await getAppUser();
   if (!user) return { error: "Not authenticated" };
@@ -185,6 +192,7 @@ export async function sendMessage(
     user_id: user.id,
     body: trimmed || "",
     attachment_url: attachmentUrl ?? null,
+    attachment_name: attachmentUrl ? sanitizeAttachmentName(attachmentName) : null,
     reply_to_message_id: replyToMessageId ?? null,
   });
 

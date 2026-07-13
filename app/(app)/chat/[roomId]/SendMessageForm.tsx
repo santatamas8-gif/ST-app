@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { X, Plus, Send } from "lucide-react";
+import { X, Plus, Send, FileText } from "lucide-react";
 import { sendMessage } from "@/app/actions/chat";
 import { useReply } from "./ReplyContext";
 
@@ -13,6 +13,8 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
   const { replyingTo, setReplyingTo } = useReply();
   const [body, setBody] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [attachmentKind, setAttachmentKind] = useState<"image" | "pdf" | null>(null);
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -30,7 +32,8 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       roomId,
       trimmed,
       attachmentUrl,
-      replyingTo?.messageId ?? null
+      replyingTo?.messageId ?? null,
+      attachmentName
     );
     setLoading(false);
     if (result.error) {
@@ -39,16 +42,27 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
     }
     setBody("");
     setAttachmentUrl(null);
+    setAttachmentKind(null);
+    setAttachmentName(null);
     setReplyingTo(null);
   }
 
+  function isAllowedAttachment(file: File): "image" | "pdf" | null {
+    const name = file.name.toLowerCase();
+    const type = file.type.toLowerCase();
+    if (type.startsWith("image/") || /\.(jpe?g|png|gif|webp)$/i.test(name)) return "image";
+    if (type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+    return null;
+  }
+
   async function processFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      setError("Only images are allowed.");
+    const kind = isAllowedAttachment(file);
+    if (!kind) {
+      setError("Only images and PDF files are allowed.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be 5MB or smaller.");
+      setError("File must be 5MB or smaller.");
       return;
     }
     setError(null);
@@ -61,12 +75,14 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) {
+      const data = (await res.json()) as { url?: string; kind?: "image" | "pdf"; name?: string | null; error?: string };
+      if (!res.ok || !data.url) {
         setError(data.error ?? "Upload failed.");
         return;
       }
       setAttachmentUrl(data.url);
+      setAttachmentKind(data.kind ?? kind);
+      setAttachmentName((data.name ?? file.name).trim() || null);
     } catch {
       setError("Upload failed.");
     } finally {
@@ -154,7 +170,7 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept="image/jpeg,image/png,image/gif,image/webp,.pdf,application/pdf"
         className="hidden"
         onChange={onFileChange}
         disabled={uploading}
@@ -163,18 +179,29 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       {/* Mobile-only: attachment preview above composer */}
       {attachmentUrl && (
         <div className="relative inline-block md:hidden">
-          <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
-            <Image
-              src={attachmentUrl}
-              alt="Attachment"
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          {attachmentKind === "pdf" ? (
+            <div className="flex max-w-[min(100%,16rem)] items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2">
+              <FileText className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
+              <span className="min-w-0 truncate text-xs text-zinc-200">{attachmentName ?? "PDF"}</span>
+            </div>
+          ) : (
+            <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
+              <Image
+                src={attachmentUrl}
+                alt="Attachment"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          )}
           <button
             type="button"
-            onClick={() => setAttachmentUrl(null)}
+            onClick={() => {
+              setAttachmentUrl(null);
+              setAttachmentKind(null);
+              setAttachmentName(null);
+            }}
             className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 py-0.5 text-xs text-white hover:bg-red-600"
           >
             Remove
@@ -194,8 +221,8 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
             onClick={() => fileInputRef.current?.click()}
             disabled={loading || uploading}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-50 md:h-9 md:w-9 md:rounded-lg"
-            aria-label="Add image"
-            title="Add image"
+            aria-label="Add image or PDF"
+            title="Add image or PDF"
           >
             {uploading ? (
               <span className="text-xs">…</span>
@@ -205,18 +232,29 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           </button>
           {attachmentUrl && (
             <div className="relative hidden flex-shrink-0 md:block">
-              <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">
-                <Image
-                  src={attachmentUrl}
-                  alt="Attachment"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
+              {attachmentKind === "pdf" ? (
+                <div className="flex max-w-[10rem] items-center gap-1.5 rounded-lg border border-zinc-600 bg-zinc-800/90 px-2 py-1.5">
+                  <FileText className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
+                  <span className="min-w-0 truncate text-[10px] text-zinc-200">{attachmentName ?? "PDF"}</span>
+                </div>
+              ) : (
+                <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">
+                  <Image
+                    src={attachmentUrl}
+                    alt="Attachment"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => setAttachmentUrl(null)}
+                onClick={() => {
+                  setAttachmentUrl(null);
+                  setAttachmentKind(null);
+                  setAttachmentName(null);
+                }}
                 className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600"
                 aria-label="Remove attachment"
               >
