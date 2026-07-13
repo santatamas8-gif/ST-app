@@ -1,0 +1,377 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Heart, Reply, X } from "lucide-react";
+import { deleteMessage, toggleLike } from "@/app/actions/chat";
+import { useReply } from "./ReplyContext";
+import { LinkPreview, extractFirstUrl } from "./LinkPreview";
+import type { ChatMessageRow } from "@/lib/types";
+
+function formatTime(iso: string | undefined): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatFullDateTime(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const dateStr = d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${dateStr}, ${timeStr}`;
+}
+
+export function MessageBubbleWithActions({
+  message,
+  displayName,
+  isOwn,
+  isAdmin,
+  roomId,
+  likeCount,
+  userLiked,
+  showSender = true,
+  isFirstMessageOfDay = false,
+  dateLabel = "",
+  replyTo = null,
+  actionsOpen = false,
+  onToggleActions,
+  onCloseActions,
+}: {
+  message: ChatMessageRow;
+  displayName: string;
+  isOwn: boolean;
+  isAdmin: boolean;
+  roomId: string;
+  likeCount: number;
+  userLiked: boolean;
+  showSender?: boolean;
+  isFirstMessageOfDay?: boolean;
+  dateLabel?: string;
+  replyTo?: { body: string; senderName: string } | null;
+  actionsOpen?: boolean;
+  onToggleActions?: () => void;
+  onCloseActions?: () => void;
+}) {
+  const router = useRouter();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [liking, setLiking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const canDelete = isOwn || isAdmin;
+  const { setReplyingTo } = useReply();
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lightboxOpen]);
+
+  useEffect(() => {
+    if (!actionsOpen || !onCloseActions) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCloseActions();
+    };
+    const closeIfOutside = (e: MouseEvent | TouchEvent) => {
+      const target = "touches" in e ? (e as TouchEvent).target : (e as MouseEvent).target;
+      if (wrapperRef.current && !wrapperRef.current.contains(target as Node)) onCloseActions();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", closeIfOutside);
+    document.addEventListener("touchstart", closeIfOutside, { passive: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", closeIfOutside);
+      document.removeEventListener("touchstart", closeIfOutside);
+    };
+  }, [actionsOpen, onCloseActions]);
+
+  async function handleCopy() {
+    const text = message.body?.trim() || "";
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    const result = await deleteMessage(message.id, roomId);
+    setDeleting(false);
+    if (!result.error) router.refresh();
+  }
+
+  async function handleLike() {
+    if (liking) return;
+    setLiking(true);
+    const result = await toggleLike(message.id, roomId);
+    setLiking(false);
+    if (result.error) {
+      console.error("Like failed:", result.error);
+    } else {
+      router.refresh();
+    }
+  }
+
+  const label = isOwn ? "You" : displayName;
+  const time = formatTime(message.created_at);
+  const fullDateTime = formatFullDateTime(message.created_at);
+  const showHeaderDateTime = isFirstMessageOfDay && dateLabel && time;
+  const isImage =
+    message.attachment_url &&
+    /\.(jpe?g|png|gif|webp)(\?|$)/i.test(message.attachment_url);
+
+  /* For own messages: don't show time in header (it goes at bottom-right of bubble). For others: show time in header when first of day. */
+  const showTimeInHeader = showHeaderDateTime && !isOwn;
+  const hasHeaderContent = showSender || showTimeInHeader;
+  return (
+    <div
+      className={`group flex flex-col ${hasHeaderContent ? "gap-1" : "gap-0"} ${isOwn ? "items-end" : "items-start"}`}
+    >
+      {hasHeaderContent && (
+        <div className={`flex min-h-[1.25rem] flex-wrap items-baseline gap-x-2 gap-y-0.5 ${isOwn ? "flex-row-reverse" : ""}`}>
+          {showSender && (
+            <span className="text-xs font-medium text-zinc-300">
+              {label}
+            </span>
+          )}
+          {showTimeInHeader && (
+            <span className="text-[10px] text-zinc-500 tabular-nums">
+              {time}
+            </span>
+          )}
+        </div>
+      )}
+      <div
+        ref={wrapperRef}
+        className={`flex w-fit max-w-[min(80%,calc(100vw-2rem))] flex-col lg:max-w-[min(85%,20rem)] ${isOwn ? "items-end" : "items-start"}`}
+      >
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onToggleActions?.()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onToggleActions?.();
+            }
+          }}
+          className={`cursor-pointer rounded-2xl border px-3 py-2 shadow-sm lg:px-3.5 lg:py-2.5 ${
+            isOwn
+              ? "border-emerald-500/20 bg-emerald-500/20 text-white"
+              : "border-zinc-700/50 bg-zinc-800/90 text-zinc-200"
+          }`}
+          title={fullDateTime ? `Sent ${fullDateTime}` : "Click to show options"}
+          aria-label="Toggle message options"
+        >
+        {replyTo && (
+          <div
+            className={`mb-2 rounded-lg border-l-2 pl-2.5 text-xs ${
+              isOwn ? "border-emerald-400/40 text-white/90" : "border-zinc-500/80 text-zinc-400"
+            }`}
+          >
+            <span className={`font-medium ${isOwn ? "text-white/90" : "text-zinc-300"}`}>{replyTo.senderName}</span>
+            {replyTo.body && (
+              <span className={`mt-0.5 block truncate ${isOwn ? "text-white/70" : "text-zinc-500"}`}>
+                {replyTo.body.length > 60 ? replyTo.body.slice(0, 60) + "…" : replyTo.body}
+              </span>
+            )}
+          </div>
+        )}
+        {message.body ? (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.body}</p>
+        ) : null}
+        {message.body && extractFirstUrl(message.body) && (
+          <LinkPreview url={extractFirstUrl(message.body)!} isOwn={isOwn} />
+        )}
+        {message.attachment_url ? (
+          isImage ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxOpen(true);
+                }}
+                className="mt-2 block max-h-48 overflow-hidden rounded-xl text-left"
+                aria-label="Open image"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={message.attachment_url}
+                  alt="Attachment"
+                  className="max-h-48 max-w-full cursor-pointer rounded-xl object-contain hover:opacity-95"
+                />
+              </button>
+              {lightboxOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Image preview"
+                  onClick={() => setLightboxOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setLightboxOpen(false)}
+                    className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+                    aria-label="Close"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                  <a
+                    href={message.attachment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="max-h-[90vh] max-w-[90vw]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={message.attachment_url}
+                      alt="Attachment"
+                      className="max-h-[90vh] max-w-full rounded object-contain"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </a>
+                </div>
+              )}
+            </>
+          ) : (
+            <a
+              href={message.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-emerald-400 underline decoration-emerald-500/50 hover:decoration-emerald-400"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Attachment
+            </a>
+          )
+        ) : null}
+        {likeCount > 0 && (
+          <div
+            className={`mt-1.5 flex items-center gap-1 ${isOwn ? "justify-end" : "justify-start"}`}
+            aria-label={`${likeCount} like${likeCount !== 1 ? "s" : ""}`}
+          >
+            <Heart
+              className={`h-3.5 w-3.5 ${userLiked ? "fill-emerald-400 text-emerald-400" : "text-zinc-500"}`}
+              aria-hidden
+            />
+            <span className={`text-[10px] ${userLiked && isOwn ? "text-white/60" : userLiked ? "text-emerald-400" : "text-zinc-500"}`}>
+              {likeCount}
+            </span>
+          </div>
+        )}
+        </div>
+        {actionsOpen && (
+          <div
+            role="menu"
+            className="relative z-10 mt-0.5 flex max-w-[min(100vw-2rem,20rem)] flex-wrap items-center gap-0.5 rounded-lg border border-zinc-700/50 bg-zinc-800/90 px-1 py-0.5 shadow-sm lg:rounded-md lg:border-zinc-700/40 lg:bg-zinc-800/95 lg:px-1.5 lg:py-1"
+            style={{ borderColor: "var(--card-border)" }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {time && (
+              <span
+                className="mr-1 border-r border-zinc-600/80 pr-1 text-[10px] text-zinc-500 tabular-nums lg:mr-1.5 lg:pr-1.5"
+                aria-hidden
+              >
+                {time}
+              </span>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                disabled={deleting}
+                className="min-h-[28px] min-w-[28px] rounded px-1.5 py-0.5 text-[10px] text-red-400 hover:bg-red-500/15 disabled:opacity-50 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
+                title="Delete message"
+              >
+                {deleting ? "…" : "Delete"}
+              </button>
+            )}
+            {message.body?.trim() && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopy();
+                }}
+                className="min-h-[28px] min-w-[28px] rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-white/10 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
+                title="Copy"
+                aria-label="Copy message"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            )}
+            <form
+              action={async () => {
+                await handleLike();
+              }}
+              className="contents"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="submit"
+                disabled={liking}
+                className={`flex min-h-[28px] min-w-[28px] items-center justify-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] disabled:opacity-50 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px] ${
+                  userLiked ? "text-emerald-400 hover:bg-emerald-500/15" : "text-zinc-400 hover:bg-white/10"
+                }`}
+                title={userLiked ? "Unlike" : "Like"}
+                aria-label={userLiked ? "Unlike" : "Like"}
+              >
+                <Heart
+                  className={`h-2.5 w-2.5 pointer-events-none lg:h-3 lg:w-3 ${userLiked ? "fill-emerald-400 text-emerald-400" : ""}`}
+                  aria-hidden
+                />
+                {likeCount > 0 && <span className="pointer-events-none">{likeCount}</span>}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setReplyingTo({
+                  messageId: message.id,
+                  body: message.body?.trim() || "",
+                  senderName: label,
+                });
+                onCloseActions?.();
+              }}
+              className="flex min-h-[28px] min-w-[28px] items-center justify-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-white/10 lg:min-h-[32px] lg:min-w-[32px] lg:rounded-md lg:px-2 lg:py-1 lg:text-[11px]"
+              title="Reply"
+              aria-label="Reply"
+            >
+              <Reply className="h-2.5 w-2.5 lg:h-3 lg:w-3" />
+              <span>Reply</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

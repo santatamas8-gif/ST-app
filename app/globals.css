@@ -1,0 +1,426 @@
+@import "tailwindcss";
+
+:root {
+  /* Slightly lighter dark (less oppressive) */
+  --background: #0f1216;
+  --foreground: #fafafa;
+  --page-bg: #13171c;
+  --card-bg: #181d24;
+  --card-border: #2d3239;
+  /* Depth: softer shadows and glow */
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --card-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --card-glow: 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+
+/* Schedule card text: subtle shadow for legibility on gradient */
+.schedule-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* Neon theme cards: text shadow for legibility on green gradient */
+.neon-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Matt theme cards: text shadow so text is readable everywhere (like neon, but no color) */
+.matt-card-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Dashboard charts: legend and axis text visible on neon/matt dark cards */
+.chart-high-contrast .recharts-legend-item-text {
+  fill: rgba(255, 255, 255, 0.92) !important;
+}
+.chart-high-contrast .recharts-cartesian-axis-tick-value {
+  fill: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Today's Schedule: CSS-only ticker – pixel-based; translateZ(0) keeps compositor layer across loop */
+@keyframes schedule-ticker-scroll {
+  0% { transform: translateX(0) translateZ(0); }
+  100% { transform: translateX(calc(-1 * var(--ticker-segment-width, 600px))) translateZ(0); }
+}
+/* Reduce jitter at loop reset: own compositor layer, no subpixel jump */
+.schedule-ticker-track {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Schedule bottom sheet – mobile: from top to bottom so header is always visible */
+@media (max-width: 767px) {
+  .schedule-sheet-panel {
+    top: 0 !important;
+    bottom: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
+  }
+}
+
+/* Schedule Add program sheet (ScheduleCalendar) – mobile: full height from top so header visible */
+@media (max-width: 767px) {
+  .schedule-add-sheet-panel {
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: none !important;
+    height: 100dvh !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Today's Schedule strip: hide scrollbar completely (no manual scroll) */
+.schedule-strip-scroll {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.schedule-strip-scroll::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.schedule-strip-scroll::-webkit-scrollbar-track,
+.schedule-strip-scroll::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Desktop chat: subtle dark scrollbar (STAMS theme) */
+.chat-message-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #52525b #27272a;
+}
+.chat-message-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-message-scroll::-webkit-scrollbar-track {
+  background: #27272a;
+}
+.chat-message-scroll::-webkit-scrollbar-thumb {
+  background: #52525b;
+  border-radius: 4px;
+}
+.chat-message-scroll::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
+}
+
+/* Login page: stadium / sports-field atmosphere – dark, soft distant lights, green glow, non-distracting */
+.login-page-bg {
+  background: #080a0c;
+  background-image:
+    /* Distant stadium-style lights along top */
+    radial-gradient(ellipse 140% 60% at 20% -10%, rgba(16, 185, 129, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 120% 50% at 80% -5%, rgba(34, 197, 94, 0.12) 0%, transparent 50%),
+    /* Softer green glow accents lower */
+    radial-gradient(ellipse 100% 70% at 0% 100%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 60% at 100% 95%, rgba(16, 185, 129, 0.06) 0%, transparent 45%),
+    /* Central vignette so card area stays calm */
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(8, 10, 12, 0.7) 0%, transparent 70%),
+    linear-gradient(180deg, #080a0c 0%, #0a0d10 30%, #0c0f12 60%, #080a0c 100%);
+}
+
+/* Login page: glass-style card – translucent, blur, soft glow (desktop + mobile) */
+.login-card {
+  background: rgba(17, 24, 28, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 48px -8px rgba(16, 185, 129, 0.12);
+}
+
+/* Login inputs: subtle emerald glow on focus */
+.login-input:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Login Sign in button: slight glow */
+.login-signin-btn:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+.login-signin-btn:not(:disabled):hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Print: hide sidebar/nav; main content (e.g. wellness table) prints; preserve colors in PDF */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  /* Force background and text colors to appear in print/PDF (desktop wellness export) */
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Tailwind v4: @theme is valid; IDE may show "Unknown at rule" – safe to ignore */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  /* Depth: center "lift" + top tint + dot pattern (lighter on light theme) */
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 35%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px);
+  background-size: auto, auto, 20px 20px;
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 35%, rgba(0, 0, 0, 0.02) 0%, transparent 60%),
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(16, 185, 129, 0.04) 0%, transparent 50%),
+    radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+}
+
+/* Scale slider track: red (low) to green (high) – same on all viewports including mobile */
+input.scale-input-track {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.scale-input-track::-webkit-slider-runnable-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #dc2626 0%, #ea580c 50%, #16a34a 100%) !important;
+}
+.scale-input-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  margin-top: -5px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.scale-input-track::-moz-range-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #dc2626 0%, #ea580c 50%, #16a34a 100%) !important;
+}
+.scale-input-track::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+/* RPE slider: green (easy) → red (hard) */
+input.rpe-input-track {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.rpe-input-track::-webkit-slider-runnable-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #16a34a 0%, #ea580c 50%, #dc2626 100%) !important;
+}
+.rpe-input-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  margin-top: -5px;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.rpe-input-track::-moz-range-track {
+  height: var(--track-h, 8px);
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #16a34a 0%, #ea580c 50%, #dc2626 100%) !important;
+}
+.rpe-input-track::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--thumb-color, #16a34a);
+  cursor: pointer;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+@media (min-width: 768px) {
+  .kiosk-wellness-form,
+  .kiosk-wellness-form .wellness-player-form {
+    max-width: none;
+  }
+}
+
+/* Kiosk RPE tablet: some tablets report a narrow mobile viewport, so also key off device width. */
+@media (min-width: 430px), (min-device-width: 700px) and (orientation: portrait) {
+  .kiosk-global-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(5.5rem, 0.65fr);
+  }
+
+  .kiosk-player-grid {
+    grid-template-columns: 44px minmax(0, 8rem) minmax(0, 1fr) 5.5rem;
+    align-items: center;
+  }
+
+  .kiosk-rpe-cell {
+    grid-column: 3 / 4;
+    grid-row: 1;
+  }
+
+  .kiosk-rpe-buttons {
+    gap: 0.125rem;
+  }
+
+  .kiosk-rpe-button {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .kiosk-meaning-cell {
+    grid-column: 4 / 5;
+    grid-row: 1;
+    width: 100%;
+    min-height: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    line-height: 1.05;
+  }
+
+  .kiosk-player-controls-cell {
+    grid-column: 3 / 4;
+    grid-row: 2;
+    padding-top: 0;
+    border-top: 0;
+    gap: 0.25rem;
+  }
+
+  .kiosk-player-controls-cell select,
+  .kiosk-player-controls-cell input {
+    height: 1.625rem;
+    font-size: 0.6875rem;
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+
+  .kiosk-status-cell {
+    grid-column: 4 / 5;
+    grid-row: 2;
+    width: 100%;
+    min-height: 1.625rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+    overflow: hidden;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .kiosk-player-row-line {
+    min-height: 5.5rem !important;
+    gap: 0.625rem !important;
+  }
+
+  .kiosk-player-fixed {
+    flex-basis: 5.75rem !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    min-height: 4.75rem !important;
+  }
+
+  .kiosk-player-fixed > div:first-child {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+
+  .kiosk-player-name {
+    display: -webkit-box !important;
+    font-size: 0.875rem !important;
+    max-width: 5.75rem !important;
+    min-height: 1.8rem !important;
+    overflow: hidden !important;
+    text-align: center !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    line-height: 1.1 !important;
+  }
+
+  .kiosk-row-scroll-content {
+    gap: 0.5rem !important;
+  }
+
+  .kiosk-row-rpe-button {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    font-size: 1.125rem !important;
+  }
+
+  .kiosk-row-meaning,
+  .kiosk-row-load {
+    min-height: 2.5rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  .kiosk-row-meaning {
+    min-width: 8.75rem !important;
+  }
+
+  .kiosk-row-status {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .kiosk-row-select {
+    height: 2.5rem !important;
+    font-size: 0.875rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .kiosk-row-duration {
+    width: 4.25rem !important;
+    height: 2.5rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .kiosk-row-min-label {
+    font-size: 0.875rem !important;
+  }
+
+  .kiosk-wellness-form {
+    max-width: none;
+  }
+
+  .kiosk-wellness-form .wellness-player-form {
+    max-width: none;
+  }
+}
+

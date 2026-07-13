@@ -1,0 +1,7 @@
+-- Supabase Storage bucket for strength exercise images (public read).
+-- The upload API creates this bucket automatically if missing.
+-- Optional manual setup in Dashboard → Storage → New bucket:
+--   Name: strength-exercise-images
+--   Public: yes
+--   File size limit: 3MB
+--   MIME types: image/jpeg, image/png, image/webp
