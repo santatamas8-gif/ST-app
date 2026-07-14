@@ -182,7 +182,7 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           {attachmentKind === "pdf" ? (
             <div className="flex max-w-[min(100%,16rem)] items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2">
               <FileText className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
-              <span className="min-w-0 truncate text-xs text-zinc-200">{attachmentName ?? "PDF"}</span>
+              <span className="min-w-0 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{attachmentName ?? "PDF"}</span>
             </div>
           ) : (
             <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">

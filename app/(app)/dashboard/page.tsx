@@ -367,28 +367,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {!allDone && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-            <span className="text-sm font-medium text-amber-400">To do:</span>
-            {!wellnessSubmitted && (
-              <Link
-                href="/wellness"
-                className="rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-500/30"
-              >
-                Wellness
-              </Link>
-            )}
-            {!rpeSubmitted && (
-              <Link
-                href="/rpe"
-                className="rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-300 hover:bg-amber-500/30"
-              >
-                RPE
-              </Link>
-            )}
-          </div>
-        )}
-
         {/* Today's Schedule – horizontal timeline strip */}
         <section>
           <h2 className={`mb-3 flex flex-wrap items-center gap-2 border-b pb-2 text-lg font-semibold text-white md:mb-4 ${isHighContrast ? "border-white/25" : "border-zinc-700/80"}`}>

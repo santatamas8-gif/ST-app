@@ -165,7 +165,7 @@ export function MessageBubbleWithActions({
       )}
       <div
         ref={wrapperRef}
-        className={`flex w-fit max-w-[min(80%,calc(100vw-2rem))] flex-col lg:max-w-[min(85%,20rem)] ${isOwn ? "items-end" : "items-start"}`}
+        className={`flex min-w-0 max-w-[85%] flex-col sm:max-w-[min(80%,20rem)] lg:max-w-[min(85%,20rem)] ${isOwn ? "ml-auto items-end" : "items-start"}`}
       >
         <div
           role="button"
@@ -177,7 +177,7 @@ export function MessageBubbleWithActions({
               onToggleActions?.();
             }
           }}
-          className={`cursor-pointer rounded-2xl border px-3 py-2 shadow-sm lg:px-3.5 lg:py-2.5 ${
+          className={`min-w-0 max-w-full cursor-pointer rounded-2xl border px-3 py-2 shadow-sm lg:px-3.5 lg:py-2.5 ${
             isOwn
               ? "border-emerald-500/20 bg-emerald-500/20 text-white"
               : "border-zinc-700/50 bg-zinc-800/90 text-zinc-200"
@@ -200,7 +200,7 @@ export function MessageBubbleWithActions({
           </div>
         )}
         {message.body ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.body}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{message.body}</p>
         ) : null}
         {message.body && extractFirstUrl(message.body) && (
           <LinkPreview url={extractFirstUrl(message.body)!} isOwn={isOwn} />
@@ -264,16 +264,16 @@ export function MessageBubbleWithActions({
               target="_blank"
               rel="noopener noreferrer"
               download={message.attachment_name ?? undefined}
-              className={`mt-2 flex max-w-full items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+              className={`mt-2 flex min-w-0 max-w-full items-start gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
                 isOwn
                   ? "border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20"
                   : "border-zinc-600/80 bg-zinc-900/50 hover:bg-zinc-900"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <FileText className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
+              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-red-400" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className={`block truncate text-sm font-medium ${isOwn ? "text-white" : "text-zinc-200"}`}>
+                <span className={`block break-words text-sm font-medium [overflow-wrap:anywhere] ${isOwn ? "text-white" : "text-zinc-200"}`}>
                   {attachmentLabel}
                 </span>
                 <span className={`text-xs ${isOwn ? "text-white/70" : "text-zinc-500"}`}>Tap to open</span>
