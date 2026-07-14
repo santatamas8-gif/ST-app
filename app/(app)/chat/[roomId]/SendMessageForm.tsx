@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { X, Plus, Send, FileText } from "lucide-react";
 import { sendMessage } from "@/app/actions/chat";
+import { shortenAttachmentName } from "@/lib/chat/attachmentDisplay";
 import { useReply } from "./ReplyContext";
 
 const DESKTOP_TEXTAREA_MIN_H = 40;
@@ -180,9 +181,11 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       {attachmentUrl && (
         <div className="relative inline-block md:hidden">
           {attachmentKind === "pdf" ? (
-            <div className="flex max-w-[min(100%,16rem)] items-center gap-2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2">
-              <FileText className="h-5 w-5 shrink-0 text-red-400" aria-hidden />
-              <span className="min-w-0 break-words text-xs text-zinc-200 [overflow-wrap:anywhere]">{attachmentName ?? "PDF"}</span>
+            <div className="flex max-w-[min(100%,14rem)] items-center gap-1.5 rounded-lg border border-zinc-600 bg-zinc-800 px-2 py-1.5">
+              <FileText className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
+              <span className="min-w-0 truncate text-xs text-zinc-200" title={attachmentName ?? undefined}>
+                {attachmentName ? shortenAttachmentName(attachmentName) : "PDF"}
+              </span>
             </div>
           ) : (
             <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-600 bg-zinc-800">
@@ -233,9 +236,11 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
           {attachmentUrl && (
             <div className="relative hidden flex-shrink-0 md:block">
               {attachmentKind === "pdf" ? (
-                <div className="flex max-w-[10rem] items-center gap-1.5 rounded-lg border border-zinc-600 bg-zinc-800/90 px-2 py-1.5">
-                  <FileText className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
-                  <span className="min-w-0 truncate text-[10px] text-zinc-200">{attachmentName ?? "PDF"}</span>
+                <div className="flex max-w-[9rem] items-center gap-1.5 rounded-lg border border-zinc-600 bg-zinc-800/90 px-2 py-1">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-red-400" aria-hidden />
+                  <span className="min-w-0 truncate text-[10px] text-zinc-200" title={attachmentName ?? undefined}>
+                    {attachmentName ? shortenAttachmentName(attachmentName, 20) : "PDF"}
+                  </span>
                 </div>
               ) : (
                 <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-zinc-600">

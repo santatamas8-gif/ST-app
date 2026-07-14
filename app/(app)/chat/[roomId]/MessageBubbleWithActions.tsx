@@ -6,6 +6,7 @@ import { Heart, Reply, X, FileText } from "lucide-react";
 import { deleteMessage, toggleLike } from "@/app/actions/chat";
 import { useReply } from "./ReplyContext";
 import { LinkPreview, extractFirstUrl } from "./LinkPreview";
+import { shortenAttachmentName } from "@/lib/chat/attachmentDisplay";
 import type { ChatMessageRow } from "@/lib/types";
 
 function formatTime(iso: string | undefined): string {
@@ -141,6 +142,7 @@ export function MessageBubbleWithActions({
     message.attachment_url &&
     /\.pdf(\?|$)/i.test(message.attachment_url);
   const attachmentLabel = message.attachment_name?.trim() || (isPdf ? "PDF document" : "Attachment");
+  const pdfDisplayName = isPdf ? shortenAttachmentName(attachmentLabel) : attachmentLabel;
 
   /* For own messages: don't show time in header (it goes at bottom-right of bubble). For others: show time in header when first of day. */
   const showTimeInHeader = showHeaderDateTime && !isOwn;
@@ -264,19 +266,20 @@ export function MessageBubbleWithActions({
               target="_blank"
               rel="noopener noreferrer"
               download={message.attachment_name ?? undefined}
-              className={`mt-2 flex min-w-0 max-w-full items-start gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+              title={attachmentLabel}
+              className={`mt-1.5 flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left transition-colors ${
                 isOwn
                   ? "border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20"
                   : "border-zinc-600/80 bg-zinc-900/50 hover:bg-zinc-900"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-red-400" aria-hidden />
+              <FileText className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className={`block break-words text-sm font-medium [overflow-wrap:anywhere] ${isOwn ? "text-white" : "text-zinc-200"}`}>
-                  {attachmentLabel}
+                <span className={`block truncate text-xs font-medium ${isOwn ? "text-white" : "text-zinc-200"}`}>
+                  {pdfDisplayName}
                 </span>
-                <span className={`text-xs ${isOwn ? "text-white/70" : "text-zinc-500"}`}>Tap to open</span>
+                <span className={`text-[10px] ${isOwn ? "text-white/70" : "text-zinc-500"}`}>Tap to open</span>
               </span>
             </a>
           ) : (
