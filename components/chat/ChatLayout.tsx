@@ -42,6 +42,17 @@ export function ChatLayout({
   // Realtime: any new message → revalidate layout so sidebar (last message, timestamp, unread) stays fresh
   useEffect(() => {
     const supabase = createClient();
+    const scheduleSidebarRefresh = (roomId?: string, force = false) => {
+      const currentRoomMatch = pathname?.match(/^\/chat\/([^/]+)$/);
+      const currentRoomId = currentRoomMatch?.[1];
+      if (!force && roomId && currentRoomId === roomId) return;
+      if (sidebarRefreshTimeoutRef.current) clearTimeout(sidebarRefreshTimeoutRef.current);
+      sidebarRefreshTimeoutRef.current = setTimeout(() => {
+        sidebarRefreshTimeoutRef.current = null;
+        revalidateChatLayout().then(() => router.refresh());
+      }, SIDEBAR_REFRESH_DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel("chat-sidebar-refresh")
       .on(
@@ -52,15 +63,18 @@ export function ChatLayout({
           table: "chat_messages",
         },
         (payload: { new?: { room_id?: string } }) => {
-          const roomId = payload.new?.room_id;
-          const currentRoomMatch = pathname?.match(/^\/chat\/([^/]+)$/);
-          const currentRoomId = currentRoomMatch?.[1];
-          if (roomId && currentRoomId === roomId) return;
-          if (sidebarRefreshTimeoutRef.current) clearTimeout(sidebarRefreshTimeoutRef.current);
-          sidebarRefreshTimeoutRef.current = setTimeout(() => {
-            sidebarRefreshTimeoutRef.current = null;
-            revalidateChatLayout().then(() => router.refresh());
-          }, SIDEBAR_REFRESH_DEBOUNCE_MS);
+          scheduleSidebarRefresh(payload.new?.room_id);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "chat_messages",
+        },
+        (payload: { old?: { room_id?: string } }) => {
+          scheduleSidebarRefresh(payload.old?.room_id, true);
         }
       )
       .subscribe();

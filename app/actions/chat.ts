@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUser, isAdmin } from "@/lib/auth";
+import { CHAT_ATTACHMENTS_BUCKET, chatAttachmentPathFromUrl } from "@/lib/chat/attachmentStorage";
 import { revalidatePath } from "next/cache";
 import type { ChatRoomRow, ChatMessageRow, ChatRoomMemberRow } from "@/lib/types";
 
@@ -220,11 +222,12 @@ export async function deleteMessage(messageId: string, roomId: string): Promise<
   const supabase = await createClient();
   const { data: message, error: fetchError } = await supabase
     .from("chat_messages")
-    .select("user_id")
+    .select("user_id, room_id, attachment_url")
     .eq("id", messageId)
     .maybeSingle();
   if (fetchError) return { error: fetchError.message };
   if (!message) return { error: "Message not found." };
+  if (message.room_id !== roomId) return { error: "Message not found in this room." };
   const isOwn = message.user_id === user.id;
   if (!isOwn && !isAdmin(user.role)) {
     return { error: "You can only delete your own messages." };
@@ -232,7 +235,19 @@ export async function deleteMessage(messageId: string, roomId: string): Promise<
 
   const { error } = await supabase.from("chat_messages").delete().eq("id", messageId);
   if (error) return { error: error.message };
+
+  const storagePath = chatAttachmentPathFromUrl(message.attachment_url);
+  if (storagePath) {
+    try {
+      const admin = createAdminClient();
+      await admin.storage.from(CHAT_ATTACHMENTS_BUCKET).remove([storagePath]);
+    } catch {
+      // Message is already gone from chat; storage cleanup is best-effort.
+    }
+  }
+
   revalidatePath(`/chat/${roomId}`);
+  revalidatePath("/chat");
   return {};
 }
 

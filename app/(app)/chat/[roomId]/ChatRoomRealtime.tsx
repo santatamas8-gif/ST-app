@@ -12,6 +12,14 @@ export function ChatRoomRealtime({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     const supabase = createClient();
+    const scheduleRefresh = () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshTimeoutRef.current = null;
+        router.refresh();
+      }, REFRESH_DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel(`chat:${roomId}`)
       .on(
@@ -22,13 +30,17 @@ export function ChatRoomRealtime({ roomId }: { roomId: string }) {
           table: "chat_messages",
           filter: `room_id=eq.${roomId}`,
         },
-        () => {
-          if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-          refreshTimeoutRef.current = setTimeout(() => {
-            refreshTimeoutRef.current = null;
-            router.refresh();
-          }, REFRESH_DEBOUNCE_MS);
-        }
+        scheduleRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `room_id=eq.${roomId}`,
+        },
+        scheduleRefresh
       )
       .subscribe();
 

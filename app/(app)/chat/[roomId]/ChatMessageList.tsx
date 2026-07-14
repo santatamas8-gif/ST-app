@@ -60,6 +60,26 @@ export function ChatMessageList({
   const prevLengthRef = useRef(messages.length);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [openMessageId, setOpenMessageId] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setRemovedIds((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of prev) {
+        if (!messages.some((m) => m.id === id)) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [messages]);
+
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => !removedIds.has(m.id)),
+    [messages, removedIds]
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -71,7 +91,7 @@ export function ChatMessageList({
     check();
     el.addEventListener("scroll", check);
     return () => el.removeEventListener("scroll", check);
-  }, [messages.length]);
+  }, [visibleMessages.length]);
 
   function scrollToBottom() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -104,14 +124,14 @@ export function ChatMessageList({
   }, [messages.length]);
 
   const firstUnreadId = useMemo(
-    () => (lastReadAt ? messages.find((m) => m.created_at && m.created_at > lastReadAt)?.id : undefined),
-    [lastReadAt, messages]
+    () => (lastReadAt ? visibleMessages.find((m) => m.created_at && m.created_at > lastReadAt)?.id : undefined),
+    [lastReadAt, visibleMessages]
   );
   const messageById = useMemo(() => {
     const byId = new Map<string, ChatMessageRow>();
-    for (const message of messages) byId.set(message.id, message);
+    for (const message of visibleMessages) byId.set(message.id, message);
     return byId;
-  }, [messages]);
+  }, [visibleMessages]);
   let lastDateKey = "";
 
   return (
@@ -123,7 +143,7 @@ export function ChatMessageList({
       >
         {/* Inner container = centered content column with max-width; mobile: comfortable padding and bottom space above composer + safe area */}
         <div className="mx-auto w-full min-w-0 max-w-[880px] px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-24 pt-3 lg:px-3 lg:pb-24 lg:pl-3 lg:pr-3 lg:pt-4">
-          {messages.length === 0 ? (
+          {visibleMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <MessageCircle
                 className="mb-4 h-14 w-14 text-zinc-600"
@@ -135,11 +155,11 @@ export function ChatMessageList({
             </div>
           ) : (
         <ul className="space-y-0">
-          {messages.map((m, i) => {
+          {visibleMessages.map((m, i) => {
             const dateKey = m.created_at ? m.created_at.slice(0, 10) : "";
             const showDate = dateKey !== lastDateKey;
             if (showDate) lastDateKey = dateKey;
-            const prev = messages[i - 1];
+            const prev = visibleMessages[i - 1];
             const startOfGroup = isStartOfGroup(m, prev, prev?.created_at ? prev.created_at.slice(0, 10) : "");
             const showSender = startOfGroup;
             const isConsecutiveInGroup = prev && !startOfGroup;
@@ -171,6 +191,10 @@ export function ChatMessageList({
                 actionsOpen={openMessageId === m.id}
                 onToggleActions={() => setOpenMessageId((id) => (id === m.id ? null : m.id))}
                 onCloseActions={() => setOpenMessageId(null)}
+                onDeleted={() => {
+                  setRemovedIds((prev) => new Set(prev).add(m.id));
+                  setOpenMessageId((id) => (id === m.id ? null : id));
+                }}
               />
             );
             return (
