@@ -111,7 +111,6 @@ function timeToHHmm(s: string | null | undefined): string | null {
 function scoreBandClassGoodHigh(value: number | null | undefined): string {
   // Mirror `BadgeScore` (goodHigh): 1–4 red, 5–7 yellow, 8+ green
   if (value == null || value === 0) return "bg-zinc-700/60";
-  // Slightly stronger fill for the mini-bar (still same hue logic as the badge).
   if (value <= 4) return "bg-red-500/80";
   if (value <= 7) return "bg-yellow-400/80";
   return "bg-emerald-400/80";
@@ -119,6 +118,12 @@ function scoreBandClassGoodHigh(value: number | null | undefined): string {
 
 function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
+}
+
+function sleepDurationTextClass(hours: number): string {
+  if (hours >= 8) return "text-emerald-300";
+  if (hours >= 5) return "text-yellow-300";
+  return "text-red-300";
 }
 
 function MiniScoreBar({
@@ -477,7 +482,7 @@ export function StaffWellnessView({
                               <button
                                 type="button"
                                 onClick={() => setModalUserId(r.user_id)}
-                                className="min-h-[40px] rounded font-medium text-emerald-400 hover:underline"
+                                className="min-h-[40px] rounded font-medium text-white hover:text-white/90 hover:underline"
                               >
                                 {displayName}
                               </button>
@@ -496,12 +501,12 @@ export function StaffWellnessView({
                           </td>
                           <td className="px-4 py-2">
                             {r.illness === true ? (
-                              <span className="rounded bg-red-500/20 px-2 py-1 text-sm font-semibold text-red-300">Yes</span>
+                              <span className="text-sm font-semibold text-red-300">Yes</span>
                             ) : (
-                              <span className="rounded bg-emerald-500/30 px-2 py-1 text-sm font-semibold text-emerald-300">No</span>
+                              <span className="text-sm font-semibold text-emerald-300">No</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 font-mono tabular-nums">
+                          <td className="px-3 py-2 font-mono tabular-nums text-white">
                             {timeToHHmm(r.bed_time) != null && timeToHHmm(r.wake_time) != null
                               ? `${timeToHHmm(r.bed_time)} – ${timeToHHmm(r.wake_time)}`
                               : timeToHHmm(r.bed_time) ?? timeToHHmm(r.wake_time) ?? "—"}
@@ -509,14 +514,7 @@ export function StaffWellnessView({
                           <td className="px-3 py-2">
                             {r.sleep_duration != null ? (
                               <span
-                                className="inline-flex min-w-[2.75rem] justify-center rounded-md px-2.5 py-1 tabular-nums font-semibold"
-                                style={
-                                  r.sleep_duration >= 8
-                                    ? { backgroundColor: "rgba(16, 185, 129, 0.25)", color: "#34d399" }
-                                    : r.sleep_duration >= 5
-                                      ? { backgroundColor: "rgba(234, 179, 8, 0.3)", color: "#fde047" }
-                                      : { backgroundColor: "rgba(220, 38, 38, 0.3)", color: "#fecaca" }
-                                }
+                                className={`inline-flex min-w-[2.75rem] justify-center tabular-nums text-sm font-semibold ${sleepDurationTextClass(r.sleep_duration)}`}
                               >
                                 {formatSleepDuration(r.sleep_duration)}h
                               </span>
@@ -525,34 +523,34 @@ export function StaffWellnessView({
                             )}
                           </td>
                           <td className="px-2 py-2 text-center">
-                            <BadgeScore value={r.sleep_quality} type="goodHigh" />
+                            <BadgeScore value={r.sleep_quality} type="goodHigh" plain />
                           </td>
                           <td className="px-2 py-2 text-center">
                             <span className="inline-flex items-center justify-center gap-1" title={r.fatigue ? `Fatigue: ${r.fatigue}/10` : undefined}>
                               <MiniScoreBar label="Fatigue" value={r.fatigue} isHighContrast={isHighContrast} />
-                              <BadgeScore value={r.fatigue} type="goodHigh" />
+                              <BadgeScore value={r.fatigue} type="goodHigh" plain />
                             </span>
                           </td>
                           <td className="px-2 py-2 text-center">
                             <span className="inline-flex items-center justify-center gap-1" title={r.soreness ? `Soreness: ${r.soreness}/10` : undefined}>
                               <MiniScoreBar label="Soreness" value={r.soreness} isHighContrast={isHighContrast} />
-                              <BadgeScore value={r.soreness} type="goodHigh" />
+                              <BadgeScore value={r.soreness} type="goodHigh" plain />
                             </span>
                           </td>
                           <td className="px-2 py-2 text-center">
                             <span className="inline-flex items-center justify-center gap-1" title={r.stress ? `Stress: ${r.stress}/10` : undefined}>
                               <MiniScoreBar label="Stress" value={r.stress} isHighContrast={isHighContrast} />
-                              <BadgeScore value={r.stress} type="goodHigh" />
+                              <BadgeScore value={r.stress} type="goodHigh" plain />
                             </span>
                           </td>
                           <td className="px-2 py-2 text-center">
                             <span className="inline-flex items-center justify-center gap-1" title={r.mood ? `Mood: ${r.mood}/10` : undefined}>
                               <MiniScoreBar label="Mood" value={r.mood} isHighContrast={isHighContrast} />
-                              <BadgeScore value={r.mood} type="goodHigh" />
+                              <BadgeScore value={r.mood} type="goodHigh" plain />
                             </span>
                           </td>
                           <td className={`border-l px-2 py-2 text-center ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
-                            <BadgeScore value={wellnessAverageFromRow(r)} type="goodHigh" />
+                            <BadgeScore value={wellnessAverageFromRow(r)} type="goodHigh" plain />
                           </td>
                         </RiskRowHighlight>
                       );
@@ -565,7 +563,7 @@ export function StaffWellnessView({
                           Team average
                         </td>
                         <td className={`border-l px-2 py-2.5 text-center ${isHighContrast ? "border-white/20" : "border-zinc-600"}`}>
-                          <BadgeScore value={teamReadinessAvg} type="goodHigh" />
+                          <BadgeScore value={teamReadinessAvg} type="goodHigh" plain />
                         </td>
                       </tr>
                     </tfoot>

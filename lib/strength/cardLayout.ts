@@ -63,7 +63,11 @@ export function groupCardItemsByExercise(
       percentage: item.percentage,
       display_percentage: explosivePercentageLabel(item.exercise_name_snapshot) ?? undefined,
       reps: item.reps,
-      display_weight: isExplosiveExercise(item.exercise_name_snapshot) ? "" : item.display_weight,
+      display_weight:
+        isExplosiveExercise(item.exercise_name_snapshot) ||
+        isRepsOnlyPullUpExercise(item.exercise_name_snapshot)
+          ? ""
+          : item.display_weight,
     });
   }
 

@@ -13,6 +13,13 @@ describe("isRepsOnlyPullUpExercise", () => {
     expect(isRepsOnlyPullUpExercise("KB around the word")).toBe(true);
   });
 
+  it("matches dip exercises (reps only, no weight or % on card)", () => {
+    expect(isRepsOnlyPullUpExercise("Ring Dips")).toBe(true);
+    expect(isRepsOnlyPullUpExercise("Bar Dip")).toBe(true);
+    expect(isRepsOnlyPullUpExercise("Parallel Bar Dips")).toBe(true);
+    expect(isRepsOnlyPullUpExercise("Tricep Dips (Bench)")).toBe(true);
+  });
+
   it("excludes pull downs and rows", () => {
     expect(isRepsOnlyPullUpExercise("Pull Down (Neutral)")).toBe(false);
     expect(isRepsOnlyPullUpExercise("Bent Over Row")).toBe(false);
