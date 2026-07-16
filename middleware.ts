@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
+        error: "Kiosk mode is active.",
         message: "Kiosk mode is active.",
       },
       { status: decision.status }

@@ -76,16 +76,37 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
         method: "POST",
         body: formData,
       });
-      const data = (await res.json()) as { url?: string; kind?: "image" | "pdf"; name?: string | null; error?: string };
+      const raw = await res.text();
+      let data: {
+        url?: string;
+        kind?: "image" | "pdf";
+        name?: string | null;
+        error?: string;
+        message?: string;
+      } = {};
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        setError(
+          `Upload failed (HTTP ${res.status}). ${raw.slice(0, 180) || "Empty response from server."}`
+        );
+        return;
+      }
       if (!res.ok || !data.url) {
-        setError(data.error ?? "Upload failed.");
+        setError(
+          data.error ||
+            data.message ||
+            `Upload failed (HTTP ${res.status}).`
+        );
         return;
       }
       setAttachmentUrl(data.url);
       setAttachmentKind(data.kind ?? kind);
       setAttachmentName((data.name ?? file.name).trim() || null);
-    } catch {
-      setError("Upload failed.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? `Upload failed: ${err.message}` : "Upload failed (network)."
+      );
     } finally {
       setUploading(false);
     }
