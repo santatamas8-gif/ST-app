@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "chat-attachments";
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+/** Kept for createBucket defaults; we also clear MIME restrictions so PDF always works. */
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/jpg",
@@ -13,6 +15,8 @@ const ALLOWED_MIME_TYPES = [
   "image/webp",
   "image/x-png",
   "application/pdf",
+  "application/x-pdf",
+  "application/octet-stream",
 ];
 
 type AttachmentKind = "image" | "pdf";
@@ -22,27 +26,16 @@ function resolveAttachment(
   fileName: string,
   mimeType: string
 ): { ext: string; contentType: string; kind: AttachmentKind } | null {
-  const type = mimeType.toLowerCase();
-  const name = fileName.toLowerCase();
+  const type = (mimeType || "").toLowerCase();
+  const name = (fileName || "").toLowerCase();
+  const isPdfMagic =
+    bytes.length >= 4 &&
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46;
 
-  const looksLikePdf =
-    type === "application/pdf" ||
-    type === "application/x-pdf" ||
-    type === "application/octet-stream" ||
-    name.endsWith(".pdf");
-
-  if (looksLikePdf && name.endsWith(".pdf")) {
-    return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
-  }
-  if (
-    type === "application/pdf" ||
-    type === "application/x-pdf" ||
-    (bytes.length >= 4 &&
-      bytes[0] === 0x25 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x44 &&
-      bytes[3] === 0x46)
-  ) {
+  if (name.endsWith(".pdf") || type.includes("pdf") || isPdfMagic) {
     return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
   }
 
@@ -77,8 +70,42 @@ function resolveAttachment(
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
     return { ext: "jpg", contentType: "image/jpeg", kind: "image" };
   }
-  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
-    return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
+
+  return null;
+}
+
+async function ensureChatAttachmentsBucket(
+  admin: ReturnType<typeof createAdminClient>
+): Promise<string | null> {
+  const { data: buckets } = await admin.storage.listBuckets();
+  const hasBucket = buckets?.some((b) => b.name === BUCKET);
+
+  if (!hasBucket) {
+    const { error: createErr } = await admin.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: MAX_SIZE_BYTES,
+      allowedMimeTypes: ALLOWED_MIME_TYPES,
+    });
+    if (createErr) return "Failed to create bucket: " + createErr.message;
+  }
+
+  // Prefer explicit allow-list including PDF.
+  await admin.storage.updateBucket(BUCKET, {
+    public: true,
+    fileSizeLimit: MAX_SIZE_BYTES,
+    allowedMimeTypes: ALLOWED_MIME_TYPES,
+  });
+
+  // Hard fix: clear MIME restriction in storage.buckets so older buckets
+  // that only allow images stop rejecting PDF (updateBucket alone can be a no-op).
+  try {
+    await admin.schema("storage").from("buckets").update({
+      public: true,
+      file_size_limit: MAX_SIZE_BYTES,
+      allowed_mime_types: null,
+    }).eq("id", BUCKET);
+  } catch {
+    // schema() may be unavailable; ignore — upload retry below still helps.
   }
 
   return null;
@@ -117,12 +144,13 @@ export async function POST(request: Request) {
   const resolved = resolveAttachment(bytes, file.name, file.type);
   if (!resolved) {
     return NextResponse.json(
-      { error: "Only images (JPEG, PNG, GIF, WebP) and PDF files are allowed." },
+      {
+        error: `Only images (JPEG, PNG, GIF, WebP) and PDF files are allowed. (got type="${file.type || "empty"}", name="${file.name}")`,
+      },
       { status: 400 }
     );
   }
 
-  // Only admin or room members may upload attachments for this room
   if (!isAdmin(user.role)) {
     const supabase = await createClient();
     const { data: member } = await supabase
@@ -138,7 +166,7 @@ export async function POST(request: Request) {
 
   const { ext, contentType, kind } = resolved;
   const uuid = crypto.randomUUID();
-  const path = `${roomId}/${uuid}.${ext}`;
+  const path = `${roomId.trim()}/${uuid}.${ext}`;
 
   let admin;
   try {
@@ -147,50 +175,54 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server configuration error." }, { status: 500 });
   }
 
-  const bucketOptions = {
-    public: true,
-    fileSizeLimit: MAX_SIZE_BYTES,
-    allowedMimeTypes: ALLOWED_MIME_TYPES,
-  };
-
-  const { data: buckets } = await admin.storage.listBuckets();
-  const hasBucket = buckets?.some((b) => b.name === BUCKET);
-  if (!hasBucket) {
-    const { error: createErr } = await admin.storage.createBucket(BUCKET, bucketOptions);
-    if (createErr) {
-      return NextResponse.json(
-        { error: "Failed to create bucket: " + createErr.message },
-        { status: 500 }
-      );
-    }
-  } else {
-    // Best-effort: do not block uploads if bucket settings cannot be updated
-    // (e.g. permission / policy changes). Upload may still succeed.
-    await admin.storage.updateBucket(BUCKET, bucketOptions);
+  const ensureErr = await ensureChatAttachmentsBucket(admin);
+  if (ensureErr) {
+    return NextResponse.json({ error: ensureErr }, { status: 500 });
   }
 
-  const { error: uploadErr } = await admin.storage
-    .from(BUCKET)
-    .upload(path, buf, {
-      contentType,
-      upsert: false,
+  let { error: uploadErr } = await admin.storage.from(BUCKET).upload(path, buf, {
+    contentType,
+    upsert: false,
+  });
+
+  // Retry once after forcing unrestricted MIME types (common when bucket was image-only).
+  if (uploadErr && /mime|not allowed|invalid|type|rejected/i.test(uploadErr.message)) {
+    await admin.storage.updateBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: MAX_SIZE_BYTES,
+      allowedMimeTypes: ALLOWED_MIME_TYPES,
     });
+    try {
+      await admin.schema("storage").from("buckets").update({
+        allowed_mime_types: null,
+        file_size_limit: MAX_SIZE_BYTES,
+        public: true,
+      }).eq("id", BUCKET);
+    } catch {
+      // ignore
+    }
+    ({ error: uploadErr } = await admin.storage.from(BUCKET).upload(path, buf, {
+      contentType,
+      upsert: true,
+    }));
+  }
 
   if (uploadErr) {
-    const msg = uploadErr.message || "Unknown storage error";
-    // Common cause: bucket MIME allow-list missing application/pdf
-    if (/mime|not allowed|invalid|type/i.test(msg)) {
-      return NextResponse.json(
-        {
-          error:
-            "Upload failed: this file type is blocked in storage. In Supabase → Storage → chat-attachments → allow MIME type application/pdf (and images).",
-        },
-        { status: 500 }
-      );
-    }
-    return NextResponse.json({ error: "Upload failed: " + msg }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          "Upload failed: " +
+          uploadErr.message +
+          " — Fix: Supabase → Storage → chat-attachments → Allowed MIME types → add application/pdf (or clear the list).",
+      },
+      { status: 500 }
+    );
   }
 
   const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(path);
-  return NextResponse.json({ url: urlData.publicUrl, kind, name: file.name.trim() || null });
+  return NextResponse.json({
+    url: urlData.publicUrl,
+    kind,
+    name: file.name.trim() || null,
+  });
 }

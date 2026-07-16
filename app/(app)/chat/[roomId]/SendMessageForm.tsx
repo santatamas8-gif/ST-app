@@ -49,17 +49,10 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
   }
 
   function isAllowedAttachment(file: File): "image" | "pdf" | null {
-    const name = file.name.toLowerCase();
-    const type = file.type.toLowerCase();
+    const name = (file.name || "").toLowerCase();
+    const type = (file.type || "").toLowerCase();
     if (type.startsWith("image/") || /\.(jpe?g|png|gif|webp)$/i.test(name)) return "image";
-    if (
-      type === "application/pdf" ||
-      type === "application/x-pdf" ||
-      type === "application/octet-stream" ||
-      name.endsWith(".pdf")
-    ) {
-      return name.endsWith(".pdf") || type.includes("pdf") ? "pdf" : null;
-    }
+    if (name.endsWith(".pdf") || type.includes("pdf")) return "pdf";
     return null;
   }
 
