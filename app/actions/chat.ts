@@ -189,14 +189,30 @@ export async function sendMessage(
   if (trimmed.length > 4000) return { error: "Message is too long." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("chat_messages").insert({
+  const payload: Record<string, unknown> = {
     room_id: roomId,
     user_id: user.id,
     body: trimmed || "",
     attachment_url: attachmentUrl ?? null,
     attachment_name: attachmentUrl ? sanitizeAttachmentName(attachmentName) : null,
     reply_to_message_id: replyToMessageId ?? null,
-  });
+  };
+
+  let { error } = await supabase.from("chat_messages").insert(payload);
+
+  // If migration 036 was not applied yet, retry without attachment_name.
+  if (error && /attachment_name/i.test(error.message)) {
+    const { attachment_name: _ignored, ...withoutName } = payload;
+    ({ error } = await supabase.from("chat_messages").insert(withoutName));
+    if (!error) {
+      revalidatePath(`/chat/${roomId}`);
+      return {};
+    }
+    return {
+      error:
+        "PDF/image send failed: missing DB column attachment_name. Run migration 036 in Supabase SQL Editor.",
+    };
+  }
 
   if (error) return { error: error.message };
   revalidatePath(`/chat/${roomId}`);

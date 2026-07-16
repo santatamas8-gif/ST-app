@@ -52,7 +52,14 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
     const name = file.name.toLowerCase();
     const type = file.type.toLowerCase();
     if (type.startsWith("image/") || /\.(jpe?g|png|gif|webp)$/i.test(name)) return "image";
-    if (type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+    if (
+      type === "application/pdf" ||
+      type === "application/x-pdf" ||
+      type === "application/octet-stream" ||
+      name.endsWith(".pdf")
+    ) {
+      return name.endsWith(".pdf") || type.includes("pdf") ? "pdf" : null;
+    }
     return null;
   }
 
@@ -171,7 +178,7 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp,.pdf,application/pdf"
+        accept="image/*,.pdf,application/pdf,application/x-pdf"
         className="hidden"
         onChange={onFileChange}
         disabled={uploading}

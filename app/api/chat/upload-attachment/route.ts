@@ -25,20 +25,25 @@ function resolveAttachment(
   const type = mimeType.toLowerCase();
   const name = fileName.toLowerCase();
 
-  if (type === "application/pdf" || name.endsWith(".pdf")) {
-    if (
-      bytes.length >= 4 &&
+  const looksLikePdf =
+    type === "application/pdf" ||
+    type === "application/x-pdf" ||
+    type === "application/octet-stream" ||
+    name.endsWith(".pdf");
+
+  if (looksLikePdf && name.endsWith(".pdf")) {
+    return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
+  }
+  if (
+    type === "application/pdf" ||
+    type === "application/x-pdf" ||
+    (bytes.length >= 4 &&
       bytes[0] === 0x25 &&
       bytes[1] === 0x50 &&
       bytes[2] === 0x44 &&
-      bytes[3] === 0x46
-    ) {
-      return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
-    }
-    if (type === "application/pdf" || name.endsWith(".pdf")) {
-      return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
-    }
-    return null;
+      bytes[3] === 0x46)
+  ) {
+    return { ext: "pdf", contentType: "application/pdf", kind: "pdf" };
   }
 
   if (type === "image/png" || type === "image/x-png" || name.endsWith(".png")) {
@@ -159,13 +164,9 @@ export async function POST(request: Request) {
       );
     }
   } else {
-    const { error: updateErr } = await admin.storage.updateBucket(BUCKET, bucketOptions);
-    if (updateErr) {
-      return NextResponse.json(
-        { error: "Failed to update storage bucket: " + updateErr.message },
-        { status: 500 }
-      );
-    }
+    // Best-effort: do not block uploads if bucket settings cannot be updated
+    // (e.g. permission / policy changes). Upload may still succeed.
+    await admin.storage.updateBucket(BUCKET, bucketOptions);
   }
 
   const { error: uploadErr } = await admin.storage
@@ -176,10 +177,18 @@ export async function POST(request: Request) {
     });
 
   if (uploadErr) {
-    return NextResponse.json(
-      { error: "Upload failed: " + uploadErr.message },
-      { status: 500 }
-    );
+    const msg = uploadErr.message || "Unknown storage error";
+    // Common cause: bucket MIME allow-list missing application/pdf
+    if (/mime|not allowed|invalid|type/i.test(msg)) {
+      return NextResponse.json(
+        {
+          error:
+            "Upload failed: this file type is blocked in storage. In Supabase → Storage → chat-attachments → allow MIME type application/pdf (and images).",
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: "Upload failed: " + msg }, { status: 500 });
   }
 
   const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(path);
