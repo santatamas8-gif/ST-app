@@ -5,10 +5,14 @@ import Image from "next/image";
 import { X, Plus, Send, FileText } from "lucide-react";
 import { sendMessage } from "@/app/actions/chat";
 import { shortenAttachmentName } from "@/lib/chat/attachmentDisplay";
+import { createClient } from "@/lib/supabase/client";
 import { useReply } from "./ReplyContext";
 
 const DESKTOP_TEXTAREA_MIN_H = 40;
 const DESKTOP_TEXTAREA_MAX_H = 120;
+/** Direct Supabase upload — higher than Vercel’s ~4.5MB serverless body limit. */
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const CHAT_ATTACHMENTS_BUCKET = "chat-attachments";
 
 export function SendMessageForm({ roomId }: { roomId: string }) {
   const { replyingTo, setReplyingTo } = useReply();
@@ -62,47 +66,73 @@ export function SendMessageForm({ roomId }: { roomId: string }) {
       setError("Only images and PDF files are allowed.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File must be 5MB or smaller.");
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setError("File must be 20MB or smaller.");
       return;
     }
     setError(null);
     setUploading(true);
-    const formData = new FormData();
-    formData.set("roomId", roomId);
-    formData.set("file", file);
     try {
-      const res = await fetch("/api/chat/upload-attachment", {
+      // 1) Ask server for a signed upload URL (tiny JSON request — no file body).
+      const prepareRes = await fetch("/api/chat/prepare-attachment", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          fileName: file.name,
+          mimeType: file.type || (kind === "pdf" ? "application/pdf" : ""),
+          fileSize: file.size,
+        }),
       });
-      const raw = await res.text();
-      let data: {
-        url?: string;
+      const prepareRaw = await prepareRes.text();
+      let prepare: {
+        path?: string;
+        token?: string;
+        publicUrl?: string;
+        contentType?: string;
         kind?: "image" | "pdf";
         name?: string | null;
         error?: string;
         message?: string;
       } = {};
       try {
-        data = raw ? (JSON.parse(raw) as typeof data) : {};
+        prepare = prepareRaw ? (JSON.parse(prepareRaw) as typeof prepare) : {};
       } catch {
         setError(
-          `Upload failed (HTTP ${res.status}). ${raw.slice(0, 180) || "Empty response from server."}`
+          `Upload failed (HTTP ${prepareRes.status}). ${prepareRaw.slice(0, 180) || "Empty response."}`
         );
         return;
       }
-      if (!res.ok || !data.url) {
+      if (!prepareRes.ok || !prepare.path || !prepare.token || !prepare.publicUrl) {
         setError(
-          data.error ||
-            data.message ||
-            `Upload failed (HTTP ${res.status}).`
+          prepare.error ||
+            prepare.message ||
+            `Upload failed (HTTP ${prepareRes.status}).`
         );
         return;
       }
-      setAttachmentUrl(data.url);
-      setAttachmentKind(data.kind ?? kind);
-      setAttachmentName((data.name ?? file.name).trim() || null);
+
+      // 2) Upload file directly to Supabase (bypasses Vercel 4.5MB limit).
+      const supabase = createClient();
+      const { error: uploadErr } = await supabase.storage
+        .from(CHAT_ATTACHMENTS_BUCKET)
+        .uploadToSignedUrl(prepare.path, prepare.token, file, {
+          contentType: prepare.contentType || file.type || undefined,
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        setError(
+          "Storage upload failed: " +
+            uploadErr.message +
+            ". If this persists, run in Supabase SQL: UPDATE storage.buckets SET allowed_mime_types = NULL, file_size_limit = 20971520 WHERE id = 'chat-attachments';"
+        );
+        return;
+      }
+
+      setAttachmentUrl(prepare.publicUrl);
+      setAttachmentKind(prepare.kind ?? kind);
+      setAttachmentName((prepare.name ?? file.name).trim() || null);
     } catch (err) {
       setError(
         err instanceof Error ? `Upload failed: ${err.message}` : "Upload failed (network)."
