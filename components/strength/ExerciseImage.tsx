@@ -43,7 +43,7 @@ export function ExerciseImage({
           alt={alt}
           className={
             isPrint
-              ? "h-full w-full object-contain object-center"
+              ? "absolute inset-0 h-full w-full object-cover object-center"
               : "max-h-full max-w-full object-contain object-center"
           }
           onError={() => setImgError(true)}

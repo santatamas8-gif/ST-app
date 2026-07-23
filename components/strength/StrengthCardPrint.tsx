@@ -267,7 +267,8 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         .print-exercise-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          grid-template-rows: repeat(4, 1fr);
+          /* minmax(0, 1fr) — plain 1fr won't shrink below image content */
+          grid-template-rows: repeat(4, minmax(0, 1fr));
           grid-auto-flow: column;
           align-items: stretch;
           gap: 3mm;
@@ -285,6 +286,7 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           min-width: 0;
           min-height: 0;
           height: 100%;
+          max-height: 100%;
           overflow: hidden;
           padding: 2.5mm;
           border: 1px solid #e2e2e2;
@@ -317,6 +319,8 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           align-items: center;
           gap: 2mm;
           min-width: 0;
+          flex-shrink: 0;
+          height: 7mm;
         }
 
         .print-exercise-badge {
@@ -342,8 +346,9 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           color: #000;
           text-transform: uppercase;
           letter-spacing: 0.01em;
-          white-space: normal;
-          word-break: break-word;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           min-width: 0;
           flex: 1;
         }
@@ -358,21 +363,27 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         .print-exercise-content {
           display: grid;
           grid-template-columns: 52% 1px 1fr;
+          grid-template-rows: 36mm;
+          height: 36mm;
+          max-height: 36mm;
           align-items: stretch;
-          flex: 1;
+          flex: 0 0 36mm;
           min-height: 0;
           overflow: hidden;
         }
 
         .print-exercise-image-row {
+          width: 100%;
+          height: 36mm;
+          min-height: 36mm;
+          max-height: 36mm;
           min-width: 0;
-          min-height: 0;
-          height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 0 2mm 0 0;
           overflow: hidden;
+          box-sizing: border-box;
         }
 
         .print-exercise-divider {
@@ -383,13 +394,13 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         }
 
         .print-exercise-image-inner {
-          position: relative;
+          position: relative !important;
           width: 100% !important;
-          height: 100% !important;
-          min-height: 0 !important;
-          max-height: 100% !important;
+          height: 36mm !important;
+          min-height: 36mm !important;
+          max-height: 36mm !important;
           padding: 0 !important;
-          box-sizing: border-box;
+          box-sizing: border-box !important;
           border: none !important;
           border-radius: 0 !important;
           background: transparent !important;
@@ -400,18 +411,23 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         }
 
         .print-exercise-image-inner img {
-          display: block;
+          position: absolute !important;
+          inset: 0 !important;
+          display: block !important;
           width: 100% !important;
           height: 100% !important;
+          max-width: 100% !important;
           max-height: 100% !important;
-          object-fit: contain !important;
-          object-position: center !important;
+          /* Fill the same frame as other cards; tall sources crop top/bottom only */
+          object-fit: cover !important;
+          object-position: center center !important;
         }
 
         .print-exercise-table {
           min-width: 0;
-          min-height: 0;
-          height: 100%;
+          width: 100%;
+          height: 36mm;
+          max-height: 36mm;
           padding: 1mm 0 1mm 8px;
           box-sizing: border-box;
           display: flex;
