@@ -1,7 +1,7 @@
 "use client";
 
 import type { PlayerStrengthCard } from "@/lib/strength/types";
-import { groupCardItemsByExercise } from "@/lib/strength/cardLayout";
+import { groupCardItemsByExercise, padExerciseGroupsToSlots } from "@/lib/strength/cardLayout";
 import { ExerciseImage } from "./ExerciseImage";
 import { StrengthCardHeader } from "./StrengthCardHeader";
 import { StrengthSetTable } from "./StrengthSetTable";
@@ -12,6 +12,21 @@ interface StrengthCardPrintProps {
 }
 
 const BRAND_RED = "#c41230";
+const SLOT_COUNT = 8;
+
+function PrintEmptyExerciseBlock({ order }: { order: number }) {
+  return (
+    <article className="print-exercise-block print-exercise-block--empty" aria-label={`Slot ${order}: no exercise`}>
+      <div className="print-exercise-heading">
+        <span className="print-exercise-badge">{String(order).padStart(2, "0")}</span>
+      </div>
+      <div className="print-exercise-rule" aria-hidden />
+      <div className="print-exercise-empty">
+        <span>No exercise</span>
+      </div>
+    </article>
+  );
+}
 
 function PrintExerciseBlock({
   order,
@@ -64,7 +79,8 @@ function PrintPlayerPage({
   card: PlayerStrengthCard;
   teamLogoUrl?: string | null;
 }) {
-  const groups = groupCardItemsByExercise(card.items, 8, card.exerciseImages);
+  const groups = groupCardItemsByExercise(card.items, SLOT_COUNT, card.exerciseImages);
+  const slots = padExerciseGroupsToSlots(groups, SLOT_COUNT);
   const sessionLine = card.session.session_type
     ? `${card.session.title} · ${card.session.session_type}`
     : card.session.title;
@@ -85,18 +101,21 @@ function PrintPlayerPage({
         />
 
         <div className="print-exercise-grid">
-          {groups.map((g) => (
-            <PrintExerciseBlock
-              key={g.key}
-              order={g.exerciseOrder}
-              name={g.name}
-              imageUrl={g.imageUrl}
-              repsOnlyPullUp={g.repsOnlyPullUp}
-              sets={g.sets}
-            />
-          ))}
+          {slots.map((slot) =>
+            "empty" in slot && slot.empty ? (
+              <PrintEmptyExerciseBlock key={`empty-${slot.exerciseOrder}`} order={slot.exerciseOrder} />
+            ) : (
+              <PrintExerciseBlock
+                key={slot.key}
+                order={slot.exerciseOrder}
+                name={slot.name}
+                imageUrl={slot.imageUrl}
+                repsOnlyPullUp={slot.repsOnlyPullUp}
+                sets={slot.sets}
+              />
+            )
+          )}
         </div>
-
       </div>
     </section>
   );
@@ -265,10 +284,32 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           page-break-inside: avoid;
           min-width: 0;
           min-height: 0;
+          height: 100%;
+          overflow: hidden;
           padding: 2.5mm;
           border: 1px solid #e2e2e2;
           border-radius: 2mm;
           background: #fff;
+        }
+
+        .print-exercise-block--empty {
+          background: #fafafa;
+          border-style: dashed;
+          border-color: #d8d8d8;
+        }
+
+        .print-exercise-empty {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 4mm;
+          color: #9a9a9a;
+          font-size: 8pt;
+          font-weight: 600;
+          letter-spacing: 0.02em;
         }
 
         .print-exercise-heading {
@@ -316,18 +357,22 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
 
         .print-exercise-content {
           display: grid;
-          grid-template-columns: 48% 1px 1fr;
+          grid-template-columns: 52% 1px 1fr;
           align-items: stretch;
           flex: 1;
           min-height: 0;
+          overflow: hidden;
         }
 
         .print-exercise-image-row {
           min-width: 0;
+          min-height: 0;
+          height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 0 2.5mm 0 0;
+          padding: 0 2mm 0 0;
+          overflow: hidden;
         }
 
         .print-exercise-divider {
@@ -341,7 +386,8 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           position: relative;
           width: 100% !important;
           height: 100% !important;
-          min-height: 34mm !important;
+          min-height: 0 !important;
+          max-height: 100% !important;
           padding: 0 !important;
           box-sizing: border-box;
           border: none !important;
@@ -350,26 +396,28 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
+          overflow: hidden !important;
         }
 
         .print-exercise-image-inner img {
           display: block;
           width: 100% !important;
           height: 100% !important;
-          max-height: 36mm !important;
+          max-height: 100% !important;
           object-fit: contain !important;
           object-position: center !important;
         }
 
         .print-exercise-table {
           min-width: 0;
-          min-height: 34mm;
+          min-height: 0;
           height: 100%;
-          padding: 1mm 0 1mm 10px;
+          padding: 1mm 0 1mm 8px;
           box-sizing: border-box;
           display: flex;
           align-items: center;
           justify-content: flex-start;
+          overflow: hidden;
         }
 
         .print-exercise-table .strength-set-table-print {
@@ -405,17 +453,23 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
         .strength-set-table-print th,
         .strength-set-table-print td {
           text-align: center;
-          padding: 1.8mm 2px;
+          padding: 1.8mm 1px;
           color: #111;
           vertical-align: middle;
           border-bottom: 1.5px solid ${BRAND_RED};
           font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          overflow: visible;
         }
 
         .strength-set-table-print td {
           white-space: nowrap;
+        }
+
+        .strength-set-table-print .print-col-weight {
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.2;
+          font-size: 7pt;
         }
 
         .strength-set-table-print th {

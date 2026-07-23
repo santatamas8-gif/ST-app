@@ -73,3 +73,25 @@ export function groupCardItemsByExercise(
 
   return order.map((k) => map.get(k)!).slice(0, max);
 }
+
+/** Always return max slots (default 8). Missing exercise orders become empty placeholders. */
+export function padExerciseGroupsToSlots(
+  groups: ExerciseGroup[],
+  max = 8
+): (ExerciseGroup | { empty: true; exerciseOrder: number })[] {
+  const byOrder = new Map<number, ExerciseGroup>();
+  for (const g of groups) {
+    const order = g.exerciseOrder;
+    if (order >= 1 && order <= max && !byOrder.has(order)) {
+      byOrder.set(order, g);
+    }
+  }
+
+  const slots: (ExerciseGroup | { empty: true; exerciseOrder: number })[] = [];
+  for (let i = 1; i <= max; i++) {
+    const existing = byOrder.get(i);
+    slots.push(existing ?? { empty: true, exerciseOrder: i });
+  }
+  return slots;
+}
+
