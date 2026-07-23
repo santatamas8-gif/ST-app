@@ -1,7 +1,7 @@
 "use client";
 
 import type { PlayerStrengthCard } from "@/lib/strength/types";
-import { groupCardItemsByExercise, padExerciseGroupsToSlots } from "@/lib/strength/cardLayout";
+import { groupCardItemsByExercise, padExerciseGroupsToSlots, isEmptyExerciseSlot } from "@/lib/strength/cardLayout";
 import { ExerciseImage } from "./ExerciseImage";
 import { StrengthCardHeader } from "./StrengthCardHeader";
 import { StrengthSetTable } from "./StrengthSetTable";
@@ -102,7 +102,7 @@ function PrintPlayerPage({
 
         <div className="print-exercise-grid">
           {slots.map((slot) =>
-            "empty" in slot && slot.empty ? (
+            isEmptyExerciseSlot(slot) ? (
               <PrintEmptyExerciseBlock key={`empty-${slot.exerciseOrder}`} order={slot.exerciseOrder} />
             ) : (
               <PrintExerciseBlock
