@@ -6,7 +6,7 @@ import { Heart, Reply, X, FileText, MoreVertical, Trash2 } from "lucide-react";
 import { deleteMessage, toggleLike } from "@/app/actions/chat";
 import { useReply } from "./ReplyContext";
 import { LinkPreview, extractFirstUrl } from "./LinkPreview";
-import { shortenAttachmentName } from "@/lib/chat/attachmentDisplay";
+import { shortenAttachmentName, resolveAttachmentLabel } from "@/lib/chat/attachmentDisplay";
 import type { ChatMessageRow } from "@/lib/types";
 
 const LONG_PRESS_MS = 450;
@@ -206,11 +206,12 @@ export function MessageBubbleWithActions({
   const isPdf =
     message.attachment_url &&
     /\.pdf(\?|$)/i.test(message.attachment_url);
-  const attachmentLabel = message.attachment_name?.trim() || (isPdf ? "PDF document" : "Attachment");
-  const pdfDisplayName = isPdf ? shortenAttachmentName(attachmentLabel) : attachmentLabel;
+  const attachmentLabel = resolveAttachmentLabel(message.attachment_name, Boolean(isPdf));
+  const pdfDisplayNameMobile = isPdf ? shortenAttachmentName(attachmentLabel, 16) : attachmentLabel;
+  const pdfDisplayNameDesktop = isPdf ? shortenAttachmentName(attachmentLabel, 32) : attachmentLabel;
   const replyPreviewBody =
     message.body?.trim() ||
-    (hasAttachment ? (isPdf ? pdfDisplayName : isImage ? "Photo" : "Attachment") : "");
+    (hasAttachment ? (isPdf ? attachmentLabel : isImage ? "Photo" : "Attachment") : "");
 
   const showTimeInHeader = showHeaderDateTime && !isOwn;
   const hasHeaderContent = showSender || showTimeInHeader;
@@ -434,9 +435,18 @@ export function MessageBubbleWithActions({
                 }`}
               >
                 <FileText className="h-4 w-4 shrink-0 text-red-400" aria-hidden />
-                <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-xs font-medium ${isOwn ? "text-white" : "text-zinc-200"}`}>
-                    {pdfDisplayName}
+                <span className="min-w-0 flex-1 overflow-hidden">
+                  <span
+                    className={`block truncate text-xs font-medium md:hidden ${isOwn ? "text-white" : "text-zinc-200"}`}
+                    title={attachmentLabel}
+                  >
+                    {pdfDisplayNameMobile}
+                  </span>
+                  <span
+                    className={`hidden truncate text-xs font-medium md:block ${isOwn ? "text-white" : "text-zinc-200"}`}
+                    title={attachmentLabel}
+                  >
+                    {pdfDisplayNameDesktop}
                   </span>
                   <span className={`text-[10px] ${isOwn ? "text-white/70" : "text-zinc-500"}`}>Tap to open</span>
                 </span>

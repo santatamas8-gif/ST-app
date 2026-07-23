@@ -189,37 +189,27 @@ export async function sendMessage(
   if (trimmed.length > 4000) return { error: "Message is too long." };
 
   const supabase = await createClient();
+  const safeName = attachmentUrl ? sanitizeAttachmentName(attachmentName) : null;
 
-  // Insert without attachment_name first so PDF send works even if migration 036
-  // was not applied yet. Then best-effort set the original filename.
-  const basePayload = {
+  // Include attachment_name on INSERT (there is no UPDATE RLS policy on chat_messages,
+  // so a follow-up update would silently fail and leave "PDF document" in the UI).
+  const withName = {
     room_id: roomId,
     user_id: user.id,
     body: trimmed || "",
     attachment_url: attachmentUrl ?? null,
+    attachment_name: safeName,
     reply_to_message_id: replyToMessageId ?? null,
   };
 
-  const { data: inserted, error } = await supabase
-    .from("chat_messages")
-    .insert(basePayload)
-    .select("id")
-    .maybeSingle();
+  let { error } = await supabase.from("chat_messages").insert(withName);
 
-  if (error) return { error: error.message };
-
-  const safeName = attachmentUrl ? sanitizeAttachmentName(attachmentName) : null;
-  if (inserted?.id && safeName) {
-    const { error: nameErr } = await supabase
-      .from("chat_messages")
-      .update({ attachment_name: safeName })
-      .eq("id", inserted.id);
-    // Ignore missing-column errors; message already saved.
-    if (nameErr && !/attachment_name/i.test(nameErr.message)) {
-      // Non-column errors are non-fatal for the chat send.
-    }
+  if (error && /attachment_name/i.test(error.message)) {
+    const { attachment_name: _ignored, ...withoutName } = withName;
+    ({ error } = await supabase.from("chat_messages").insert(withoutName));
   }
 
+  if (error) return { error: error.message };
   revalidatePath(`/chat/${roomId}`);
   return {};
 }
