@@ -46,12 +46,13 @@ export default async function WellnessPage() {
 
   const emailByUserId: Record<string, string> = {};
   const displayNameByUserId: Record<string, string> = {};
+  const avatarByUserId: Record<string, string | null> = {};
   let totalPlayers: number | null = null;
   let allPlayerIds: string[] = [];
   if (!isPlayer) {
     const { data: playerProfiles } = await supabase
       .from("profiles")
-      .select("id, email, full_name")
+      .select("id, email, full_name, avatar_url")
       .eq("role", "player");
     if (playerProfiles) {
       totalPlayers = playerProfiles.length;
@@ -62,6 +63,9 @@ export default async function WellnessPage() {
         const name = (p as { full_name?: string | null }).full_name;
         displayNameByUserId[p.id] =
           (name && typeof name === "string" && name.trim()) ? name.trim() : email;
+        const avatar = (p as { avatar_url?: string | null }).avatar_url;
+        const trimmed = typeof avatar === "string" ? avatar.trim() : "";
+        avatarByUserId[p.id] = trimmed.length > 0 ? trimmed : null;
       }
     }
   }
@@ -107,6 +111,7 @@ export default async function WellnessPage() {
           list={list}
           emailByUserId={emailByUserId}
           displayNameByUserId={displayNameByUserId}
+          avatarByUserId={avatarByUserId}
           totalPlayers={totalPlayers}
           allPlayerIds={allPlayerIds}
         />
@@ -116,6 +121,7 @@ export default async function WellnessPage() {
           list={list}
           emailByUserId={emailByUserId}
           displayNameByUserId={displayNameByUserId}
+          avatarByUserId={avatarByUserId}
           totalPlayers={totalPlayers}
           allPlayerIds={allPlayerIds}
         />

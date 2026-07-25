@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { Activity, AlertTriangle, UserRound, FileDown, ArrowUpDown, ArrowUp, ArrowDown, CalendarOff } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
+import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import type { WellnessRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
@@ -146,10 +147,36 @@ function MiniScoreBar({
   );
 }
 
+function initialsForName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return (parts[0][0] ?? "?").toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+/** Small table avatar: fill circle, bias crop toward the face. */
+function WellnessPlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  const url = (avatarUrl ?? "").trim();
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-emerald-500/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-300"
+      aria-hidden
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className={PROFILE_AVATAR_IMG_CLASS} />
+      ) : (
+        initialsForName(name)
+      )}
+    </span>
+  );
+}
+
 interface StaffWellnessViewProps {
   list: WellnessRow[];
   emailByUserId: Record<string, string>;
   displayNameByUserId: Record<string, string>;
+  avatarByUserId?: Record<string, string | null>;
   totalPlayers: number | null;
   allPlayerIds?: string[];
 }
@@ -158,6 +185,7 @@ export function StaffWellnessView({
   list,
   emailByUserId,
   displayNameByUserId,
+  avatarByUserId = {},
   totalPlayers,
   allPlayerIds = [],
 }: StaffWellnessViewProps) {
@@ -482,9 +510,13 @@ export function StaffWellnessView({
                               <button
                                 type="button"
                                 onClick={() => setModalUserId(r.user_id)}
-                                className="min-h-[40px] rounded font-medium text-white hover:text-white/90 hover:underline"
+                                className="inline-flex min-h-[40px] max-w-full items-center gap-2 rounded font-medium text-white hover:text-white/90 hover:underline"
                               >
-                                {displayName}
+                                <WellnessPlayerAvatar
+                                  name={displayName}
+                                  avatarUrl={avatarByUserId[r.user_id]}
+                                />
+                                <span className="min-w-0 break-words text-left">{displayName}</span>
                               </button>
                               {atRisk && <RiskBadge />}
                               {r.illness === true && (

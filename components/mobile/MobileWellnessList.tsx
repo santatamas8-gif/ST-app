@@ -7,6 +7,7 @@ import { wellnessAverageFromRow } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
 import { useTheme } from "@/components/ThemeProvider";
 import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
+import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import { BodyMapViewOnly } from "@/components/BodyMap";
 import { BadgeScore } from "@/app/(app)/wellness/components/BadgeScore";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
@@ -91,10 +92,35 @@ function readinessColorClass(readiness: number | null | undefined, isHighContras
   return "text-emerald-300";
 }
 
+function initialsForName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return (parts[0][0] ?? "?").toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+function WellnessPlayerAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  const url = (avatarUrl ?? "").trim();
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-emerald-500/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-300"
+      aria-hidden
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className={PROFILE_AVATAR_IMG_CLASS} />
+      ) : (
+        initialsForName(name)
+      )}
+    </span>
+  );
+}
+
 export interface MobileWellnessListProps {
   list: WellnessRow[];
   emailByUserId: Record<string, string>;
   displayNameByUserId: Record<string, string>;
+  avatarByUserId?: Record<string, string | null>;
   totalPlayers?: number | null;
   allPlayerIds?: string[];
 }
@@ -103,6 +129,7 @@ export function MobileWellnessList({
   list,
   emailByUserId,
   displayNameByUserId,
+  avatarByUserId = {},
   allPlayerIds = [],
 }: MobileWellnessListProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -341,6 +368,7 @@ export function MobileWellnessList({
                             : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }
                       }
                     >
+                      <WellnessPlayerAvatar name={displayName} avatarUrl={avatarByUserId[item.user_id]} />
                       <span className={`min-w-0 flex-1 truncate font-medium ${isHighContrast ? "text-white/80" : "text-zinc-400"}`}>
                         {displayName}
                       </span>
@@ -372,6 +400,7 @@ export function MobileWellnessList({
                           : { backgroundColor: "var(--card-bg)", borderRadius: CARD_RADIUS }
                     }
                   >
+                    <WellnessPlayerAvatar name={displayName} avatarUrl={avatarByUserId[r.user_id]} />
                     <span className="min-w-0 flex-1 truncate font-medium text-white">
                       {displayName}
                     </span>
