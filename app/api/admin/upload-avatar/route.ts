@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processAvatarImage } from "@/lib/players/processAvatarImage";
 
 const BUCKET = "avatars";
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -37,6 +38,26 @@ function detectImageType(
   if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return { ext: "jpg", contentType: "image/jpeg" };
 
   return null;
+}
+
+async function ensureAvatarsBucket(
+  admin: ReturnType<typeof createAdminClient>
+): Promise<{ error: string | null }> {
+  const { data: buckets } = await admin.storage.listBuckets();
+  const hasBucket = buckets?.some((b) => b.name === BUCKET);
+  const bucketOptions = {
+    public: true,
+    fileSizeLimit: MAX_SIZE_BYTES,
+    allowedMimeTypes: ALLOWED_MIME_TYPES,
+  };
+  if (!hasBucket) {
+    const { error: createErr } = await admin.storage.createBucket(BUCKET, bucketOptions);
+    if (createErr) return { error: "Failed to create bucket: " + createErr.message };
+  } else {
+    const { error: updateErr } = await admin.storage.updateBucket(BUCKET, bucketOptions);
+    if (updateErr) return { error: "Failed to update storage bucket: " + updateErr.message };
+  }
+  return { error: null };
 }
 
 export async function POST(request: Request) {
@@ -89,8 +110,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const { ext, contentType } = resolved;
-  const path = `${targetUserId}.${ext}`;
+  let processed;
+  try {
+    processed = await processAvatarImage(bytes);
+  } catch {
+    return NextResponse.json(
+      { error: "Could not process image. Try another JPEG or PNG." },
+      { status: 400 }
+    );
+  }
+
+  const path = `${targetUserId}.${processed.ext}`;
 
   let admin;
   try {
@@ -102,36 +132,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: buckets } = await admin.storage.listBuckets();
-  const hasBucket = buckets?.some((b) => b.name === BUCKET);
-  const bucketOptions = {
-    public: true,
-    fileSizeLimit: MAX_SIZE_BYTES,
-    allowedMimeTypes: ALLOWED_MIME_TYPES,
-  };
-  if (!hasBucket) {
-    const { error: createErr } = await admin.storage.createBucket(BUCKET, bucketOptions);
-    if (createErr) {
-      return NextResponse.json(
-        { error: "Failed to create bucket: " + createErr.message },
-        { status: 500 }
-      );
-    }
-  } else {
-    // Bucket may still have the original 1MB limit from first deploy.
-    const { error: updateErr } = await admin.storage.updateBucket(BUCKET, bucketOptions);
-    if (updateErr) {
-      return NextResponse.json(
-        { error: "Failed to update storage bucket: " + updateErr.message },
-        { status: 500 }
-      );
-    }
+  const bucketResult = await ensureAvatarsBucket(admin);
+  if (bucketResult.error) {
+    return NextResponse.json({ error: bucketResult.error }, { status: 500 });
   }
 
   const { error: uploadErr } = await admin.storage
     .from(BUCKET)
-    .upload(path, buf, {
-      contentType,
+    .upload(path, processed.buffer, {
+      contentType: processed.contentType,
       upsert: true,
     });
 
@@ -140,6 +149,11 @@ export async function POST(request: Request) {
       { error: "Upload failed: " + uploadErr.message },
       { status: 500 }
     );
+  }
+
+  // Prefer a single .jpg path after processing; remove leftover .png if present.
+  if (resolved.ext === "png") {
+    await admin.storage.from(BUCKET).remove([`${targetUserId}.png`]);
   }
 
   const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(path);
