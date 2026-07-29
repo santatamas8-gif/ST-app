@@ -469,6 +469,7 @@ export function StaffLoadView({
         label: row.playerName.slice(0, 20),
         playerName: row.playerName,
         load: row.totalLoad,
+        averageRpe: row.averageRpe,
         sessionCount: row.sessionCount,
       }));
   }, [filteredDailyRows, dailyChartSortOrder]);

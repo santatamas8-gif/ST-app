@@ -137,11 +137,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: bucketResult.error }, { status: 500 });
   }
 
+  // Use Uint8Array — Node Buffer can be UTF-8-corrupted by the Supabase client on Vercel.
+  const uploadBody = new Uint8Array(
+    processed.buffer.buffer,
+    processed.buffer.byteOffset,
+    processed.buffer.byteLength
+  );
+
   const { error: uploadErr } = await admin.storage
     .from(BUCKET)
-    .upload(path, processed.buffer, {
+    .upload(path, uploadBody, {
       contentType: processed.contentType,
       upsert: true,
+      cacheControl: "3600",
     });
 
   if (uploadErr) {

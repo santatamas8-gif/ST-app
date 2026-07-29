@@ -142,17 +142,29 @@ export function TeamLoadBarChart({
   );
 }
 
-/** Player load: vertical bars, names on X (bottom), load on Y, value beside bar */
+/** Player load: vertical bars by load; load value on top; bar color from avg RPE (1–4 / 5–7 / 8+). */
 interface PlayerLoadBarChartProps {
-  data: { label: string; playerName?: string; load: number; sessionCount?: number }[];
+  data: {
+    label: string;
+    playerName?: string;
+    load: number;
+    averageRpe?: number | null;
+    sessionCount?: number;
+  }[];
   className?: string;
 }
 
-function playerLoadBarColor(load: number): string {
-  if (load >= 600) return "#f59e0b";
-  if (load >= 400) return "#22c55e";
-  if (load >= 250) return "#14b8a6";
-  return "#38bdf8";
+/** Same bands as staff RPE badges: 1–4 green, 5–7 amber, 8+ red. */
+function playerLoadBarColor(averageRpe: number | null | undefined): string {
+  if (averageRpe == null) return "#71717a";
+  if (averageRpe <= 4) return "#34d399";
+  if (averageRpe <= 7) return "#fbbf24";
+  return "#f87171";
+}
+
+function formatRpeLabel(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartProps) {
@@ -165,7 +177,7 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 20, right: 24, left: 0, bottom: 4 }}
+              margin={{ top: 28, right: 12, left: 0, bottom: 4 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
               <XAxis
@@ -184,7 +196,15 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
                   border: "1px solid #27272a",
                   borderRadius: "8px",
                 }}
-                formatter={(v: number) => [`${Math.round(v).toLocaleString("en-GB")} AU`, "Total load"]}
+                formatter={(v: number, _name, item) => {
+                  const row = item?.payload as (typeof chartData)[number] | undefined;
+                  const rpe =
+                    row?.averageRpe == null ? "—" : formatRpeLabel(row.averageRpe);
+                  return [
+                    `${Math.round(v).toLocaleString("en-GB")} AU · RPE ${rpe}`,
+                    "Total load",
+                  ];
+                }}
                 labelFormatter={(_, payload) => {
                   const row = payload?.[0]?.payload as (typeof chartData)[number] | undefined;
                   if (!row) return "";
@@ -197,13 +217,14 @@ export function PlayerLoadBarChart({ data, className = "" }: PlayerLoadBarChartP
               />
               <Bar dataKey="load" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry) => (
-                  <Cell key={entry.label} fill={playerLoadBarColor(entry.load)} />
+                  <Cell key={entry.label} fill={playerLoadBarColor(entry.averageRpe)} />
                 ))}
                 <LabelList
                   dataKey="load"
-                  position="right"
-                  fill="#a1a1aa"
+                  position="top"
+                  fill="#e4e4e7"
                   fontSize={11}
+                  offset={6}
                   formatter={(value: number) => Math.round(value).toLocaleString("en-GB")}
                 />
               </Bar>

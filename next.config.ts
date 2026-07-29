@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  serverExternalPackages: ["sharp"],
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
     serverActions: {
