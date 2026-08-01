@@ -59,8 +59,11 @@ export function KioskWellnessPlayerCard({
               className="pointer-events-none absolute inset-0 flex items-center justify-center"
               aria-hidden
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600/80 shadow-sm ring-2 ring-emerald-400/25 min-[430px]:h-9 min-[430px]:w-9">
-                <Check className="h-4 w-4 text-white min-[430px]:h-[1.125rem] min-[430px]:w-[1.125rem]" strokeWidth={2.5} />
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-emerald-500/45 shadow-sm ring-1 ring-emerald-400/20">
+                <Check
+                  className="h-8 w-8 text-emerald-50/90 min-[430px]:h-9 min-[430px]:w-9"
+                  strokeWidth={2.5}
+                />
               </span>
             </span>
           ) : null}

@@ -22,7 +22,6 @@ import {
   isKioskPlayerCompleted,
   syncAllDurationInputs,
   updatePlayerRpe,
-  updatePlayerSettings,
 } from "@/lib/kioskRpe/state";
 import { submitKioskRpeEntries } from "@/lib/kioskRpe/submitClient";
 import type { KioskGlobalSettings, RpeValue } from "@/lib/kioskRpe/types";
@@ -30,7 +29,8 @@ import type { KioskPlayer } from "@/lib/players/listPlayers";
 import type { SafeError } from "@/lib/supabase/safeQuery";
 import { KioskGlobalSettings as KioskGlobalSettingsPanel } from "./KioskGlobalSettings";
 import { KioskSummaryBar } from "./KioskSummaryBar";
-import { KioskPlayerRow } from "./KioskPlayerRow";
+import { KioskRpePlayerCard } from "./KioskRpePlayerCard";
+import { KioskRpeSelectModal } from "./KioskRpeSelectModal";
 import { KioskSubmitConfirmation } from "./KioskSubmitConfirmation";
 import { KioskTodayNotice } from "./KioskTodayNotice";
 
@@ -82,6 +82,7 @@ export function KioskRpeView({
   const [todayBatchCountUnavailable, setTodayBatchCountUnavailable] = useState(
     todayKioskBatchCountUnavailable
   );
+  const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
 
   const playerIds = useMemo(() => players.map((p) => p.id), [players]);
 
@@ -105,34 +106,30 @@ export function KioskRpeView({
     setDurationInputs((prev) => syncAllDurationInputs(playerIds, duration, prev));
   }, [globalDurationInput, globalSettings, playerIds]);
 
-  const handlePlayerSettingsChange = useCallback(
-    (
-      playerId: string,
-      patch: Partial<{
-        sessionType: KioskGlobalSettings["sessionType"];
-        matchdayTag: KioskGlobalSettings["matchdayTag"];
-        duration: number;
-      }>
-    ) => {
-      setPlayerStates((prev) => updatePlayerSettings(prev, playerId, patch));
+  const handleOpenPlayer = useCallback(
+    (playerId: string) => {
+      if (isReadOnly) return;
+      setActivePlayerId(playerId);
     },
-    []
+    [isReadOnly]
   );
 
-  const handleDurationInputChange = useCallback((playerId: string, value: string) => {
-    setDurationInputs((prev) => ({ ...prev, [playerId]: value }));
-    const parsed = parseDurationInput(value);
-    if (parsed !== null) {
-      setPlayerStates((prev) => updatePlayerSettings(prev, playerId, { duration: parsed }));
-    }
+  const handleCloseModal = useCallback(() => {
+    setActivePlayerId(null);
   }, []);
 
-  const handleRpeSelect = useCallback((playerId: string, rpe: RpeValue) => {
-    setPlayerStates((prev) => {
-      const currentRpe = prev[playerId]?.rpe ?? null;
-      return updatePlayerRpe(prev, playerId, currentRpe === rpe ? null : rpe);
-    });
-  }, []);
+  const handleRpeSelect = useCallback(
+    (playerId: string, rpe: RpeValue) => {
+      const currentRpe = playerStates[playerId]?.rpe ?? null;
+      const nextRpe = currentRpe === rpe ? null : rpe;
+      setPlayerStates((prev) => updatePlayerRpe(prev, playerId, nextRpe));
+      // Close after selecting; stay open when toggling the same value off.
+      if (nextRpe !== null) {
+        setActivePlayerId(null);
+      }
+    },
+    [playerStates]
+  );
 
   const total = players.length;
   const completed = useMemo(() => {
@@ -160,6 +157,7 @@ export function KioskRpeView({
       setSubmissionMessage(`${result.insertedCount} RPE entries submitted successfully.`);
       setKnownTodayBatchCount((count) => count + 1);
       setTodayBatchCountUnavailable(false);
+      setActivePlayerId(null);
       feedbackRef.current?.focus();
       return;
     }
@@ -252,6 +250,16 @@ export function KioskRpeView({
     return `Completed: ${completed} · Missing: ${missing}`;
   })();
 
+  const activePlayer = activePlayerId
+    ? players.find((player) => player.id === activePlayerId) ?? null
+    : null;
+  const activeState = activePlayerId ? playerStates[activePlayerId] ?? null : null;
+  const activeDurationInput = activePlayerId
+    ? durationInputs[activePlayerId] ?? (activeState ? String(activeState.duration) : "")
+    : "";
+  const activeDurationMinutes =
+    parseDurationInput(activeDurationInput) ?? activeState?.duration ?? DEFAULT_DURATION_MINUTES;
+
   return (
     <div className={embedded ? "space-y-6" : "mx-auto min-w-0 max-w-7xl space-y-6"}>
       {!embedded ? (
@@ -308,7 +316,10 @@ export function KioskRpeView({
               </p>
             </div>
           ) : (
-            <section className="space-y-3" aria-label="Players">
+            <section
+              className="grid grid-cols-2 auto-rows-[10.5rem] gap-3 min-[430px]:auto-rows-[11.5rem] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-4"
+              aria-label="Players"
+            >
               {players.map((player) => {
                 const state = playerStates[player.id];
                 if (!state) return null;
@@ -316,25 +327,14 @@ export function KioskRpeView({
                 const isCompleted = isKioskPlayerCompleted(state, durationInput);
                 const existingSubmissionLocked = isExistingSubmissionLocked(state);
                 return (
-                  <KioskPlayerRow
+                  <KioskRpePlayerCard
                     key={player.id}
-                    playerId={player.id}
-                    name={player.name}
-                    avatarUrl={player.avatarUrl}
-                    rpe={state.rpe}
-                    settings={{
-                      sessionType: state.sessionType,
-                      matchdayTag: state.matchdayTag,
-                      duration: state.duration,
-                    }}
-                    durationInput={durationInput}
+                    player={player}
                     isCompleted={isCompleted}
-                    readOnly={isReadOnly}
-                    rpeReadOnly={existingSubmissionLocked}
+                    rpe={state.rpe}
                     muted={existingSubmissionLocked}
-                    onDurationInputChange={(value) => handleDurationInputChange(player.id, value)}
-                    onSettingsChange={(patch) => handlePlayerSettingsChange(player.id, patch)}
-                    onRpeSelect={(rpe) => handleRpeSelect(player.id, rpe)}
+                    disabled={isReadOnly}
+                    onSelect={() => handleOpenPlayer(player.id)}
                   />
                 );
               })}
@@ -388,6 +388,21 @@ export function KioskRpeView({
         onCancel={handleCancelConfirm}
         onConfirm={handleConfirmSubmit}
       />
+
+      {activePlayer && activeState ? (
+        <KioskRpeSelectModal
+          open
+          playerName={activePlayer.name}
+          avatarUrl={activePlayer.avatarUrl}
+          selectedRpe={activeState.rpe}
+          sessionType={activeState.sessionType}
+          matchdayTag={activeState.matchdayTag}
+          durationMinutes={activeDurationMinutes}
+          rpeReadOnly={isExistingSubmissionLocked(activeState)}
+          onClose={handleCloseModal}
+          onSelectRpe={(rpe) => handleRpeSelect(activePlayer.id, rpe)}
+        />
+      ) : null}
     </div>
   );
 }
