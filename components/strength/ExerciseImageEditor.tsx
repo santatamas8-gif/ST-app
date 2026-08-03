@@ -24,8 +24,6 @@ export function ExerciseImageEditor({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [showUrl, setShowUrl] = useState(false);
-  const [urlDraft, setUrlDraft] = useState(imageUrl ?? "");
 
   const hasImage = Boolean(imageUrl && isRenderableImageUrl(imageUrl));
 
@@ -46,7 +44,6 @@ export function ExerciseImageEditor({
           return;
         }
         onImageChange(data.image_url);
-        setUrlDraft(data.image_url);
       } catch {
         onError?.("Upload failed");
       } finally {
@@ -86,7 +83,6 @@ export function ExerciseImageEditor({
         return;
       }
       onImageChange(null);
-      setUrlDraft("");
     } catch {
       onError?.("Delete failed");
     } finally {
@@ -94,30 +90,10 @@ export function ExerciseImageEditor({
     }
   }
 
-  async function onSaveUrl() {
-    const trimmed = urlDraft.trim();
-    if (trimmed && !isRenderableImageUrl(trimmed)) {
-      onError?.("Use a valid web URL (https://…) or upload a file");
-      return;
-    }
-    setUploading(true);
-    try {
-      const { updateExerciseImage } = await import("@/app/actions/strength");
-      const result = await updateExerciseImage(exerciseId, trimmed);
-      if (result.error) {
-        onError?.(result.error);
-        return;
-      }
-      onImageChange(trimmed || null);
-    } finally {
-      setUploading(false);
-    }
-  }
-
   const busy = uploading || deleting;
 
   return (
-    <div className="flex w-full flex-col gap-3 sm:w-44 sm:shrink-0">
+    <div className="flex w-full flex-col gap-2.5 sm:w-44 sm:shrink-0 md:w-full">
       <div
         role="button"
         tabIndex={0}
@@ -131,10 +107,10 @@ export function ExerciseImageEditor({
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`relative cursor-pointer rounded-xl border-2 border-dashed transition ${
+        className={`relative cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition ${
           dragOver
-            ? "border-emerald-500 bg-emerald-500/10"
-            : "border-zinc-600 hover:border-zinc-500 hover:bg-zinc-800/30"
+            ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_24px_-8px_rgba(16,185,129,0.45)]"
+            : "border-zinc-600/80 bg-zinc-950/40 hover:border-zinc-500 hover:bg-zinc-900/50"
         } ${busy ? "pointer-events-none opacity-70" : ""}`}
         aria-label={`Upload image for ${exerciseName}`}
       >
@@ -146,21 +122,23 @@ export function ExerciseImageEditor({
           onChange={onPickFile}
           disabled={busy}
         />
-        <div className="p-2">
+        <div className="p-1.5 sm:p-2">
           {hasImage ? (
             <ExerciseImage
               src={imageUrl}
               alt={exerciseName}
-              className="aspect-square w-full"
+              className="aspect-[4/3] w-full md:aspect-square"
             />
           ) : (
-            <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-lg bg-zinc-800/40 px-2 text-center text-zinc-500">
+            <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-lg bg-zinc-900/60 px-3 text-center text-zinc-500 md:aspect-square">
               {busy ? (
-                <Loader2 className="h-8 w-8 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-400/80" />
               ) : (
                 <>
-                  <ImagePlus className="h-8 w-8 opacity-60" />
-                  <span className="text-xs leading-snug">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-700/80 bg-zinc-800/50">
+                    <ImagePlus className="h-5 w-5 opacity-70" />
+                  </div>
+                  <span className="max-w-[10rem] text-xs leading-snug text-zinc-400">
                     Drop image or tap to upload
                   </span>
                 </>
@@ -169,18 +147,18 @@ export function ExerciseImageEditor({
           )}
         </div>
         {!busy && (
-          <div className="absolute bottom-2 right-2 rounded-md bg-zinc-900/90 p-1.5 text-zinc-300 shadow">
-            <Upload className="h-4 w-4" aria-hidden />
+          <div className="absolute bottom-2.5 right-2.5 rounded-lg border border-zinc-700/60 bg-zinc-950/90 p-1.5 text-zinc-300 shadow-md backdrop-blur-sm">
+            <Upload className="h-3.5 w-3.5" aria-hidden />
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="min-h-[36px] flex-1 rounded-lg border border-zinc-600 px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+          className="min-h-[40px] flex-1 rounded-xl border border-zinc-600/80 bg-zinc-900/60 px-2.5 py-2 text-xs font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800/80 disabled:opacity-50"
         >
           {hasImage ? "Replace" : "Choose file"}
         </button>
@@ -189,40 +167,13 @@ export function ExerciseImageEditor({
             type="button"
             disabled={busy}
             onClick={onDelete}
-            className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-red-900/60 px-2 py-1.5 text-xs text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+            className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-red-900/50 bg-red-950/25 px-2.5 py-2 text-red-400 transition hover:border-red-700/60 hover:bg-red-950/45 disabled:opacity-50"
             aria-label="Remove image"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         )}
       </div>
-
-      <button
-        type="button"
-        onClick={() => setShowUrl((v) => !v)}
-        className="text-left text-xs text-zinc-500 hover:text-zinc-400"
-      >
-        {showUrl ? "Hide URL option" : "Or paste image URL"}
-      </button>
-      {showUrl && (
-        <div className="flex flex-col gap-2">
-          <input
-            type="url"
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            placeholder="https://…"
-            className="min-h-[36px] w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 py-1.5 text-xs text-white"
-          />
-          <button
-            type="button"
-            disabled={busy || urlDraft.trim() === (imageUrl ?? "")}
-            onClick={onSaveUrl}
-            className="min-h-[36px] rounded-lg bg-zinc-700 px-2 py-1.5 text-xs text-white hover:bg-zinc-600 disabled:opacity-50"
-          >
-            Save URL
-          </button>
-        </div>
-      )}
     </div>
   );
 }
