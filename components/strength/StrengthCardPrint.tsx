@@ -11,7 +11,8 @@ interface StrengthCardPrintProps {
   teamLogoUrl?: string | null;
 }
 
-const BRAND_RED = "#c41230";
+/** Accent for badge + table rules (was brand red #c41230). Easy to revert. */
+const PRINT_ACCENT = "#6b1e2a";
 const SLOT_COUNT = 8;
 
 function PrintEmptyExerciseBlock({ order }: { order: number }) {
@@ -138,7 +139,7 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
 
         .strength-print-toolbar {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: space-between;
           gap: 16px;
           width: 210mm;
@@ -331,7 +332,7 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           min-width: 7mm;
           height: 7mm;
           padding: 0 1.5mm;
-          background: ${BRAND_RED};
+          background: ${PRINT_ACCENT};
           color: #fff;
           font-size: 8pt;
           font-weight: 800;
@@ -355,7 +356,7 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
 
         .print-exercise-rule {
           height: 2px;
-          background: ${BRAND_RED};
+          background: ${PRINT_ACCENT};
           margin: 1.5mm 0 2mm;
           flex-shrink: 0;
         }
@@ -472,7 +473,7 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           padding: 1.8mm 1px;
           color: #111;
           vertical-align: middle;
-          border-bottom: 1.5px solid ${BRAND_RED};
+          border-bottom: 1.5px solid ${PRINT_ACCENT};
           font-weight: 700;
           overflow: visible;
         }
@@ -490,16 +491,21 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
 
         .strength-set-table-print th {
           font-size: 6.5pt;
+          font-weight: 400;
           text-transform: uppercase;
           letter-spacing: 0;
           color: #222;
-          border-bottom: 2px solid ${BRAND_RED};
+          border-bottom: 2px solid ${PRINT_ACCENT};
           padding-top: 1.5mm;
           padding-bottom: 2.8mm;
           background: #f0f0f0;
           white-space: normal;
           line-height: 1.25;
           word-break: break-word;
+        }
+
+        .strength-set-table-print td.print-col-pct {
+          font-weight: 400;
         }
 
         .strength-set-table-print tbody tr td {
