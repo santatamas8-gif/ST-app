@@ -16,6 +16,7 @@ import {
   type PowerBiPlayerCandidate,
 } from "@/lib/powerbi/queries/playerNames.server";
 import { resolvePowerBiPlayerCandidate } from "@/lib/powerbi/queries/playerNames";
+import type { PlayerExternalMappingRow } from "@/lib/gpsPlanner/types";
 
 export const POWERBI_MAPPING_PROVIDER = "powerbi" as const;
 
@@ -40,15 +41,7 @@ export type PlayerMappingResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: PlayerMappingSafeError };
 
-export type PlayerExternalMappingRow = {
-  id: string;
-  playerId: string;
-  provider: typeof POWERBI_MAPPING_PROVIDER;
-  externalPlayerName: string;
-  createdAt: string;
-  updatedAt: string;
-  playerDisplayName: string;
-};
+export type { PlayerExternalMappingRow };
 
 type MappingDbRow = {
   id: string;

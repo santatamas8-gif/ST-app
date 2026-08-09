@@ -90,10 +90,21 @@ import {
   type PlannerWeeklyProgressResult,
 } from "@/lib/gpsPlanner/progress.server";
 
+import {
+  createPlayerMapping,
+  listPlayerMappings,
+  listPowerBiPlayerCandidates,
+  updatePlayerMapping,
+  type CreatePlayerMappingInput,
+  type UpdatePlayerMappingInput,
+} from "@/lib/gpsPlanner/playerMappings.server";
+
 import type {
+  ApplyDailyTargetOutcome,
   ApplyWeeklyTargetOutcome,
   PlannerUiPlayer,
 } from "@/lib/gpsPlanner/types";
+import { plannerErrorMessage } from "@/lib/gpsPlanner/uiDisplay";
 
 const PLANNER_PATH = "/admin/planner";
 
@@ -449,4 +460,125 @@ export async function applyWeeklyTargetsToPlayers(
 
   if (anySuccess) revalidatePlanner();
   return { ok: true, data: outcomes };
+}
+
+export type ApplyDailyTargetToPlayersInput = {
+  weekDayId: string;
+  playerIds: string[];
+  tdPct: number;
+  hsrPct: number;
+  sprintPct: number;
+  accPct: number;
+  decPct: number;
+};
+
+/**
+ * Per-player create-or-update Daily Targets for one week day.
+ * Same percentages for each selected player; absolutes stay player-specific
+ * via frozen Match Best inside existing domain create/update.
+ * Does not call Power BI.
+ */
+export async function applyDailyTargetToPlayers(
+  input: ApplyDailyTargetToPlayersInput
+): Promise<PlannerResult<ApplyDailyTargetOutcome[]>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  const outcomes: ApplyDailyTargetOutcome[] = [];
+  let anySuccess = false;
+  const pct = {
+    tdPct: input.tdPct,
+    hsrPct: input.hsrPct,
+    sprintPct: input.sprintPct,
+    accPct: input.accPct,
+    decPct: input.decPct,
+  };
+
+  for (const playerId of input.playerIds) {
+    const existing = await getPlannerDailyTarget(input.weekDayId, playerId);
+    if (!existing.ok) {
+      outcomes.push({
+        playerId,
+        status: "failed",
+        message: plannerErrorMessage(
+          existing.error.code,
+          existing.error.message
+        ),
+      });
+      continue;
+    }
+
+    if (existing.data) {
+      const updated = await updatePlannerDailyTarget({
+        weekDayId: input.weekDayId,
+        playerId,
+        ...pct,
+      });
+      if (updated.ok) {
+        anySuccess = true;
+        outcomes.push({ playerId, status: "updated" });
+      } else {
+        outcomes.push({
+          playerId,
+          status: "failed",
+          message: plannerErrorMessage(
+            updated.error.code,
+            updated.error.message
+          ),
+        });
+      }
+    } else {
+      const created = await createPlannerDailyTarget({
+        weekDayId: input.weekDayId,
+        playerId,
+        ...pct,
+      });
+      if (created.ok) {
+        anySuccess = true;
+        outcomes.push({ playerId, status: "created" });
+      } else {
+        outcomes.push({
+          playerId,
+          status: "failed",
+          message: plannerErrorMessage(
+            created.error.code,
+            created.error.message
+          ),
+        });
+      }
+    }
+  }
+
+  if (anySuccess) revalidatePlanner();
+  return { ok: true, data: outcomes };
+}
+
+// ── Player ↔ Power BI mappings ──────────────────────────────────────────────
+
+export async function listPowerBiPlayerCandidatesAction(): Promise<
+  Awaited<ReturnType<typeof listPowerBiPlayerCandidates>>
+> {
+  return listPowerBiPlayerCandidates();
+}
+
+export async function listPlayerMappingsAction(): Promise<
+  Awaited<ReturnType<typeof listPlayerMappings>>
+> {
+  return listPlayerMappings();
+}
+
+export async function createPlayerMappingAction(
+  input: CreatePlayerMappingInput
+): Promise<Awaited<ReturnType<typeof createPlayerMapping>>> {
+  const result = await createPlayerMapping(input);
+  if (result.ok) revalidatePlanner();
+  return result;
+}
+
+export async function updatePlayerMappingAction(
+  input: UpdatePlayerMappingInput
+): Promise<Awaited<ReturnType<typeof updatePlayerMapping>>> {
+  const result = await updatePlayerMapping(input);
+  if (result.ok) revalidatePlanner();
+  return result;
 }

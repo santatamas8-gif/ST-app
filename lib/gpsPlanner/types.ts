@@ -171,3 +171,17 @@ export type ApplyWeeklyTargetOutcome = {
   status: "created" | "updated" | "failed";
   message?: string;
 };
+
+/** Same per-player outcome shape as weekly apply. */
+export type ApplyDailyTargetOutcome = ApplyWeeklyTargetOutcome;
+
+/** Current ST-AMS ↔ Power BI mapping row (display). */
+export type PlayerExternalMappingRow = {
+  id: string;
+  playerId: string;
+  provider: "powerbi";
+  externalPlayerName: string;
+  createdAt: string;
+  updatedAt: string;
+  playerDisplayName: string;
+};

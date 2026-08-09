@@ -67,11 +67,16 @@ const ERROR_MESSAGES: Record<string, string> = {
   mapping_not_found:
     "No Power BI player mapping for this player. Map them before creating a Weekly Target.",
   mapping_changed: "Power BI player mapping changed unexpectedly.",
+  player_already_mapped: "This ST-AMS player already has a Power BI mapping.",
+  external_player_already_mapped:
+    "This Power BI player is already mapped to another ST-AMS player.",
+  external_player_not_found:
+    "Selected Power BI player was not found in GPS_Log or Match Best.",
   match_best_not_found: "Match Best was not found in Power BI for this player.",
   match_best_ambiguous: "Match Best is ambiguous in Power BI for this player.",
   match_best_incomplete: "Match Best from Power BI is incomplete for this player.",
   powerbi_error: "Power BI request failed. Try again later.",
-  weekly_target_not_found: "Weekly target was not found for this player.",
+  weekly_target_not_found: "Weekly Target not found",
   weekly_target_already_exists: "A weekly target already exists for this player in this week.",
   invalid_percentage: "Percentages must be numbers ≥ 0 (no upper bound).",
   daily_target_not_found: "Daily target was not found.",

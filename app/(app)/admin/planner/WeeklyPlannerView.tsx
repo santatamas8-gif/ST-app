@@ -34,6 +34,7 @@ import {
 } from "@/lib/gpsPlanner/uiDisplay";
 import {
   addPlannerGroupMemberAction,
+  applyDailyTargetToPlayers,
   applyWeeklyTargetsToPlayers,
   createPlannerDailyTargetAction,
   createPlannerGroupAction,
@@ -61,6 +62,7 @@ import {
   updatePlannerWeeklyTargetAction,
 } from "@/app/actions/gpsPlanner";
 import type {
+  ApplyDailyTargetOutcome,
   ApplyWeeklyTargetOutcome,
   PlannerDailyTargetView,
   PlannerGroupMemberRow,
@@ -72,6 +74,7 @@ import type {
   PlannerWeeklyProgressResult,
   PlannerWeeklyTargetView,
 } from "@/lib/gpsPlanner/types";
+import { PlayerMappingModal } from "./PlayerMappingModal";
 
 const METRIC_KEYS = ["td", "hsr", "sprint", "acc", "dec"] as const;
 type MetricKey = (typeof METRIC_KEYS)[number];
@@ -241,6 +244,9 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
   const [applyOutcomes, setApplyOutcomes] = useState<
     ApplyWeeklyTargetOutcome[] | null
   >(null);
+  const [dailyApplyOutcomes, setDailyApplyOutcomes] = useState<
+    ApplyDailyTargetOutcome[] | null
+  >(null);
   const [pending, startTransition] = useTransition();
 
   const [confirm, setConfirm] = useState<null | {
@@ -251,6 +257,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
   const [confirmBusy, setConfirmBusy] = useState(false);
   /** Remount week-day edit inputs after failed/successful save so values stay in sync. */
   const [dayFormEpoch, setDayFormEpoch] = useState(0);
+  const [mappingOpen, setMappingOpen] = useState(false);
 
   // Week form (create / edit)
   const [showWeekForm, setShowWeekForm] = useState(false);
@@ -826,6 +833,35 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
     });
   }
 
+  function applyDailyToSelected(dayId: string) {
+    if (!weekId || selectedPlayerIds.length === 0) return;
+    const inputs = dailyPctInputs[dayId];
+    if (!inputs) return;
+    const pct = parsePctInputs(inputs);
+    if (!pct) {
+      setError("Enter valid daily percentages (≥ 0) for all metrics.");
+      return;
+    }
+    setDailyApplyOutcomes(null);
+    setError(null);
+    startTransition(async () => {
+      const res = await applyDailyTargetToPlayers({
+        weekDayId: dayId,
+        playerIds: selectedPlayerIds,
+        ...pct,
+      });
+      if (!res.ok) {
+        setError(errText(res.error.code, res.error.message));
+        return;
+      }
+      setDailyApplyOutcomes(res.data);
+      setFlash("Daily apply finished — see per-player outcomes.");
+      if (focusedPlayerId) {
+        await loadFocusedPlayerData(weekId, focusedPlayerId);
+      }
+    });
+  }
+
   function askDeleteDaily(dayId: string) {
     if (!focusedPlayerId || !dailyByDayId[dayId]) return;
     setConfirm({
@@ -967,6 +1003,13 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
             </select>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setMappingOpen(true)}
+              className="min-h-[44px] rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+            >
+              Player Mapping
+            </button>
             <button
               type="button"
               onClick={openCreateWeek}
@@ -1765,6 +1808,14 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                       >
                         Save Daily
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => applyDailyToSelected(day.id)}
+                        disabled={pending || selectedPlayerIds.length === 0}
+                        className="min-h-[40px] rounded-lg border border-emerald-700/50 text-sm text-emerald-200 hover:bg-emerald-950/30 disabled:opacity-40"
+                      >
+                        Apply to {selectedPlayerIds.length} selected
+                      </button>
                       {hasRow && (
                         <button
                           type="button"
@@ -1779,6 +1830,35 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                 );
               })}
             </div>
+
+            {dailyApplyOutcomes && (
+              <div className="rounded-lg border border-zinc-700/60 p-3">
+                <p className="mb-2 text-sm font-medium text-zinc-200">
+                  Daily apply outcomes
+                </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+                  {dailyApplyOutcomes.map((o) => (
+                    <li key={o.playerId} className="flex gap-2 text-zinc-300">
+                      <span
+                        className={
+                          o.status === "failed"
+                            ? "text-red-400"
+                            : "text-emerald-400"
+                        }
+                      >
+                        {o.status}
+                      </span>
+                      <span>
+                        {playerById.get(o.playerId)?.name ?? o.playerId}
+                      </span>
+                      {o.message && (
+                        <span className="text-zinc-500">— {o.message}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </Card>
@@ -1900,6 +1980,12 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
           </div>
         )}
       </Card>
+
+      <PlayerMappingModal
+        open={mappingOpen}
+        onClose={() => setMappingOpen(false)}
+        players={players}
+      />
 
       <ConfirmDialog
         open={confirm != null}

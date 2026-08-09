@@ -69,6 +69,15 @@ vi.mock("@/lib/gpsPlanner/progress.server", () => ({
   getPlannerDailyAnalysis: vi.fn(),
 }));
 
+vi.mock("@/lib/gpsPlanner/playerMappings.server", () => ({
+  listPlayerMappings: vi.fn(),
+  listPowerBiPlayerCandidates: vi.fn(),
+  createPlayerMapping: vi.fn(),
+  updatePlayerMapping: vi.fn(),
+  deletePlayerMapping: vi.fn(),
+  getPlayerMapping: vi.fn(),
+}));
+
 import { applyWeeklyTargetsToPlayers } from "@/app/actions/gpsPlanner";
 
 const ADMIN = {
