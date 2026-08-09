@@ -185,3 +185,27 @@ export type PlayerExternalMappingRow = {
   updatedAt: string;
   playerDisplayName: string;
 };
+
+/** One player row on the printable Daily Plan (client-safe). */
+export type DailyPlanPrintPlayerRow = {
+  playerId: string;
+  playerDisplayName: string;
+  hasDailyTarget: boolean;
+  /** Absolute planned TD (m). Null when hasDailyTarget is false — not zero. */
+  totalDistance: number | null;
+  hsr: number | null;
+  sprint: number | null;
+  accelerations: number | null;
+  decelerations: number | null;
+};
+
+/** Daily Plan print payload (client-safe). No Actual / Match Best / Difference. */
+export type DailyPlanPrintResult = {
+  weekDayId: string;
+  weekId: string;
+  powerBiWeekId: string;
+  date: string;
+  mdTag: string;
+  /** Ordered as requested playerIds. */
+  players: DailyPlanPrintPlayerRow[];
+};

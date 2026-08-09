@@ -1852,15 +1852,40 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                       >
                         Save Daily
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => applyDailyToSelected(day.id)}
-                        disabled={pending || selectedPlayerIds.length === 0}
-                        className="min-h-[40px] rounded-lg border border-emerald-700/50 text-sm text-emerald-200 hover:bg-emerald-950/30 disabled:opacity-40"
-                      >
-                        Apply to {selectedPlayerIds.length} selected
-                      </button>
-                      {hasRow && (
+                        <button
+                          type="button"
+                          onClick={() => applyDailyToSelected(day.id)}
+                          disabled={pending || selectedPlayerIds.length === 0}
+                          className="min-h-[40px] rounded-lg border border-emerald-700/50 text-sm text-emerald-200 hover:bg-emerald-950/30 disabled:opacity-40"
+                        >
+                          Apply to {selectedPlayerIds.length} selected
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedPlayerIds.length === 0) {
+                              setError(
+                                "Select at least one player before opening Daily Plan."
+                              );
+                              return;
+                            }
+                            setError(null);
+                            const qs = new URLSearchParams({
+                              weekDayId: day.id,
+                              playerIds: selectedPlayerIds.join(","),
+                            });
+                            window.open(
+                              `/admin/planner/daily-plan?${qs.toString()}`,
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
+                          }}
+                          disabled={selectedPlayerIds.length === 0}
+                          className="min-h-[40px] rounded-lg border border-zinc-600 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                        >
+                          Daily Plan
+                        </button>
+                        {hasRow && (
                         <button
                           type="button"
                           onClick={() => askDeleteDaily(day.id)}

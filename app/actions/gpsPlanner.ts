@@ -91,6 +91,11 @@ import {
 } from "@/lib/gpsPlanner/progress.server";
 
 import {
+  getDailyPlanForPrint,
+  type DailyPlanPrintResult,
+} from "@/lib/gpsPlanner/dailyPlan.server";
+
+import {
   createPlayerMapping,
   listPlayerMappings,
   listPowerBiPlayerCandidates,
@@ -337,6 +342,15 @@ export async function getPlannerDailyAnalysisAction(input: {
   playerId: string;
 }): Promise<PlannerResult<PlannerDailyAnalysisResult>> {
   return getPlannerDailyAnalysis(input);
+}
+
+// ── Daily Plan print ────────────────────────────────────────────────────────
+
+export async function getDailyPlanForPrintAction(input: {
+  weekDayId: string;
+  playerIds: string[];
+}): Promise<PlannerResult<DailyPlanPrintResult>> {
+  return getDailyPlanForPrint(input);
 }
 
 // ── UI players + bulk apply ─────────────────────────────────────────────────

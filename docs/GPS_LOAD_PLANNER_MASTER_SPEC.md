@@ -2,7 +2,7 @@
 
 **Status:** Authoritative project specification  
 **Scope:** GPS Load Planner V1 only  
-**Last architecture lock:** domain + Weekly Planner UI implemented; Daily Plan print not started
+**Last architecture lock:** Weekly Planner production final; Phase E Daily Plan print complete
 
 This document is the **single source of truth** for GPS Load Planner V1.  
 Any Cursor agent or human implementing planner work **must read this file first**.  
@@ -479,11 +479,11 @@ Power BI stores: **GPS facts**.
 
 ---
 
-## U. Daily Plan / print (future)
+## U. Daily Plan / print
 
-Minimal printable coaching sheet:
+Minimal printable coaching sheet (Phase E — **implemented**, browser/A4, read-only):
 
-- Week / MD Tag  
+- Week / MD Tag / Date  
 - Player  
 - Absolute TD / HSR / Sprint / Acc / Dec targets  
 
@@ -615,6 +615,12 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Weekly Planner UI (ADMIN ONLY): `/admin/planner` layout + page + `WeeklyPlannerView`, Sidebar nav (`PLANNER_NAV_ITEM`, admin-only), thin server actions (`app/actions/gpsPlanner.ts`), display helpers (`lib/gpsPlanner/uiDisplay.ts`)  
 - Destructive confirm gates in UI for week / week-day / weekly-target / daily-target deletes (domain still requires `confirm: true`)  
 - Multi-player Weekly Target apply orchestration (`applyWeeklyTargetsToPlayers`) with per-player outcomes  
+- Admin Player Mapping UI (`PlayerMappingModal` on `/admin/planner`)  
+- Multi-player Daily Target apply orchestration (`applyDailyTargetToPlayers`) with per-player outcomes  
+- Weekly Planner UX finalized (status/order helpers, humanized progress statuses, coach-facing outcomes)  
+- Phase E Daily Plan printable sheet: Admin-only browser/A4 print at `/admin/planner/daily-plan`  
+- Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %  
+- Daily Plan content: Week / Date / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec only — **no** Actual, Difference, Match Best, Weekly %, Daily %, Remaining, mapping, Wellness/RPE  
 
 ### Verification baseline (after Power BI query modules)
 
@@ -622,13 +628,12 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 
 ### Not implemented yet
 
-- Daily Plan / print  
 - Carry-over / microdosing / automatic coaching  
 
 ### Next phase (requires explicit approval)
 
-Daily Plan print — not started.  
-**Do not start Daily Plan print automatically from this documentation step.**
+No further GPS Load Planner V1 feature phase is open.  
+Carry-over / microdosing / automatic coaching remain excluded unless explicitly re-approved.
 
 ---
 
