@@ -851,6 +851,10 @@ describe("Daily Plan print content / design contract", () => {
     expect(source).toContain("Weekly %");
     expect(source).toContain("Daily %");
     expect(source).toContain("Daily Team Average");
+    expect(source).toContain("daily-plan-print-pct-pair");
+    expect(source).toContain("PRINT_BURGUNDY");
+    expect(source).toContain("Power BI calculations");
+    expect(source).toContain("daily-plan-print-footnote");
     expect(source).toContain("no-print");
     expect(source).toContain("daily-plan-print-logo");
     for (const forbidden of [
