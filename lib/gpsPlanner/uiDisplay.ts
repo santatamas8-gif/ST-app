@@ -3,7 +3,12 @@
  * Display-only — never persist rounded values; never invent formulas.
  */
 
-import { comparePlannerIsoDates, dateInInclusiveRange } from "@/lib/gpsPlanner/common";
+import {
+  comparePlannerIsoDates,
+  dateInInclusiveRange,
+  type PlannerWeekStatus,
+} from "@/lib/gpsPlanner/common";
+import type { DayActualStatus } from "@/lib/gpsPlanner/types";
 
 export type PlannerMetricKey = "td" | "hsr" | "sprint" | "acc" | "dec";
 
@@ -26,7 +31,7 @@ export function allocationStatusLabel(remainingPct: number): AllocationStatusLab
   if (remainingPct > 0) {
     return {
       kind: "remaining",
-      text: `${remainingPct}% remaining to allocate`,
+      text: `${remainingPct}% remaining`,
     };
   }
   if (remainingPct < 0) {
@@ -36,6 +41,61 @@ export function allocationStatusLabel(remainingPct: number): AllocationStatusLab
     };
   }
   return { kind: "full", text: "Fully allocated" };
+}
+
+/** Organizational week-status labels only — V1 does not lock editing. */
+export const WEEK_STATUS_HELP: Record<
+  PlannerWeekStatus,
+  { label: string; meaning: string }
+> = {
+  draft: {
+    label: "Draft",
+    meaning: "Planning / not finalized yet",
+  },
+  active: {
+    label: "Active",
+    meaning: "Current week in use",
+  },
+  closed: {
+    label: "Closed",
+    meaning: "Week finished / historical",
+  },
+};
+
+export const WEEK_STATUS_ORG_NOTE =
+  "Status is an organizational label only — it does not lock editing or change calculations.";
+
+/** Humanize progress day Actual status enums for Admin coaches. */
+export function formatProgressDayStatus(status: DayActualStatus): string {
+  switch (status) {
+    case "actual_found":
+      return "Found";
+    case "actual_not_found":
+      return "No data";
+    case "actual_ambiguous":
+      return "Ambiguous (not summed)";
+    case "actual_error":
+      return "Unavailable";
+    case "actual_incomplete":
+      return "Incomplete";
+    default:
+      return "Unavailable";
+  }
+}
+
+export type BulkApplyOutcomeStatus = "created" | "updated" | "failed";
+
+/** Display-only bulk apply outcome label (Weekly / Daily). */
+export function formatBulkApplyOutcomeStatus(
+  status: BulkApplyOutcomeStatus
+): { mark: string; label: string; tone: "ok" | "fail" } {
+  if (status === "failed") {
+    return { mark: "!", label: "Failed", tone: "fail" };
+  }
+  if (status === "created") {
+    return { mark: "✓", label: "Created", tone: "ok" };
+  }
+  return { mark: "✓", label: "Updated", tone: "ok" };
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -55,9 +115,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   day_not_found: "Week day was not found.",
   day_outside_week: "Day date must fall within the planner week.",
   duplicate_day_date: "This week already has a day on that date.",
-  duplicate_display_order: "This week already has a day with that display order.",
+  duplicate_display_order: "This week already has a day with that order.",
   invalid_md_tag: "MD tag is required.",
-  invalid_display_order: "Display order must be a whole number ≥ 0.",
+  invalid_display_order: "Order must be a whole number ≥ 0.",
   group_not_found: "Group was not found.",
   duplicate_group_name: "A group with this name already exists in the week.",
   player_not_found: "Player was not found.",
@@ -65,14 +125,14 @@ const ERROR_MESSAGES: Record<string, string> = {
   member_already_exists: "Player is already in this group.",
   member_not_found: "Group member was not found.",
   mapping_not_found:
-    "No Power BI player mapping for this player. Map them before creating a Weekly Target.",
+    "Power BI mapping not set — map the player before creating a Weekly Target",
   mapping_changed: "Power BI player mapping changed unexpectedly.",
   player_already_mapped: "This ST-AMS player already has a Power BI mapping.",
   external_player_already_mapped:
     "This Power BI player is already mapped to another ST-AMS player.",
   external_player_not_found:
     "Selected Power BI player was not found in GPS_Log or Match Best.",
-  match_best_not_found: "Match Best was not found in Power BI for this player.",
+  match_best_not_found: "Match Best not found in Power BI",
   match_best_ambiguous: "Match Best is ambiguous in Power BI for this player.",
   match_best_incomplete: "Match Best from Power BI is incomplete for this player.",
   powerbi_error: "Power BI request failed. Try again later.",

@@ -156,7 +156,8 @@ describe("applyWeeklyTargetsToPlayers", () => {
     expect(result.data[0]).toEqual({
       playerId: P1,
       status: "failed",
-      message: "No mapping.",
+      message:
+        "Power BI mapping not set — map the player before creating a Weekly Target",
     });
     expect(createPlannerWeeklyTarget).not.toHaveBeenCalled();
   });

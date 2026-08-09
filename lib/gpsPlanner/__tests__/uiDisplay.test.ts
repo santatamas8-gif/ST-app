@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   WEEKLY_BENCHMARK_REFERENCE,
+  WEEK_STATUS_HELP,
+  WEEK_STATUS_ORG_NOTE,
   allocationStatusLabel,
   defaultThroughDate,
+  formatBulkApplyOutcomeStatus,
   formatMetricUnit,
   formatPlannerDisplayAbsolute,
+  formatProgressDayStatus,
   formatWeekOptionLabel,
   plannerErrorMessage,
 } from "@/lib/gpsPlanner/uiDisplay";
@@ -28,10 +32,10 @@ describe("formatMetricUnit", () => {
 });
 
 describe("allocationStatusLabel", () => {
-  it("labels remaining / full / over", () => {
+  it("labels remaining / full / over in coach language", () => {
     expect(allocationStatusLabel(40)).toEqual({
       kind: "remaining",
-      text: "40% remaining to allocate",
+      text: "40% remaining",
     });
     expect(allocationStatusLabel(0)).toEqual({
       kind: "full",
@@ -40,6 +44,43 @@ describe("allocationStatusLabel", () => {
     expect(allocationStatusLabel(-15)).toEqual({
       kind: "over",
       text: "15% over-allocated",
+    });
+  });
+});
+
+describe("week status helpers", () => {
+  it("explains organizational labels only", () => {
+    expect(WEEK_STATUS_HELP.draft.meaning).toMatch(/Planning/i);
+    expect(WEEK_STATUS_HELP.active.meaning).toMatch(/Current week/i);
+    expect(WEEK_STATUS_HELP.closed.meaning).toMatch(/historical/i);
+    expect(WEEK_STATUS_ORG_NOTE).toMatch(/does not lock editing/i);
+  });
+});
+
+describe("formatProgressDayStatus", () => {
+  it("humanizes raw Actual status enums", () => {
+    expect(formatProgressDayStatus("actual_found")).toBe("Found");
+    expect(formatProgressDayStatus("actual_not_found")).toBe("No data");
+    expect(formatProgressDayStatus("actual_ambiguous")).toBe(
+      "Ambiguous (not summed)"
+    );
+    expect(formatProgressDayStatus("actual_error")).toBe("Unavailable");
+    expect(formatProgressDayStatus("actual_incomplete")).toBe("Incomplete");
+  });
+});
+
+describe("formatBulkApplyOutcomeStatus", () => {
+  it("formats created / updated / failed", () => {
+    expect(formatBulkApplyOutcomeStatus("created")).toEqual({
+      mark: "✓",
+      label: "Created",
+      tone: "ok",
+    });
+    expect(formatBulkApplyOutcomeStatus("updated").label).toBe("Updated");
+    expect(formatBulkApplyOutcomeStatus("failed")).toEqual({
+      mark: "!",
+      label: "Failed",
+      tone: "fail",
     });
   });
 });
@@ -59,10 +100,18 @@ describe("defaultThroughDate", () => {
 });
 
 describe("plannerErrorMessage", () => {
-  it("maps common codes and falls back", () => {
+  it("maps common codes into Admin language", () => {
     expect(plannerErrorMessage("unauthorized")).toBe("Admin access required.");
     expect(plannerErrorMessage("confirmation_required")).toMatch(/confirm/i);
-    expect(plannerErrorMessage("mapping_not_found")).toMatch(/mapping/i);
+    expect(plannerErrorMessage("mapping_not_found")).toMatch(
+      /Power BI mapping not set/i
+    );
+    expect(plannerErrorMessage("match_best_not_found")).toBe(
+      "Match Best not found in Power BI"
+    );
+    expect(plannerErrorMessage("weekly_target_not_found")).toBe(
+      "Weekly Target not found"
+    );
     expect(plannerErrorMessage("unknown_code", "Custom")).toBe("Custom");
     expect(plannerErrorMessage("totally_unknown")).toMatch(/planner/i);
   });

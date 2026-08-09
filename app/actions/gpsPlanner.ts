@@ -410,7 +410,10 @@ export async function applyWeeklyTargetsToPlayers(
       outcomes.push({
         playerId,
         status: "failed",
-        message: existing.error.message,
+        message: plannerErrorMessage(
+          existing.error.code,
+          existing.error.message
+        ),
       });
       continue;
     }
@@ -432,7 +435,10 @@ export async function applyWeeklyTargetsToPlayers(
         outcomes.push({
           playerId,
           status: "failed",
-          message: updated.error.message,
+          message: plannerErrorMessage(
+            updated.error.code,
+            updated.error.message
+          ),
         });
       }
     } else {
@@ -452,7 +458,10 @@ export async function applyWeeklyTargetsToPlayers(
         outcomes.push({
           playerId,
           status: "failed",
-          message: created.error.message,
+          message: plannerErrorMessage(
+            created.error.code,
+            created.error.message
+          ),
         });
       }
     }

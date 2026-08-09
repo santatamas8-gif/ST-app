@@ -146,8 +146,8 @@ export function PlayerMappingModal({ open, onClose, players }: Props) {
               Player Mapping
             </h3>
             <p className="mt-1 text-xs text-zinc-400">
-              Map each ST-AMS player to the exact Power BI player name. No
-              automatic matching.
+              Link each ST-AMS player to the exact Power BI player name. No
+              automatic matching. Status: Mapped or Not mapped.
             </p>
           </div>
           <button

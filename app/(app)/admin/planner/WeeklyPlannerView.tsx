@@ -25,10 +25,14 @@ import {
 } from "@/lib/gpsPlanner/calculations";
 import {
   WEEKLY_BENCHMARK_REFERENCE,
+  WEEK_STATUS_HELP,
+  WEEK_STATUS_ORG_NOTE,
   allocationStatusLabel,
   defaultThroughDate,
+  formatBulkApplyOutcomeStatus,
   formatMetricUnit,
   formatPlannerDisplayAbsolute,
+  formatProgressDayStatus,
   formatWeekOptionLabel,
   plannerErrorMessage,
 } from "@/lib/gpsPlanner/uiDisplay";
@@ -247,6 +251,9 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
   const [dailyApplyOutcomes, setDailyApplyOutcomes] = useState<
     ApplyDailyTargetOutcome[] | null
   >(null);
+  const [dailyApplyContext, setDailyApplyContext] = useState<string | null>(
+    null
+  );
   const [pending, startTransition] = useTransition();
 
   const [confirm, setConfirm] = useState<null | {
@@ -549,7 +556,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
     if (!selectedWeek) return;
     setConfirm({
       title: "Delete planner week?",
-      body: `Delete ${formatWeekOptionLabel(selectedWeek.powerbiWeekId, selectedWeek.startDate, selectedWeek.endDate)}?\n\nThis permanently deletes week days, groups, Match Best snapshots, weekly targets, and daily targets for this week.`,
+      body: `Delete ${formatWeekOptionLabel(selectedWeek.powerbiWeekId, selectedWeek.startDate, selectedWeek.endDate)}?\n\nThis permanently deletes week days, groups, Match Best snapshots, weekly targets, and daily targets for this week.\n\nPower BI data and player mappings are not deleted.`,
       run: async () => {
         const res = await deletePlannerWeekAction({
           weekId: selectedWeek.id,
@@ -842,7 +849,9 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       setError("Enter valid daily percentages (≥ 0) for all metrics.");
       return;
     }
+    const day = days.find((d) => d.id === dayId);
     setDailyApplyOutcomes(null);
+    setDailyApplyContext(day ? `${day.mdTag} · ${day.date}` : dayId);
     setError(null);
     startTransition(async () => {
       const res = await applyDailyTargetToPlayers({
@@ -989,7 +998,9 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
               onChange={(e) => setWeekId(e.target.value)}
               className="w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-white"
             >
-              {weeks.length === 0 && <option value="">No weeks yet</option>}
+              {weeks.length === 0 && (
+                <option value="">No weeks yet — create one with New week</option>
+              )}
               {weeks.map((w) => (
                 <option key={w.id} value={w.id}>
                   {formatWeekOptionLabel(
@@ -997,7 +1008,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                     w.startDate,
                     w.endDate
                   )}{" "}
-                  · {w.weekType} · {w.status}
+                  · {w.weekType} · {WEEK_STATUS_HELP[w.status].label}
                 </option>
               ))}
             </select>
@@ -1054,7 +1065,13 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
             </div>
             <div>
               <p className="text-xs text-zinc-500">Status</p>
-              <p className="text-zinc-200 capitalize">{selectedWeek.status}</p>
+              <p className="text-zinc-200">
+                {WEEK_STATUS_HELP[selectedWeek.status].label}
+              </p>
+              <p className="text-[11px] text-zinc-500">
+                {WEEK_STATUS_HELP[selectedWeek.status].meaning}.{" "}
+                {WEEK_STATUS_ORG_NOTE}
+              </p>
             </div>
             <div>
               <p className="text-xs text-zinc-500">Power BI Week ID</p>
@@ -1082,7 +1099,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Status">
+              <Field label="Status" hint={WEEK_STATUS_ORG_NOTE}>
                 <select
                   value={weekForm.status}
                   onChange={(e) =>
@@ -1095,7 +1112,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                 >
                   {WEEK_STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {WEEK_STATUS_HELP[s].label} — {WEEK_STATUS_HELP[s].meaning}
                     </option>
                   ))}
                 </select>
@@ -1269,7 +1286,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                   {days.length === 0 && (
                     <tr>
                       <td colSpan={4} className="py-4 text-zinc-500">
-                        No days yet.
+                        No days yet — add a date and MD tag below.
                       </td>
                     </tr>
                   )}
@@ -1297,7 +1314,10 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Display order">
+              <Field
+                label="Order"
+                hint="Controls the order of days in the Planner."
+              >
                 <input
                   type="number"
                   min={0}
@@ -1326,8 +1346,9 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       {/* Players + groups */}
       <Card title="Players">
         <p className="mb-3 text-xs text-zinc-500">
-          Identity is profile UUID. Groups are selection helpers only — they do
-          not own targets.
+          Check players to apply Weekly/Daily percentages in bulk. Focus one
+          player to edit details. Groups are optional selection helpers — they
+          do not own targets.
         </p>
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           <div>
@@ -1409,7 +1430,12 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-medium text-zinc-200">Groups</p>
+            <div>
+              <p className="text-sm font-medium text-zinc-200">Groups</p>
+              <p className="text-xs text-zinc-500">
+                Optional — use groups only to select players faster.
+              </p>
+            </div>
             <div className="flex gap-2">
               <input
                 value={newGroupName}
@@ -1524,7 +1550,8 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       <Card title="Weekly targets">
         {!focusedPlayerId ? (
           <p className="text-sm text-zinc-400">
-            Select a focused player to edit Weekly Targets.
+            Select a focused player, then enter Weekly % (e.g. 135 = 135%). Use
+            Player Mapping first if Match Best is missing.
           </p>
         ) : (
           <div className="space-y-4">
@@ -1587,13 +1614,22 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                   <tr className="border-b border-zinc-800 text-zinc-400">
                     <th className="py-2 pr-2 text-left font-medium">Metric</th>
                     <th className="py-2 pr-2 text-left font-medium">
-                      Weekly %
+                      Weekly %{" "}
+                      <span className="font-normal text-zinc-500">
+                        (135 = 135%)
+                      </span>
                     </th>
                     <th className="py-2 pr-2 text-left font-medium">
-                      Match Best (frozen)
+                      Match Best{" "}
+                      <span className="font-normal text-zinc-500">
+                        (frozen · read-only)
+                      </span>
                     </th>
                     <th className="py-2 text-left font-medium">
-                      Planned (display)
+                      Planned{" "}
+                      <span className="font-normal text-zinc-500">
+                        (from % × Match Best)
+                      </span>
                     </th>
                   </tr>
                 </thead>
@@ -1639,9 +1675,6 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                           {best == null
                             ? "—"
                             : `${formatPlannerDisplayAbsolute(best)} ${unit}`}
-                          <span className="ml-1 text-[10px] uppercase tracking-wide text-zinc-600">
-                            read-only
-                          </span>
                         </td>
                         <td className="py-2 text-zinc-200">
                           {plannedAbs == null
@@ -1657,39 +1690,43 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
 
             {(snapshot || weeklyTarget) && (
               <p className="text-xs text-zinc-500">
-                Frozen Power BI name:{" "}
-                {snapshot?.powerBiPlayerName ??
-                  weeklyTarget?.powerBiPlayerName}{" "}
-                · method:{" "}
-                {snapshot?.sourceMethod ?? weeklyTarget?.sourceMethod}
+                Match Best reference for this week:{" "}
+                <span className="text-zinc-300">
+                  {snapshot?.powerBiPlayerName ??
+                    weeklyTarget?.powerBiPlayerName}
+                </span>{" "}
+                (frozen — not editable)
               </p>
             )}
 
             {applyOutcomes && (
               <div className="rounded-lg border border-zinc-700/60 p-3">
                 <p className="mb-2 text-sm font-medium text-zinc-200">
-                  Apply outcomes
+                  Weekly apply outcomes
                 </p>
                 <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
-                  {applyOutcomes.map((o) => (
-                    <li key={o.playerId} className="flex gap-2 text-zinc-300">
-                      <span
-                        className={
-                          o.status === "failed"
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }
-                      >
-                        {o.status}
-                      </span>
-                      <span>
-                        {playerById.get(o.playerId)?.name ?? o.playerId}
-                      </span>
-                      {o.message && (
-                        <span className="text-zinc-500">— {o.message}</span>
-                      )}
-                    </li>
-                  ))}
+                  {applyOutcomes.map((o) => {
+                    const fmt = formatBulkApplyOutcomeStatus(o.status);
+                    return (
+                      <li key={o.playerId} className="flex gap-2 text-zinc-300">
+                        <span
+                          className={
+                            fmt.tone === "fail"
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                          }
+                        >
+                          {fmt.mark} {fmt.label}
+                        </span>
+                        <span>
+                          — {playerById.get(o.playerId)?.name ?? o.playerId}
+                        </span>
+                        {o.message && (
+                          <span className="text-zinc-500">· {o.message}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -1701,12 +1738,19 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       <Card title="Daily distribution">
         {!focusedPlayerId || !weeklyTarget ? (
           <p className="text-sm text-zinc-400">
-            Create a Weekly Target for the focused player to edit daily %.
+            Create a Weekly Target for the focused player first, then distribute
+            daily %.
           </p>
         ) : days.length === 0 ? (
           <p className="text-sm text-zinc-400">Add week days first.</p>
         ) : (
           <div className="space-y-4">
+            <p className="text-xs text-zinc-500">
+              Daily % is of frozen Match Best (not of Weekly Target). Same % can
+              be applied to selected players; planned meters/counts stay
+              player-specific. Values below are for the focused player. Example:
+              50 = 50%.
+            </p>
             {remaining && (
               <div className="flex flex-wrap gap-2 text-xs">
                 {METRIC_KEYS.map((key) => {
@@ -1772,7 +1816,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                                     : planned.decelerations;
                         return (
                           <div key={key}>
-                            <label className="text-[11px] text-zinc-500">
+                            <label className="text-xs text-zinc-500">
                               {METRIC_LABEL[key]} %
                             </label>
                             <input
@@ -1789,7 +1833,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                               }
                               className={inputClass}
                             />
-                            <p className="mt-0.5 text-[10px] text-zinc-500">
+                            <p className="mt-0.5 text-xs text-zinc-500">
                               Planned:{" "}
                               {abs == null
                                 ? "—"
@@ -1835,27 +1879,35 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
               <div className="rounded-lg border border-zinc-700/60 p-3">
                 <p className="mb-2 text-sm font-medium text-zinc-200">
                   Daily apply outcomes
+                  {dailyApplyContext ? (
+                    <span className="ml-2 font-normal text-zinc-400">
+                      ({dailyApplyContext})
+                    </span>
+                  ) : null}
                 </p>
                 <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
-                  {dailyApplyOutcomes.map((o) => (
-                    <li key={o.playerId} className="flex gap-2 text-zinc-300">
-                      <span
-                        className={
-                          o.status === "failed"
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }
-                      >
-                        {o.status}
-                      </span>
-                      <span>
-                        {playerById.get(o.playerId)?.name ?? o.playerId}
-                      </span>
-                      {o.message && (
-                        <span className="text-zinc-500">— {o.message}</span>
-                      )}
-                    </li>
-                  ))}
+                  {dailyApplyOutcomes.map((o) => {
+                    const fmt = formatBulkApplyOutcomeStatus(o.status);
+                    return (
+                      <li key={o.playerId} className="flex gap-2 text-zinc-300">
+                        <span
+                          className={
+                            fmt.tone === "fail"
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                          }
+                        >
+                          {fmt.mark} {fmt.label}
+                        </span>
+                        <span>
+                          — {playerById.get(o.playerId)?.name ?? o.playerId}
+                        </span>
+                        {o.message && (
+                          <span className="text-zinc-500">· {o.message}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -1867,12 +1919,16 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       <Card title="Weekly progress">
         {!focusedPlayerId || !weeklyTarget ? (
           <p className="text-sm text-zinc-400">
-            Progress requires a focused player with a Weekly Target.
+            Focus a player with a Weekly Target, then set Progress through date
+            and refresh.
           </p>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field label="Through date">
+              <Field
+                label="Progress through date"
+                hint="Weekly Actual and To Target use training days up to this date."
+              >
                 <input
                   type="date"
                   value={throughDate}
@@ -1905,8 +1961,18 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                       <tr className="border-b border-zinc-800 text-zinc-400">
                         <th className="py-2 pr-2 text-left">Metric</th>
                         <th className="py-2 pr-2 text-left">Planned</th>
-                        <th className="py-2 pr-2 text-left">Actual</th>
-                        <th className="py-2 text-left">To Target</th>
+                        <th className="py-2 pr-2 text-left">
+                          Actual{" "}
+                          <span className="font-normal text-zinc-500">
+                            (Full Training)
+                          </span>
+                        </th>
+                        <th className="py-2 text-left">
+                          To Target{" "}
+                          <span className="font-normal text-zinc-500">
+                            (Planned − Actual)
+                          </span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1949,12 +2015,16 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                     </tbody>
                   </table>
                 </div>
+                <p className="text-xs text-zinc-500">
+                  To Target = Planned − Actual. Positive = remaining, zero =
+                  reached, negative = over target (not judged as good/bad).
+                </p>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[560px] text-xs">
                     <thead>
                       <tr className="border-b border-zinc-800 text-zinc-500">
                         <th className="py-1.5 pr-2 text-left">Day</th>
-                        <th className="py-1.5 pr-2 text-left">Status</th>
+                        <th className="py-1.5 pr-2 text-left">Actual status</th>
                         <th className="py-1.5 text-left">Has daily target</th>
                       </tr>
                     </thead>
@@ -1965,7 +2035,7 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
                             {d.mdTag} · {d.date}
                           </td>
                           <td className="py-1.5 pr-2 text-zinc-400">
-                            {d.status}
+                            {formatProgressDayStatus(d.status)}
                           </td>
                           <td className="py-1.5 text-zinc-400">
                             {d.hasDailyTarget ? "yes" : "no"}
@@ -2004,15 +2074,18 @@ const inputClass =
 
 function Field({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: ReactNode;
 }) {
   return (
     <label className="block space-y-1">
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       {children}
+      {hint ? <span className="block text-[11px] text-zinc-500">{hint}</span> : null}
     </label>
   );
 }
