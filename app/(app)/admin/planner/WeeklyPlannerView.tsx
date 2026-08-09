@@ -124,6 +124,8 @@ const EMPTY_PCT: PercentageMetrics = {
 type Props = {
   initialWeeks: PlannerWeekRow[];
   players: PlannerUiPlayer[];
+  /** Optional: notify shell when Planning week changes (Review can reuse). */
+  onWeekIdChange?: (weekId: string) => void;
 };
 
 function todayIsoLocal(): string {
@@ -210,7 +212,11 @@ function ConfirmDialog({
   );
 }
 
-export function WeeklyPlannerView({ initialWeeks, players }: Props) {
+export function WeeklyPlannerView({
+  initialWeeks,
+  players,
+  onWeekIdChange,
+}: Props) {
   const [weeks, setWeeks] = useState(initialWeeks);
   const [weekId, setWeekId] = useState(initialWeeks[0]?.id ?? "");
   const selectedWeek = weeks.find((w) => w.id === weekId) ?? null;
@@ -332,6 +338,10 @@ export function WeeklyPlannerView({ initialWeeks, players }: Props) {
       }
     }
   }, []);
+
+  useEffect(() => {
+    onWeekIdChange?.(weekId);
+  }, [weekId, onWeekIdChange]);
 
   useEffect(() => {
     void loadWeekScoped(weekId);

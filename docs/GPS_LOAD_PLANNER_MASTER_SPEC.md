@@ -2,7 +2,7 @@
 
 **Status:** Authoritative project specification  
 **Scope:** GPS Load Planner V1 only  
-**Last architecture lock:** Weekly Planner production final; Daily Plan final redesign (landscape + secondary summaries)
+**Last architecture lock:** GPS Load Planner Planning | Review (Phase F) on `/admin/planner`
 
 This document is the **single source of truth** for GPS Load Planner V1.  
 Any Cursor agent or human implementing planner work **must read this file first**.  
@@ -479,6 +479,38 @@ Power BI stores: **GPS facts**.
 
 ---
 
+## U2. Planning | Review navigation (Phase F)
+
+Single Admin route:
+
+`/admin/planner`
+
+Top-level segmented control (only one visible at a time):
+
+`Planning | Review`
+
+**Planning:** existing Weekly Planner (unchanged production-final behavior). Kept mounted/hidden when Review is active.
+
+**Review:** secondary segmented control `Weekly | Daily`.
+
+- Week selector: any saved `planner_weeks` (including closed/historical)
+- Review population: players with a saved Weekly Target for that week
+- Actual: live Power BI Full Training only — **not** persisted
+- Historical Actual identity: frozen snapshot `powerbi_player_name` (never current mapping)
+- Metrics: TD / HSR / Sprint / Acc / Dec only
+- Sign: Planned − Actual (Weekly: To Target; Daily: Difference)
+- Weekly uses existing `getPlannerWeeklyProgress` + visible `throughDate`
+- Daily uses existing `getPlannerDailyAnalysis` + dynamic `planner_week_days`
+- Missing Daily Target: Planned/Difference `—`; Actual may still show if found
+- Missing / ambiguous / error Actual: never fake zeros; withhold Difference/To Target per existing domain
+- No new archive/history tables; no new sidebar route; no automatic coaching
+
+**Review UI state (session/page only):** Owned by `GpsLoadPlannerView` shell. Switching Planning ↔ Review preserves Review sub-tab (Weekly/Daily), Review week, through-date, and Daily week-day selection. First open of Review may seed week from Planning; later switches do not overwrite Review selections. Intentional Review week change revalidates through-date for the new week range and replaces a stale Daily week-day with a valid day from the new week.
+
+**Known V1 performance characteristic (not a release defect):** Large-roster Weekly/Daily Review loads Power BI Actuals sequentially per player (correctness over concurrency). Do not treat this as a MINOR defect.
+
+---
+
 ## U. Daily Plan / print
 
 Professional printable coaching sheet (**implemented**, browser / A4 **landscape**, read-only):
@@ -640,6 +672,7 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Daily Plan final redesign: A4 landscape; red accents; dominant player table; secondary Weekly % / Daily % / Daily Team Average summaries
 - Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %
 - Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
+- Phase F Planning | Review on `/admin/planner`: Planning = existing Weekly Planner; Review = Weekly/Daily Planned vs Actual via existing progress/analysis domain (frozen historical Power BI identity; Actual not persisted)
 
 ### Verification baseline (after Power BI query modules)
 
@@ -651,7 +684,6 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 
 ### Next phase (requires explicit approval)
 
-No further GPS Load Planner V1 feature phase is open.  
 Carry-over / microdosing / automatic coaching remain excluded unless explicitly re-approved.
 
 ---

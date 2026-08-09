@@ -2,7 +2,7 @@ import {
   listPlannerUiPlayers,
   listPlannerWeeksAction,
 } from "@/app/actions/gpsPlanner";
-import { WeeklyPlannerView } from "./WeeklyPlannerView";
+import { GpsLoadPlannerView } from "./GpsLoadPlannerView";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function WeeklyPlannerPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-          Weekly Planner
+          GPS Load Planner
         </h1>
         <p className="mt-1 text-sm text-zinc-400">
           Admin-only GPS load planning — you decide, system calculates.
@@ -33,7 +33,7 @@ export default async function WeeklyPlannerPage() {
           {loadError}
         </p>
       )}
-      <WeeklyPlannerView initialWeeks={weeks} players={players} />
+      <GpsLoadPlannerView initialWeeks={weeks} players={players} />
     </div>
   );
 }

@@ -160,6 +160,24 @@ export type PlannerWeeklyProgressResult = {
   actualCompleteness: "complete" | "partial_not_found" | "incomplete";
 };
 
+/** Daily Analysis: Planned / Actual / Difference (client-safe). */
+export type PlannerDailyAnalysisResult = {
+  weekId: string;
+  powerBiWeekId: string;
+  weekDayId: string;
+  date: string;
+  mdTag: string;
+  playerId: string;
+  playerDisplayName: string;
+  powerBiPlayerName: string;
+  hasDailyTarget: boolean;
+  dailyPct: PercentageMetrics | null;
+  planned: AbsoluteMetrics | null;
+  actualStatus: DayActualStatus | null;
+  actual: AbsoluteMetrics | null;
+  difference: AbsoluteMetrics | null;
+};
+
 export type PlannerUiPlayer = {
   id: string;
   name: string;

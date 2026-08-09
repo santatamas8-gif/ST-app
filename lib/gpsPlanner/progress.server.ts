@@ -35,13 +35,19 @@ import {
 import { getTrainingActualGps } from "@/lib/powerbi/queries/trainingActual.server";
 import type {
   DayActualStatus,
+  PlannerDailyAnalysisResult,
   PlannerWeeklyProgressResult,
   WeeklyProgressDayActual,
 } from "@/lib/gpsPlanner/types";
 
 export type PlannerActualMetrics = AbsoluteMetrics;
 
-export type { DayActualStatus, WeeklyProgressDayActual, PlannerWeeklyProgressResult };
+export type {
+  DayActualStatus,
+  WeeklyProgressDayActual,
+  PlannerWeeklyProgressResult,
+  PlannerDailyAnalysisResult,
+};
 
 export type PlannerDailyActualResult = {
   weekId: string;
@@ -53,23 +59,6 @@ export type PlannerDailyActualResult = {
   powerBiPlayerName: string;
   status: DayActualStatus;
   actual: PlannerActualMetrics | null;
-};
-
-export type PlannerDailyAnalysisResult = {
-  weekId: string;
-  powerBiWeekId: string;
-  weekDayId: string;
-  date: string;
-  mdTag: string;
-  playerId: string;
-  playerDisplayName: string;
-  powerBiPlayerName: string;
-  hasDailyTarget: boolean;
-  dailyPct: PercentageMetrics | null;
-  planned: AbsoluteMetrics | null;
-  actualStatus: DayActualStatus | null;
-  actual: PlannerActualMetrics | null;
-  difference: AbsoluteMetrics | null;
 };
 
 type WeekDbRow = {

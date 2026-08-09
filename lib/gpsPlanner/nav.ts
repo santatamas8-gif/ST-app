@@ -5,6 +5,6 @@
 
 export const PLANNER_NAV_ITEM = {
   href: "/admin/planner",
-  label: "Weekly Planner",
+  label: "GPS Load Planner",
   roles: ["admin"] as const,
 };

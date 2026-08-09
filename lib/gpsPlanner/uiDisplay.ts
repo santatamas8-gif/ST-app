@@ -164,6 +164,47 @@ export function defaultThroughDate(
   return weekEnd;
 }
 
+/**
+ * When Review Week changes, through-date must be valid for the NEW week.
+ * Same week: keep previous through-date if still in range; otherwise clamp.
+ */
+export function resolveReviewThroughDateForWeek(params: {
+  previousWeekId: string;
+  nextWeekId: string;
+  previousThroughDate: string;
+  nextWeekStart: string;
+  nextWeekEnd: string;
+  todayIso: string;
+}): string {
+  const {
+    previousWeekId,
+    nextWeekId,
+    previousThroughDate,
+    nextWeekStart,
+    nextWeekEnd,
+    todayIso,
+  } = params;
+  if (
+    previousWeekId === nextWeekId &&
+    previousThroughDate &&
+    dateInInclusiveRange(previousThroughDate, nextWeekStart, nextWeekEnd)
+  ) {
+    return previousThroughDate;
+  }
+  return defaultThroughDate(nextWeekStart, nextWeekEnd, todayIso);
+}
+
+/**
+ * Keep selected Review day if it belongs to the loaded week days; else first day.
+ */
+export function resolveReviewDayIdForWeekDays(
+  previousDayId: string,
+  dayIds: string[]
+): string {
+  if (previousDayId && dayIds.includes(previousDayId)) return previousDayId;
+  return dayIds[0] ?? "";
+}
+
 /** Reference ranges only — never auto-fill Weekly Target %. */
 export const WEEKLY_BENCHMARK_REFERENCE = {
   label: "Reference only",
@@ -198,4 +239,79 @@ export function formatWeekOptionLabel(
   endDate: string
 ): string {
   return `${powerBiWeekId} · ${startDate} – ${endDate}`;
+}
+
+/**
+ * Signed Planned − Actual display (To Target / Difference).
+ * Null → "—". Positive includes "+". Display rounding only.
+ */
+export function formatPlannerDisplaySignedAbsolute(
+  n: number | null | undefined
+): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const rounded = formatPlannerDisplayAbsolute(n);
+  if (rounded > 0) return `+${rounded.toLocaleString("en-US")}`;
+  return rounded.toLocaleString("en-US");
+}
+
+/** Unsigned absolute display with locale separators; null → "—". */
+export function formatPlannerDisplayAbsoluteOrDash(
+  n: number | null | undefined
+): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return formatPlannerDisplayAbsolute(n).toLocaleString("en-US");
+}
+
+export type ReviewActualQualityLabel =
+  | "Complete"
+  | "Incomplete"
+  | "No data"
+  | "Data issue"
+  | "Unavailable";
+
+/**
+ * Coach-facing Weekly Review Actual quality from existing progress completeness.
+ * Plan compliance only — not injury/risk language.
+ */
+export function formatWeeklyReviewActualQuality(input: {
+  actualCompleteness: "complete" | "partial_not_found" | "incomplete";
+  includedDays: number;
+  foundDays: number;
+  notFoundDays: number;
+  problematicDays: number;
+}): ReviewActualQualityLabel {
+  const {
+    actualCompleteness,
+    includedDays,
+    foundDays,
+    notFoundDays,
+    problematicDays,
+  } = input;
+  if (includedDays === 0) return "No data";
+  if (foundDays === 0 && notFoundDays === includedDays) return "No data";
+  if (actualCompleteness === "incomplete" || problematicDays > 0) {
+    return "Data issue";
+  }
+  if (actualCompleteness === "complete") return "Complete";
+  return "Incomplete";
+}
+
+/** Daily Review Actual status → coach label (reuses day semantics). */
+export function formatDailyReviewActualQuality(
+  status: DayActualStatus | null
+): ReviewActualQualityLabel {
+  if (status == null) return "No data";
+  switch (status) {
+    case "actual_found":
+      return "Complete";
+    case "actual_not_found":
+      return "No data";
+    case "actual_ambiguous":
+    case "actual_incomplete":
+      return "Data issue";
+    case "actual_error":
+      return "Unavailable";
+    default:
+      return "Unavailable";
+  }
 }
