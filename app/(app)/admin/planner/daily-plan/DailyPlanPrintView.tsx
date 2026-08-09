@@ -28,6 +28,26 @@ function formatAverage(value: number | null): string {
   return formatPlannerDisplayAbsolute(value).toLocaleString("en-US");
 }
 
+/** Display-only: "4" / "W4" → "Week 4". */
+function formatWeekMeta(powerBiWeekId: string): string {
+  const n = powerBiWeekId.trim().replace(/^W/i, "");
+  return `Week ${n}`;
+}
+
+/** Display-only: compact MD label (e.g. "MD-5"). */
+function formatMatchdayMeta(mdTag: string): string {
+  const t = mdTag.trim();
+  if (/^MD/i.test(t)) return `MD${t.slice(2)}`;
+  return `MD${t}`;
+}
+
+/** Display-only calendar date. */
+function formatPlanDate(isoDate: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+  if (!m) return isoDate;
+  return `${m[3]}.${m[2]}.${m[1]}`;
+}
+
 const PCT_ROWS: {
   key: keyof DailyPlanPctSummary;
   label: string;
@@ -43,11 +63,11 @@ const AVG_ROWS: {
   key: keyof DailyPlanTeamAverage;
   label: string;
 }[] = [
-  { key: "totalDistance", label: "TD" },
-  { key: "hsr", label: "HSR" },
-  { key: "sprint", label: "Sprint" },
-  { key: "accelerations", label: "Acc" },
-  { key: "decelerations", label: "Dec" },
+  { key: "totalDistance", label: "Total Distance" },
+  { key: "hsr", label: "HSR Distance" },
+  { key: "sprint", label: "Sprint Distance" },
+  { key: "accelerations", label: "Accelerations" },
+  { key: "decelerations", label: "Decelerations" },
 ];
 
 export function DailyPlanPrintView({
@@ -81,23 +101,36 @@ export function DailyPlanPrintView({
 
       <div className="daily-plan-print-root">
         <header className="daily-plan-print-header">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoSrc}
-            alt="ST-AMS"
-            className="daily-plan-print-logo"
-          />
+          <div className="daily-plan-print-header-left">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoSrc}
+              alt="ST-AMS"
+              className="daily-plan-print-logo"
+            />
+          </div>
           <div className="daily-plan-print-header-center">
             <h1 className="daily-plan-print-title">Daily Plan</h1>
             <p className="daily-plan-print-meta">
-              Week {data.powerBiWeekId} · Match Day {data.mdTag}
+              {formatWeekMeta(data.powerBiWeekId)} ·{" "}
+              {formatMatchdayMeta(data.mdTag)} · {formatPlanDate(data.date)}
             </p>
           </div>
+          <p className="daily-plan-print-attribution">Power BI calculations</p>
         </header>
 
-        {/* Player table left; three summary boxes right (Weekly % | Daily % side by side, Team Average under). */}
-        <div className="daily-plan-print-body">
-          <div className="daily-plan-print-table-wrap">
+        {/* Player table LEFT; 3 summary boxes RIGHT (Weekly%|Daily% pair, Team Average under). */}
+        <div
+          className="daily-plan-print-body"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(240px, 32%)",
+            gap: "10px",
+            alignItems: "start",
+            width: "100%",
+          }}
+        >
+          <div className="daily-plan-print-table-wrap" style={{ minWidth: 0 }}>
             <table className="daily-plan-print-table">
               <thead>
                 <tr>
@@ -130,7 +163,16 @@ export function DailyPlanPrintView({
             </table>
           </div>
 
-          <aside className="daily-plan-print-aside" aria-label="Plan summaries">
+          <aside
+            className="daily-plan-print-aside"
+            aria-label="Plan summaries"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              minWidth: 0,
+            }}
+          >
             <div
               className="daily-plan-print-pct-pair"
               style={{
@@ -183,8 +225,6 @@ export function DailyPlanPrintView({
             </section>
           </aside>
         </div>
-
-        <p className="daily-plan-print-footnote">Power BI calculations</p>
       </div>
 
       <style jsx global>{`
@@ -225,13 +265,20 @@ export function DailyPlanPrintView({
           margin-bottom: 8px;
           padding-bottom: 6px;
           border-bottom: 1px solid #ececf0;
-          min-height: 36px;
+          min-height: 44px;
         }
 
-        .daily-plan-print-logo {
+        .daily-plan-print-header-left {
           position: absolute;
           left: 0;
           top: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          max-width: 88px;
+        }
+
+        .daily-plan-print-logo {
           height: 24px;
           width: auto;
           max-width: 64px;
@@ -240,7 +287,7 @@ export function DailyPlanPrintView({
 
         .daily-plan-print-header-center {
           text-align: center;
-          padding: 0 72px;
+          padding: 0 110px;
         }
 
         .daily-plan-print-title {
@@ -258,11 +305,24 @@ export function DailyPlanPrintView({
           font-weight: 500;
         }
 
+        .daily-plan-print-attribution {
+          position: absolute;
+          right: 0;
+          top: 0;
+          margin: 0;
+          font-size: 8px;
+          font-style: italic;
+          color: #a1a1aa;
+          font-weight: 400;
+          white-space: nowrap;
+        }
+
         .daily-plan-print-body {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(220px, 30%);
-          gap: 10px;
-          align-items: start;
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) minmax(240px, 32%) !important;
+          gap: 10px !important;
+          align-items: start !important;
+          width: 100% !important;
         }
 
         .daily-plan-print-pct-pair {
@@ -311,10 +371,14 @@ export function DailyPlanPrintView({
           print-color-adjust: exact;
         }
 
+        .daily-plan-print-table th:not(:first-child),
         .daily-plan-print-table td:not(:first-child) {
-          text-align: right;
+          text-align: center;
           font-variant-numeric: tabular-nums;
           white-space: nowrap;
+        }
+
+        .daily-plan-print-table td:not(:first-child) {
           font-weight: 550;
           color: #27272a;
         }
@@ -337,13 +401,14 @@ export function DailyPlanPrintView({
           background: #fff;
           padding: 5px 6px 4px;
           min-width: 0;
+          opacity: 0.92;
         }
 
         .daily-plan-print-summary-title {
           margin: 0 0 4px;
           font-size: 9px;
-          font-weight: 700;
-          color: ${PRINT_BURGUNDY};
+          font-weight: 650;
+          color: #5c3038;
           letter-spacing: 0.02em;
         }
 
@@ -366,13 +431,13 @@ export function DailyPlanPrintView({
 
         .daily-plan-print-pct-row dt {
           margin: 0;
-          color: #52525b;
+          color: #71717a;
           font-weight: 500;
         }
 
         .daily-plan-print-pct-row dd {
           margin: 0;
-          color: #27272a;
+          color: #3f3f46;
           font-weight: 650;
           font-variant-numeric: tabular-nums;
           white-space: nowrap;
@@ -422,18 +487,8 @@ export function DailyPlanPrintView({
           white-space: nowrap;
         }
 
-        .daily-plan-print-footnote {
-          margin: 8px 0 0;
-          text-align: right;
-          font-size: 8px;
-          font-style: italic;
-          color: #a1a1aa;
-          font-weight: 400;
-        }
-
         /* Screen preview must match print sheet layout (same component, same CSS). */
         .daily-plan-print-title,
-        .daily-plan-print-summary-title,
         .daily-plan-print-avg-title {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
@@ -494,7 +549,7 @@ export function DailyPlanPrintView({
 
           .daily-plan-print-body {
             display: grid !important;
-            grid-template-columns: minmax(0, 1fr) minmax(220px, 30%) !important;
+            grid-template-columns: minmax(0, 1fr) minmax(240px, 32%) !important;
             gap: 8px !important;
             align-items: start !important;
           }
@@ -505,7 +560,7 @@ export function DailyPlanPrintView({
             gap: 6px !important;
           }
 
-          .daily-plan-print-footnote {
+          .daily-plan-print-attribution {
             color: #a1a1aa !important;
           }
 
@@ -526,11 +581,14 @@ export function DailyPlanPrintView({
           }
 
           .daily-plan-print-title,
-          .daily-plan-print-summary-title,
           .daily-plan-print-avg-title {
             color: ${PRINT_BURGUNDY} !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+          }
+
+          .daily-plan-print-summary-title {
+            color: #5c3038 !important;
           }
         }
       `}</style>

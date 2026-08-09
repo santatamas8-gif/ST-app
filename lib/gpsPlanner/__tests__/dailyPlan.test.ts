@@ -854,9 +854,16 @@ describe("Daily Plan print content / design contract", () => {
     expect(source).toContain("daily-plan-print-pct-pair");
     expect(source).toContain("PRINT_BURGUNDY");
     expect(source).toContain("Power BI calculations");
-    expect(source).toContain("daily-plan-print-footnote");
+    expect(source).toContain("daily-plan-print-attribution");
+    expect(source).toContain("formatPlanDate");
+    expect(source).toContain("formatMatchdayMeta");
+    expect(source).toContain('return `MD${t.slice(2)}`');
+    expect(source).not.toContain("Matchday ${");
+    expect(source).not.toContain("`Matchday");
     expect(source).toContain("no-print");
     expect(source).toContain("daily-plan-print-logo");
+    expect(source).toContain("text-align: center");
+    expect(source).toContain("opacity: 0.92");
     for (const forbidden of [
       "Match Best",
       "To Target",

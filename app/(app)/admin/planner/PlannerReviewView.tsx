@@ -22,6 +22,7 @@ import {
 } from "@/app/actions/gpsPlanner";
 import type {
   PlannerDailyAnalysisResult,
+  PlannerUiPlayer,
   PlannerWeekDayRow,
   PlannerWeekRow,
   PlannerWeeklyProgressResult,
@@ -34,15 +35,16 @@ type MetricKey = "td" | "hsr" | "sprint" | "acc" | "dec";
 
 const METRICS: { key: MetricKey; label: string; field: keyof AbsoluteMetrics }[] =
   [
-    { key: "td", label: "TD", field: "totalDistance" },
-    { key: "hsr", label: "HSR", field: "hsr" },
-    { key: "sprint", label: "Sprint", field: "sprint" },
-    { key: "acc", label: "Acc", field: "accelerations" },
-    { key: "dec", label: "Dec", field: "decelerations" },
+    { key: "td", label: "Total Distance", field: "totalDistance" },
+    { key: "hsr", label: "HSR Distance", field: "hsr" },
+    { key: "sprint", label: "Sprint Distance", field: "sprint" },
+    { key: "acc", label: "Accelerations", field: "accelerations" },
+    { key: "dec", label: "Decelerations", field: "decelerations" },
   ];
 
 type Props = {
   initialWeeks: PlannerWeekRow[];
+  players: PlannerUiPlayer[];
   /** Controlled Review navigation — owned by GpsLoadPlannerView shell. */
   tab: ReviewTab;
   onTabChange: (tab: ReviewTab) => void;
@@ -66,37 +68,108 @@ function formatDayOption(day: PlannerWeekDayRow): string {
   return `${day.mdTag} · ${day.date}`;
 }
 
-function MetricTriple({
+const SUB_COLS = ["Planned", "Actual", "Diff"] as const;
+
+function MetricValues({
   planned,
   actual,
   delta,
-  deltaLabel,
 }: {
   planned: number | null;
   actual: number | null;
   delta: number | null;
-  deltaLabel: "TT" | "D";
 }) {
+  const diffTone =
+    delta == null
+      ? "text-zinc-500"
+      : delta < 0
+        ? "text-emerald-600"
+        : delta > 0
+          ? "text-red-600"
+          : "text-zinc-700";
+
   return (
-    <div className="space-y-0.5 tabular-nums text-[11px] leading-tight sm:text-xs">
-      <div className="flex justify-between gap-2">
-        <span className="text-zinc-500">P</span>
-        <span className="font-semibold text-zinc-100">
-          {formatPlannerDisplayAbsoluteOrDash(planned)}
+    <>
+      <td className="border-l border-zinc-200/80 px-2 py-2 text-center tabular-nums text-sm font-normal text-zinc-700">
+        {formatPlannerDisplayAbsoluteOrDash(planned)}
+      </td>
+      <td className="border-l border-zinc-100 px-2 py-2 text-center tabular-nums text-sm font-normal text-zinc-700">
+        {formatPlannerDisplayAbsoluteOrDash(actual)}
+      </td>
+      <td
+        className={`border-l border-zinc-100 px-2 py-2 text-center tabular-nums text-sm font-normal ${diffTone}`}
+      >
+        {formatPlannerDisplaySignedAbsolute(delta)}
+      </td>
+    </>
+  );
+}
+
+function ReviewTableHead() {
+  return (
+    <thead>
+      <tr className="bg-[#4a1820] text-xs uppercase tracking-wide text-white">
+        <th className="sticky left-0 z-10 bg-[#4a1820] px-3 py-2.5 font-medium">
+          Player
+        </th>
+        {METRICS.map((m) => (
+          <th
+            key={m.key}
+            colSpan={3}
+            className="border-l border-white/15 px-2 py-2.5 text-center font-medium"
+          >
+            {m.label}
+          </th>
+        ))}
+        <th className="border-l border-white/15 px-3 py-2.5 font-medium">
+          Quality
+        </th>
+      </tr>
+      <tr className="border-b border-zinc-200 text-[10px] font-medium uppercase tracking-wide text-[#6b3a42] sm:text-[11px]">
+        <th className="sticky left-0 z-10 border-r border-zinc-200/80 bg-white px-3 py-1.5" />
+        {METRICS.map((m) =>
+          SUB_COLS.map((label, i) => (
+            <th
+              key={`${m.key}-${label}`}
+              className={`bg-[#f3e9eb] px-2 py-1.5 text-center ${
+                i === 0
+                  ? "border-l border-zinc-200/80"
+                  : "border-l border-zinc-200/60"
+              }`}
+            >
+              {label}
+            </th>
+          ))
+        )}
+        <th className="border-l border-zinc-200/80 bg-[#f3e9eb] px-3 py-1.5" />
+      </tr>
+    </thead>
+  );
+}
+
+function ReviewPlayerCell({
+  name,
+  avatarUrl,
+}: {
+  name: string;
+  avatarUrl: string | null;
+}) {
+  const initial = name.trim().slice(0, 1).toUpperCase() || "?";
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt=""
+          className="size-8 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"
+        />
+      ) : (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200">
+          {initial}
         </span>
-      </div>
-      <div className="flex justify-between gap-2">
-        <span className="text-zinc-500">A</span>
-        <span className="font-semibold text-zinc-100">
-          {formatPlannerDisplayAbsoluteOrDash(actual)}
-        </span>
-      </div>
-      <div className="flex justify-between gap-2">
-        <span className="text-zinc-500">{deltaLabel}</span>
-        <span className="font-semibold text-zinc-50">
-          {formatPlannerDisplaySignedAbsolute(delta)}
-        </span>
-      </div>
+      )}
+      <span className="truncate font-medium text-zinc-900">{name}</span>
     </div>
   );
 }
@@ -107,6 +180,7 @@ function MetricTriple({
  */
 export function PlannerReviewView({
   initialWeeks,
+  players,
   tab,
   onTabChange,
   weekId,
@@ -262,8 +336,17 @@ export function PlannerReviewView({
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const t of targets) m.set(t.playerId, t.playerDisplayName);
+    for (const p of players) {
+      if (!m.has(p.id)) m.set(p.id, p.name);
+    }
     return m;
-  }, [targets]);
+  }, [targets, players]);
+
+  const avatarById = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const p of players) m.set(p.id, p.avatarUrl);
+    return m;
+  }, [players]);
 
   const throughMin = selectedWeek?.startDate ?? undefined;
   const throughMax = selectedWeek?.endDate ?? undefined;
@@ -384,9 +467,8 @@ export function PlannerReviewView({
         </div>
 
         <p className="text-[11px] text-zinc-500">
-          TD · HSR · Sprint · Acc · Dec — Planned − Actual (
-          {tab === "weekly" ? "To Target" : "Difference"}). Missing Actual is not
-          zero.
+          Each metric shows Planned, Actual, and Diff side by side (Planned −
+          Actual). Missing Actual is not zero.
         </p>
 
         {error ? (
@@ -405,12 +487,14 @@ export function PlannerReviewView({
           <WeeklyReviewTable
             rows={weeklyRows}
             nameById={nameById}
+            avatarById={avatarById}
             throughDate={throughDate}
           />
         ) : (
           <DailyReviewTable
             rows={dailyRows}
             nameById={nameById}
+            avatarById={avatarById}
             dayLabel={selectedDay ? formatDayOption(selectedDay) : ""}
           />
         )}
@@ -422,42 +506,42 @@ export function PlannerReviewView({
 function WeeklyReviewTable({
   rows,
   nameById,
+  avatarById,
   throughDate,
 }: {
   rows: (PlannerWeeklyProgressResult | { playerId: string; error: string })[];
   nameById: Map<string, string>;
+  avatarById: Map<string, string | null>;
   throughDate: string;
 }) {
   if (rows.length === 0) {
     return <p className="text-sm text-zinc-400">No weekly review rows.</p>;
   }
+  const metricColSpan = METRICS.length * 3;
   return (
     <div className="space-y-2">
       <p className="text-xs text-zinc-500">Through {throughDate}</p>
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="min-w-[720px] w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-950/80 text-xs uppercase tracking-wide text-zinc-500">
-              <th className="px-3 py-2 font-medium">Player</th>
-              {METRICS.map((m) => (
-                <th key={m.key} className="px-2 py-2 font-medium">
-                  {m.label}
-                </th>
-              ))}
-              <th className="px-3 py-2 font-medium">Quality</th>
-            </tr>
-          </thead>
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
+          <ReviewTableHead />
           <tbody>
-            {rows.map((row) => {
+            {rows.map((row, index) => {
+              const stripe = index % 2 === 0 ? "bg-white" : "bg-zinc-50";
               if ("error" in row) {
                 return (
-                  <tr key={row.playerId} className="border-b border-zinc-800/80">
-                    <td className="px-3 py-2 text-zinc-200">
-                      {nameById.get(row.playerId) ?? row.playerId}
+                  <tr
+                    key={row.playerId}
+                    className={`border-b border-zinc-300 ${stripe}`}
+                  >
+                    <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
+                      <ReviewPlayerCell
+                        name={nameById.get(row.playerId) ?? row.playerId}
+                        avatarUrl={avatarById.get(row.playerId) ?? null}
+                      />
                     </td>
                     <td
-                      colSpan={METRICS.length + 1}
-                      className="px-3 py-2 text-amber-200"
+                      colSpan={metricColSpan + 1}
+                      className="px-3 py-2 text-amber-700"
                     >
                       {row.error}
                     </td>
@@ -465,21 +549,25 @@ function WeeklyReviewTable({
                 );
               }
               return (
-                <tr key={row.playerId} className="border-b border-zinc-800/80">
-                  <td className="px-3 py-2 font-medium text-zinc-100">
-                    {row.playerDisplayName}
+                <tr
+                  key={row.playerId}
+                  className={`border-b border-zinc-300 ${stripe}`}
+                >
+                  <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
+                    <ReviewPlayerCell
+                      name={row.playerDisplayName}
+                      avatarUrl={avatarById.get(row.playerId) ?? null}
+                    />
                   </td>
                   {METRICS.map((m) => (
-                    <td key={m.key} className="px-2 py-2 align-top">
-                      <MetricTriple
-                        planned={row.weeklyPlanned[m.field]}
-                        actual={row.weeklyActual?.[m.field] ?? null}
-                        delta={row.weeklyToTarget?.[m.field] ?? null}
-                        deltaLabel="TT"
-                      />
-                    </td>
+                    <MetricValues
+                      key={m.key}
+                      planned={row.weeklyPlanned[m.field]}
+                      actual={row.weeklyActual?.[m.field] ?? null}
+                      delta={row.weeklyToTarget?.[m.field] ?? null}
+                    />
                   ))}
-                  <td className="px-3 py-2 text-xs text-zinc-400">
+                  <td className="border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
                     {formatWeeklyReviewActualQuality({
                       actualCompleteness: row.actualCompleteness,
                       includedDays: row.includedDays,
@@ -501,44 +589,44 @@ function WeeklyReviewTable({
 function DailyReviewTable({
   rows,
   nameById,
+  avatarById,
   dayLabel,
 }: {
   rows: (PlannerDailyAnalysisResult | { playerId: string; error: string })[];
   nameById: Map<string, string>;
+  avatarById: Map<string, string | null>;
   dayLabel: string;
 }) {
   if (rows.length === 0) {
     return <p className="text-sm text-zinc-400">No daily review rows.</p>;
   }
+  const metricColSpan = METRICS.length * 3;
   return (
     <div className="space-y-2">
       {dayLabel ? (
         <p className="text-xs text-zinc-500">{dayLabel}</p>
       ) : null}
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="min-w-[720px] w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-950/80 text-xs uppercase tracking-wide text-zinc-500">
-              <th className="px-3 py-2 font-medium">Player</th>
-              {METRICS.map((m) => (
-                <th key={m.key} className="px-2 py-2 font-medium">
-                  {m.label}
-                </th>
-              ))}
-              <th className="px-3 py-2 font-medium">Quality</th>
-            </tr>
-          </thead>
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
+          <ReviewTableHead />
           <tbody>
-            {rows.map((row) => {
+            {rows.map((row, index) => {
+              const stripe = index % 2 === 0 ? "bg-white" : "bg-zinc-50";
               if ("error" in row) {
                 return (
-                  <tr key={row.playerId} className="border-b border-zinc-800/80">
-                    <td className="px-3 py-2 text-zinc-200">
-                      {nameById.get(row.playerId) ?? row.playerId}
+                  <tr
+                    key={row.playerId}
+                    className={`border-b border-zinc-300 ${stripe}`}
+                  >
+                    <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
+                      <ReviewPlayerCell
+                        name={nameById.get(row.playerId) ?? row.playerId}
+                        avatarUrl={avatarById.get(row.playerId) ?? null}
+                      />
                     </td>
                     <td
-                      colSpan={METRICS.length + 1}
-                      className="px-3 py-2 text-amber-200"
+                      colSpan={metricColSpan + 1}
+                      className="px-3 py-2 text-amber-700"
                     >
                       {row.error}
                     </td>
@@ -546,21 +634,25 @@ function DailyReviewTable({
                 );
               }
               return (
-                <tr key={row.playerId} className="border-b border-zinc-800/80">
-                  <td className="px-3 py-2 font-medium text-zinc-100">
-                    {row.playerDisplayName}
+                <tr
+                  key={row.playerId}
+                  className={`border-b border-zinc-300 ${stripe}`}
+                >
+                  <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
+                    <ReviewPlayerCell
+                      name={row.playerDisplayName}
+                      avatarUrl={avatarById.get(row.playerId) ?? null}
+                    />
                   </td>
                   {METRICS.map((m) => (
-                    <td key={m.key} className="px-2 py-2 align-top">
-                      <MetricTriple
-                        planned={row.planned?.[m.field] ?? null}
-                        actual={row.actual?.[m.field] ?? null}
-                        delta={row.difference?.[m.field] ?? null}
-                        deltaLabel="D"
-                      />
-                    </td>
+                    <MetricValues
+                      key={m.key}
+                      planned={row.planned?.[m.field] ?? null}
+                      actual={row.actual?.[m.field] ?? null}
+                      delta={row.difference?.[m.field] ?? null}
+                    />
                   ))}
-                  <td className="px-3 py-2 text-xs text-zinc-400">
+                  <td className="border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
                     {formatDailyReviewActualQuality(row.actualStatus)}
                   </td>
                 </tr>

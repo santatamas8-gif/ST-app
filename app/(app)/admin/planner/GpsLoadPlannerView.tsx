@@ -127,6 +127,7 @@ export function GpsLoadPlannerView({ initialWeeks, players }: Props) {
         >
           <PlannerReviewView
             initialWeeks={initialWeeks}
+            players={players}
             tab={reviewTab}
             onTabChange={setReviewTab}
             weekId={reviewWeekId}
