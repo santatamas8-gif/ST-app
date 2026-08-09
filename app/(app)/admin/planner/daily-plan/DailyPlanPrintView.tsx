@@ -95,65 +95,8 @@ export function DailyPlanPrintView({
           </div>
         </header>
 
-        {/* Top: Weekly % | Daily % side by side; Team Average under them; player table below. */}
+        {/* Player table left; three summary boxes right (Weekly % | Daily % side by side, Team Average under). */}
         <div className="daily-plan-print-body">
-          <aside className="daily-plan-print-aside" aria-label="Plan summaries">
-            <div
-              className="daily-plan-print-pct-pair"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "8px",
-                alignItems: "stretch",
-                width: "100%",
-                maxWidth: "420px",
-              }}
-            >
-              <section className="daily-plan-print-summary">
-                <h2 className="daily-plan-print-summary-title">Weekly %</h2>
-                <dl className="daily-plan-print-pct-list">
-                  {PCT_ROWS.map((row) => (
-                    <div key={`w-${row.key}`} className="daily-plan-print-pct-row">
-                      <dt>{row.label}</dt>
-                      <dd>{formatSharedPct(data.weeklyPct[row.key])}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-
-              <section className="daily-plan-print-summary">
-                <h2 className="daily-plan-print-summary-title">Daily %</h2>
-                <dl className="daily-plan-print-pct-list">
-                  {PCT_ROWS.map((row) => (
-                    <div key={`d-${row.key}`} className="daily-plan-print-pct-row">
-                      <dt>{row.label}</dt>
-                      <dd>{formatSharedPct(data.dailyPct[row.key])}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            </div>
-
-            <section
-              className="daily-plan-print-avg"
-              style={{ maxWidth: "420px", width: "100%" }}
-            >
-              <h2 className="daily-plan-print-avg-title">Daily Team Average</h2>
-              <div className="daily-plan-print-avg-list">
-                {AVG_ROWS.map((row) => (
-                  <div key={row.key} className="daily-plan-print-avg-card">
-                    <span className="daily-plan-print-avg-label">
-                      {row.label}
-                    </span>
-                    <span className="daily-plan-print-avg-value">
-                      {formatAverage(data.teamAverage[row.key])}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </aside>
-
           <div className="daily-plan-print-table-wrap">
             <table className="daily-plan-print-table">
               <thead>
@@ -186,6 +129,59 @@ export function DailyPlanPrintView({
               </tbody>
             </table>
           </div>
+
+          <aside className="daily-plan-print-aside" aria-label="Plan summaries">
+            <div
+              className="daily-plan-print-pct-pair"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "6px",
+                alignItems: "stretch",
+                width: "100%",
+              }}
+            >
+              <section className="daily-plan-print-summary">
+                <h2 className="daily-plan-print-summary-title">Weekly %</h2>
+                <dl className="daily-plan-print-pct-list">
+                  {PCT_ROWS.map((row) => (
+                    <div key={`w-${row.key}`} className="daily-plan-print-pct-row">
+                      <dt>{row.label}</dt>
+                      <dd>{formatSharedPct(data.weeklyPct[row.key])}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section className="daily-plan-print-summary">
+                <h2 className="daily-plan-print-summary-title">Daily %</h2>
+                <dl className="daily-plan-print-pct-list">
+                  {PCT_ROWS.map((row) => (
+                    <div key={`d-${row.key}`} className="daily-plan-print-pct-row">
+                      <dt>{row.label}</dt>
+                      <dd>{formatSharedPct(data.dailyPct[row.key])}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            </div>
+
+            <section className="daily-plan-print-avg">
+              <h2 className="daily-plan-print-avg-title">Daily Team Average</h2>
+              <div className="daily-plan-print-avg-list">
+                {AVG_ROWS.map((row) => (
+                  <div key={row.key} className="daily-plan-print-avg-card">
+                    <span className="daily-plan-print-avg-label">
+                      {row.label}
+                    </span>
+                    <span className="daily-plan-print-avg-value">
+                      {formatAverage(data.teamAverage[row.key])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
         </div>
 
         <p className="daily-plan-print-footnote">Power BI calculations</p>
@@ -263,16 +259,16 @@ export function DailyPlanPrintView({
         }
 
         .daily-plan-print-body {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(220px, 30%);
           gap: 10px;
-          align-items: stretch;
+          align-items: start;
         }
 
         .daily-plan-print-pct-pair {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 8px;
+          gap: 6px;
           align-items: stretch;
         }
 
@@ -497,16 +493,16 @@ export function DailyPlanPrintView({
           }
 
           .daily-plan-print-body {
-            display: flex !important;
-            flex-direction: column !important;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(220px, 30%) !important;
             gap: 8px !important;
-            align-items: stretch !important;
+            align-items: start !important;
           }
 
           .daily-plan-print-pct-pair {
             display: grid !important;
             grid-template-columns: 1fr 1fr !important;
-            gap: 8px !important;
+            gap: 6px !important;
           }
 
           .daily-plan-print-footnote {
