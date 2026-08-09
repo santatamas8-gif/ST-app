@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDailyPlanForPrintAction } from "@/app/actions/gpsPlanner";
+import { getPublicTeamLogo } from "@/app/actions/teamSettings";
 import { isPlannerUuid } from "@/lib/gpsPlanner/common";
 import { plannerErrorMessage } from "@/lib/gpsPlanner/uiDisplay";
 import { DailyPlanPrintView } from "./DailyPlanPrintView";
@@ -41,7 +42,10 @@ export default async function DailyPlanPrintPage({
     );
   }
 
-  const result = await getDailyPlanForPrintAction({ weekDayId, playerIds });
+  const [result, { team_logo_url }] = await Promise.all([
+    getDailyPlanForPrintAction({ weekDayId, playerIds }),
+    getPublicTeamLogo(),
+  ]);
 
   if (!result.ok) {
     return (
@@ -60,5 +64,7 @@ export default async function DailyPlanPrintPage({
     );
   }
 
-  return <DailyPlanPrintView data={result.data} />;
+  return (
+    <DailyPlanPrintView data={result.data} logoUrl={team_logo_url} />
+  );
 }

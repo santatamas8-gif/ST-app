@@ -2,7 +2,7 @@
 
 **Status:** Authoritative project specification  
 **Scope:** GPS Load Planner V1 only  
-**Last architecture lock:** Weekly Planner production final; Phase E Daily Plan print complete
+**Last architecture lock:** Weekly Planner production final; Daily Plan final redesign (landscape + secondary summaries)
 
 This document is the **single source of truth** for GPS Load Planner V1.  
 Any Cursor agent or human implementing planner work **must read this file first**.  
@@ -481,13 +481,31 @@ Power BI stores: **GPS facts**.
 
 ## U. Daily Plan / print
 
-Minimal printable coaching sheet (Phase E — **implemented**, browser/A4, read-only):
+Professional printable coaching sheet (**implemented**, browser / A4 **landscape**, read-only):
 
-- Week / MD Tag / Date  
-- Player  
-- Absolute TD / HSR / Sprint / Acc / Dec targets  
+**Primary (dominant):**
 
-**Do not** show on print: Match Best, Previous Week, Actual, Difference, Wellness, explanatory analytics.
+- Header: `Daily Plan` + `Week {powerBiWeekId} · Match Day {mdTag}`
+- Existing app/team logo (small, corner only)
+- Player table columns exactly: Player / TD / HSR / Sprint / Acc / Dec  
+  (no `(m)` / `(count)` units in headers)
+- Absolute Daily Planned values = Frozen Match Best × Daily % / 100 (existing domain)
+- Missing Daily Target → player name + `—` (never zero)
+
+**Secondary (right column, visually subordinate):**
+
+- Weekly % summary (shared % across printed players with a Weekly Target; else `Mixed` / `—`)
+- Daily % summary for the selected Week Day (same Mixed / — rules; never average %)
+- Daily Team Average of valid absolute Daily Planned values only  
+  (missing targets excluded — never zeroed; not persisted)
+
+**History:** Daily Plan is projected from existing persisted Planner records  
+(`planner_weeks` → `planner_week_days` → weekly/daily targets + frozen Match Best).  
+No print-history / archive tables.
+
+**Do not** show on print: Match Best values, Previous Week, Actual, Difference,  
+To Target, Remaining to Allocate, Wellness/RPE, mapping status, charts, icons,  
+automatic coaching.
 
 ---
 
@@ -618,9 +636,10 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Admin Player Mapping UI (`PlayerMappingModal` on `/admin/planner`)  
 - Multi-player Daily Target apply orchestration (`applyDailyTargetToPlayers`) with per-player outcomes  
 - Weekly Planner UX finalized (status/order helpers, humanized progress statuses, coach-facing outcomes)  
-- Phase E Daily Plan printable sheet: Admin-only browser/A4 print at `/admin/planner/daily-plan`  
-- Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %  
-- Daily Plan content: Week / Date / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec only — **no** Actual, Difference, Match Best, Weekly %, Daily %, Remaining, mapping, Wellness/RPE  
+- Phase E Daily Plan printable sheet: Admin-only browser print at `/admin/planner/daily-plan`
+- Daily Plan final redesign: A4 landscape; red accents; dominant player table; secondary Weekly % / Daily % / Daily Team Average summaries
+- Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %
+- Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
 
 ### Verification baseline (after Power BI query modules)
 

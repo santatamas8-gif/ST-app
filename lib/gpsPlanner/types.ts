@@ -191,7 +191,7 @@ export type DailyPlanPrintPlayerRow = {
   playerId: string;
   playerDisplayName: string;
   hasDailyTarget: boolean;
-  /** Absolute planned TD (m). Null when hasDailyTarget is false — not zero. */
+  /** Absolute planned TD. Null when hasDailyTarget is false — not zero. */
   totalDistance: number | null;
   hsr: number | null;
   sprint: number | null;
@@ -199,7 +199,35 @@ export type DailyPlanPrintPlayerRow = {
   decelerations: number | null;
 };
 
-/** Daily Plan print payload (client-safe). No Actual / Match Best / Difference. */
+/**
+ * Shared % across printed players who have the relevant target.
+ * number = all same; "Mixed" = differ; null = no valid value (display —).
+ * Never an average of percentages.
+ */
+export type DailyPlanSharedPct = number | "Mixed" | null;
+
+export type DailyPlanPctSummary = {
+  td: DailyPlanSharedPct;
+  hsr: DailyPlanSharedPct;
+  sprint: DailyPlanSharedPct;
+  acc: DailyPlanSharedPct;
+  dec: DailyPlanSharedPct;
+};
+
+/** Raw average of valid absolute Daily Planned values. Null when none — not zero. */
+export type DailyPlanTeamAverage = {
+  totalDistance: number | null;
+  hsr: number | null;
+  sprint: number | null;
+  accelerations: number | null;
+  decelerations: number | null;
+};
+
+/**
+ * Daily Plan print payload (client-safe).
+ * No Actual / Match Best / Difference / To Target.
+ * weeklyPct / dailyPct / teamAverage are read-only projections — not persisted.
+ */
 export type DailyPlanPrintResult = {
   weekDayId: string;
   weekId: string;
@@ -208,4 +236,7 @@ export type DailyPlanPrintResult = {
   mdTag: string;
   /** Ordered as requested playerIds. */
   players: DailyPlanPrintPlayerRow[];
+  weeklyPct: DailyPlanPctSummary;
+  dailyPct: DailyPlanPctSummary;
+  teamAverage: DailyPlanTeamAverage;
 };

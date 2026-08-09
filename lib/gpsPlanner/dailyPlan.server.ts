@@ -1,8 +1,9 @@
 import "server-only";
 
 /**
- * ADMIN-ONLY Daily Plan print read model (Phase E).
+ * ADMIN-ONLY Daily Plan print read model.
  * Absolute targets from existing Daily Target views only.
+ * Weekly % / Daily % / Team Average are read-only projections (not persisted).
  * No Power BI Actual. No DB writes. No formula changes.
  */
 
@@ -17,7 +18,12 @@ import {
   type PlannerResult,
 } from "@/lib/gpsPlanner/common";
 import { getPlannerDailyTarget } from "@/lib/gpsPlanner/dailyTargets.server";
+import {
+  buildPctSummary,
+  buildTeamAverage,
+} from "@/lib/gpsPlanner/dailyPlanSummary";
 import { getPlannerWeek } from "@/lib/gpsPlanner/weeks.server";
+import { getPlannerWeeklyTarget } from "@/lib/gpsPlanner/weeklyTargets.server";
 import type {
   DailyPlanPrintPlayerRow,
   DailyPlanPrintResult,
@@ -107,9 +113,30 @@ function missingTargetRow(
   };
 }
 
+function emptyPctLists() {
+  return {
+    td: [] as number[],
+    hsr: [] as number[],
+    sprint: [] as number[],
+    acc: [] as number[],
+    dec: [] as number[],
+  };
+}
+
+function emptyAbsoluteLists() {
+  return {
+    totalDistance: [] as number[],
+    hsr: [] as number[],
+    sprint: [] as number[],
+    accelerations: [] as number[],
+    decelerations: [] as number[],
+  };
+}
+
 /**
- * Build printable Daily Plan rows for selected players on one week day.
+ * Build printable Daily Plan for selected players on one week day.
  * Preserves playerIds order. Missing daily targets → null metrics (not zeros).
+ * Summaries are derived only from existing persisted Weekly/Daily targets.
  */
 export async function getDailyPlanForPrint(input: {
   weekDayId: string;
@@ -159,15 +186,40 @@ export async function getDailyPlanForPrint(input: {
     };
   }
 
+  const weekId = dayResult.data.week_id;
   const missingIds: string[] = [];
   const players: DailyPlanPrintPlayerRow[] = [];
 
+  const weeklyPctLists = emptyPctLists();
+  const dailyPctLists = emptyPctLists();
+  const absoluteLists = emptyAbsoluteLists();
+
   for (const playerId of playerIds) {
+    const weeklyResult = await getPlannerWeeklyTarget(weekId, playerId);
+    if (!weeklyResult.ok) return weeklyResult;
+    if (weeklyResult.data) {
+      weeklyPctLists.td.push(weeklyResult.data.tdPct);
+      weeklyPctLists.hsr.push(weeklyResult.data.hsrPct);
+      weeklyPctLists.sprint.push(weeklyResult.data.sprintPct);
+      weeklyPctLists.acc.push(weeklyResult.data.accPct);
+      weeklyPctLists.dec.push(weeklyResult.data.decPct);
+    }
+
     const targetResult = await getPlannerDailyTarget(weekDayId, playerId);
     if (!targetResult.ok) return targetResult;
 
     if (targetResult.data) {
       const view = targetResult.data;
+      dailyPctLists.td.push(view.tdPct);
+      dailyPctLists.hsr.push(view.hsrPct);
+      dailyPctLists.sprint.push(view.sprintPct);
+      dailyPctLists.acc.push(view.accPct);
+      dailyPctLists.dec.push(view.decPct);
+      absoluteLists.totalDistance.push(view.totalDistance);
+      absoluteLists.hsr.push(view.hsr);
+      absoluteLists.sprint.push(view.sprint);
+      absoluteLists.accelerations.push(view.accelerations);
+      absoluteLists.decelerations.push(view.decelerations);
       players.push({
         playerId: view.playerId,
         playerDisplayName: view.playerDisplayName,
@@ -201,11 +253,14 @@ export async function getDailyPlanForPrint(input: {
     ok: true,
     data: {
       weekDayId: dayResult.data.id,
-      weekId: dayResult.data.week_id,
+      weekId,
       powerBiWeekId: weekResult.data.powerbiWeekId,
       date: dayResult.data.date,
       mdTag: dayResult.data.md_tag,
       players,
+      weeklyPct: buildPctSummary(weeklyPctLists),
+      dailyPct: buildPctSummary(dailyPctLists),
+      teamAverage: buildTeamAverage(absoluteLists),
     },
   };
 }
