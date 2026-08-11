@@ -1,11 +1,17 @@
 import { getAppUser } from "@/lib/auth";
 import { getTeamSessionDateString } from "@/lib/kioskRpe/localDate";
+import { listMatchFeedbackMatches, loadMatchFeedbackDetail } from "@/lib/matchFeedback/load.server";
+import type {
+  MatchFeedbackListItem,
+  MatchFeedbackMatch,
+  MatchFeedbackResponse,
+} from "@/lib/matchFeedback/types";
+import type { KioskPlayer } from "@/lib/players/listPlayers";
 import { createClient } from "@/lib/supabase/server";
 import { runQuery } from "@/lib/supabase/safeQuery";
 import type { WellnessRow } from "@/lib/types";
-import { MobileWellnessList } from "@/components/mobile/MobileWellnessList";
-import { StaffWellnessView } from "./components/StaffWellnessView";
 import { WellnessPlayerContent } from "./components/WellnessPlayerContent";
+import { StaffWellnessWorkspace } from "./components/StaffWellnessWorkspace";
 
 export default async function WellnessPage() {
   const user = await getAppUser();
@@ -62,7 +68,7 @@ export default async function WellnessPage() {
         emailByUserId[p.id] = email;
         const name = (p as { full_name?: string | null }).full_name;
         displayNameByUserId[p.id] =
-          (name && typeof name === "string" && name.trim()) ? name.trim() : email;
+          name && typeof name === "string" && name.trim() ? name.trim() : email;
         const avatar = (p as { avatar_url?: string | null }).avatar_url;
         const trimmed = typeof avatar === "string" ? avatar.trim() : "";
         avatarByUserId[p.id] = trimmed.length > 0 ? trimmed : null;
@@ -104,28 +110,41 @@ export default async function WellnessPage() {
     );
   }
 
+  let matchList: MatchFeedbackListItem[] = [];
+  const matchDetailsById: Record<
+    string,
+    {
+      match: MatchFeedbackMatch;
+      participants: KioskPlayer[];
+      responsesByPlayerId: Record<string, MatchFeedbackResponse>;
+    }
+  > = {};
+
+  try {
+    const matchResult = await listMatchFeedbackMatches(supabase);
+    if (!matchResult.error) {
+      matchList = matchResult.data;
+      for (const m of matchList) {
+        const detail = await loadMatchFeedbackDetail(supabase, m.id);
+        if (detail.data) {
+          matchDetailsById[m.id] = detail.data;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[wellness] Match Feedback results failed to load", error);
+  }
+
   return (
-    <>
-      <div className="md:hidden">
-        <MobileWellnessList
-          list={list}
-          emailByUserId={emailByUserId}
-          displayNameByUserId={displayNameByUserId}
-          avatarByUserId={avatarByUserId}
-          totalPlayers={totalPlayers}
-          allPlayerIds={allPlayerIds}
-        />
-      </div>
-      <div className="hidden md:block">
-        <StaffWellnessView
-          list={list}
-          emailByUserId={emailByUserId}
-          displayNameByUserId={displayNameByUserId}
-          avatarByUserId={avatarByUserId}
-          totalPlayers={totalPlayers}
-          allPlayerIds={allPlayerIds}
-        />
-      </div>
-    </>
+    <StaffWellnessWorkspace
+      list={list}
+      emailByUserId={emailByUserId}
+      displayNameByUserId={displayNameByUserId}
+      avatarByUserId={avatarByUserId}
+      totalPlayers={totalPlayers}
+      allPlayerIds={allPlayerIds}
+      matchList={matchList}
+      matchDetailsById={matchDetailsById}
+    />
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { Activity, HeartPulse } from "lucide-react";
+import { Activity, HeartPulse, Trophy } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
-export type KioskMode = "rpe" | "wellness";
+export type KioskMode = "rpe" | "wellness" | "match";
 
 type KioskModeSwitchProps = {
   mode: KioskMode;
@@ -14,6 +14,7 @@ type KioskModeSwitchProps = {
 const MODES: { id: KioskMode; label: string; icon: typeof Activity }[] = [
   { id: "rpe", label: "RPE", icon: Activity },
   { id: "wellness", label: "Wellness", icon: HeartPulse },
+  { id: "match", label: "Match", icon: Trophy },
 ];
 
 export function KioskModeSwitch({ mode, onChange, disabled = false }: KioskModeSwitchProps) {
@@ -22,7 +23,7 @@ export function KioskModeSwitch({ mode, onChange, disabled = false }: KioskModeS
 
   return (
     <div
-      className="inline-flex w-full max-w-md rounded-xl border p-1 sm:w-auto"
+      className="inline-flex w-full max-w-xl rounded-xl border p-1 sm:w-auto"
       style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}
       role="tablist"
       aria-label="Kiosk mode"
@@ -37,7 +38,7 @@ export function KioskModeSwitch({ mode, onChange, disabled = false }: KioskModeS
             aria-selected={selected}
             disabled={disabled}
             onClick={() => onChange(id)}
-            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors sm:min-w-[8.5rem] ${
+            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors sm:min-w-[7.5rem] ${
               selected
                 ? "bg-emerald-600 text-white shadow-sm"
                 : isHighContrast

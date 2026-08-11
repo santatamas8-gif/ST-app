@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Monitor } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import type { ExistingSubmissionMap } from "@/lib/kioskRpe/existingSubmission";
+import type { MatchFeedbackListItem } from "@/lib/matchFeedback/types";
 import type { KioskPlayer } from "@/lib/players/listPlayers";
 import type { WellnessSubmittedMap } from "@/lib/kioskWellness/todaySubmissions.server";
 import type { SafeError } from "@/lib/supabase/safeQuery";
 import { KioskModeSwitch, type KioskMode } from "./KioskModeSwitch";
 import { KioskRpeView } from "./KioskRpeView";
 import { KioskWellnessView } from "./KioskWellnessView";
+import { KioskMatchView } from "./KioskMatchView";
 
 type KioskShellViewProps = {
   players: KioskPlayer[];
@@ -19,6 +21,8 @@ type KioskShellViewProps = {
   existingSubmissions?: ExistingSubmissionMap;
   wellnessSubmittedToday?: WellnessSubmittedMap;
   sessionDate: string;
+  matchList: MatchFeedbackListItem[];
+  canCreateMatch: boolean;
 };
 
 export function KioskShellView({
@@ -29,6 +33,8 @@ export function KioskShellView({
   existingSubmissions = {},
   wellnessSubmittedToday = {},
   sessionDate,
+  matchList,
+  canCreateMatch,
 }: KioskShellViewProps) {
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
@@ -37,7 +43,9 @@ export function KioskShellView({
   const subtitle =
     mode === "rpe"
       ? "Quick post-session RPE collection for the team."
-      : "Daily wellness check-in — tap a player and enter their initials.";
+      : mode === "wellness"
+        ? "Daily wellness check-in — tap a player and enter their initials."
+        : "Post-match feedback — open a match and tap a player.";
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl space-y-6">
@@ -67,12 +75,19 @@ export function KioskShellView({
           todayKioskBatchCountUnavailable={todayKioskBatchCountUnavailable}
           existingSubmissions={existingSubmissions}
         />
-      ) : (
+      ) : mode === "wellness" ? (
         <KioskWellnessView
           players={players}
           loadError={loadError}
           wellnessSubmittedToday={wellnessSubmittedToday}
           sessionDate={sessionDate}
+        />
+      ) : (
+        <KioskMatchView
+          players={players}
+          loadError={loadError}
+          initialMatches={matchList}
+          canCreate={canCreateMatch}
         />
       )}
     </div>

@@ -4,6 +4,8 @@ import { getEligibleSameDayPhoneSubmissions } from "@/lib/kioskRpe/existingSubmi
 import type { ExistingSubmissionMap } from "@/lib/kioskRpe/existingSubmission";
 import { getKioskBatchCountForDate } from "@/lib/kioskRpe/recentKioskSessions.server";
 import { getKioskLockState } from "@/lib/kioskLock/cookies.server";
+import { listMatchFeedbackMatches } from "@/lib/matchFeedback/load.server";
+import type { MatchFeedbackListItem } from "@/lib/matchFeedback/types";
 import { getWellnessSubmittedForDate } from "@/lib/kioskWellness/todaySubmissions.server";
 import { listPlayersForKiosk } from "@/lib/players/listPlayers";
 import { createClient } from "@/lib/supabase/server";
@@ -75,12 +77,25 @@ export default async function KioskRpePage() {
     console.error("[kiosk-rpe] Wellness submissions failed to load", error);
   }
 
+  let matchList: MatchFeedbackListItem[] = [];
+  try {
+    const matchResult = await listMatchFeedbackMatches(supabase);
+    if (matchResult.error) {
+      console.error("[kiosk-rpe] Match Feedback list unavailable", matchResult.error);
+    } else {
+      matchList = matchResult.data;
+    }
+  } catch (error) {
+    console.error("[kiosk-rpe] Match Feedback list failed to load", error);
+  }
+
   const existingKey = Object.values(existingSubmissions)
     .map((row) => row.id)
     .sort()
     .join("|");
   const wellnessKey = Object.keys(wellnessSubmittedToday).sort().join("|");
-  const rosterKey = `${roster.map((player) => player.id).join("|")}::${existingKey}::${wellnessKey}`;
+  const matchKey = matchList.map((m) => m.id).join("|");
+  const rosterKey = `${roster.map((player) => player.id).join("|")}::${existingKey}::${wellnessKey}::${matchKey}`;
 
   return (
     <KioskShellView
@@ -92,6 +107,8 @@ export default async function KioskRpePage() {
       existingSubmissions={existingSubmissions}
       wellnessSubmittedToday={wellnessSubmittedToday}
       sessionDate={sessionDate}
+      matchList={matchList}
+      canCreateMatch={user.role === "admin"}
     />
   );
 }
