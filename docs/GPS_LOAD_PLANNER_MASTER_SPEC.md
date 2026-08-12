@@ -541,10 +541,51 @@ automatic coaching.
 
 ---
 
-## V. Plan compliance colors (if introduced later)
+## V. Plan compliance colors (Review UI)
 
 Colors = **plan compliance only**.  
 Not injury risk, readiness, medical warning, or biological safety.
+
+### Weekly Review (Actual / frozen Match Best × 100)
+
+Display-only classification per **player** and **metric** (does not change Planned/Actual/To Target math):
+
+```text
+Actual Weekly % = Weekly Actual absolute / frozen Match Best absolute × 100
+```
+
+Compare against **that player's saved Weekly Target %** with dynamic green tolerance:
+
+| Metric | Green band |
+|---|---|
+| TD | Weekly Target ±20 percentage points |
+| HSR | Weekly Target ±20 percentage points |
+| Sprint | Weekly Target ±10 percentage points |
+| Acc | Weekly Target ±20 percentage points |
+| Dec | Weekly Target ±20 percentage points |
+
+- **Green:** inside band inclusive of edges  
+- **Orange:** below lower boundary  
+- **Red:** above upper boundary  
+- **Neutral:** incomplete / partial / ambiguous / unavailable Actual quality (no compliance color)
+
+Example: player TD target 200% → green 180–220%; player TD target 250% → green 230–270%.
+
+Do **not** hard-code example targets (250% / 150% / 100% / 300%) as universal bands.
+
+Legend: Green — Within target range; Orange — Below target range; Red — Above target range.
+
+### Daily Review (Difference = Planned − Actual)
+
+| Metric | Green | Orange | Red |
+|---|---|---|---|
+| TD | 0–500 | >500 | <0 |
+| HSR | 0–100 | >100 | <0 |
+| Sprint | 0–50 | >50 | <0 |
+| Acc | 0–10 | >10 | <0 |
+| Dec | 0–10 | >10 | <0 |
+
+Legend: Green — Within planned tolerance; Orange — Below planned load; Red — Planned load exceeded.
 
 ---
 

@@ -319,4 +319,51 @@ describe("Planner Review UI contract", () => {
     expect(review).not.toContain("Promise.all(targets");
     expect(progress).toContain("getTrainingActualGps");
   });
+
+  it("uses semantic third-column labels: Weekly To Target / Daily Difference", async () => {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const review = await fs.readFile(
+      path.join(process.cwd(), "app/(app)/admin/planner/PlannerReviewView.tsx"),
+      "utf8"
+    );
+
+    expect(review).toContain(
+      'const WEEKLY_SUB_COLS = ["Actual", "Planned", "To Target"] as const'
+    );
+    expect(review).toContain(
+      'const DAILY_SUB_COLS = ["Actual", "Planned", "Difference"] as const'
+    );
+    expect(review).toContain("<ReviewTableHead subCols={WEEKLY_SUB_COLS} />");
+    expect(review).toContain("<ReviewTableHead subCols={DAILY_SUB_COLS} />");
+    expect(review).not.toMatch(
+      /SUB_COLS\s*=\s*\["Actual",\s*"Planned",\s*"Diff"\]/
+    );
+
+    // Same sign convention for both labels (presentation-only rename).
+    expect(
+      differenceAbsolute(
+        {
+          totalDistance: 6000,
+          hsr: 100,
+          sprint: 50,
+          accelerations: 10,
+          decelerations: 8,
+        },
+        {
+          totalDistance: 5500,
+          hsr: 80,
+          sprint: 40,
+          accelerations: 9,
+          decelerations: 7,
+        }
+      )
+    ).toEqual({
+      totalDistance: 500,
+      hsr: 20,
+      sprint: 10,
+      accelerations: 1,
+      decelerations: 1,
+    });
+  });
 });
