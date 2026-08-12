@@ -23,7 +23,7 @@ import {
   resolveReviewThroughDateForWeek,
 } from "@/lib/gpsPlanner/uiDisplay";
 import {
-  getPlannerDailyAnalysisAction,
+  getPlannerDailyReviewAnalysisAction,
   getPlannerWeeklyReviewProgressAction,
   listPlannerWeekDaysAction,
   listPlannerWeeklyTargetsAction,
@@ -401,22 +401,16 @@ export function PlannerReviewView({
     }
     setLoadingData(true);
     setError(null);
-    const rows: (PlannerDailyAnalysisResult | { playerId: string; error: string })[] =
-      [];
-    for (const t of targets) {
-      const res = await getPlannerDailyAnalysisAction({
-        weekDayId: dayId,
-        playerId: t.playerId,
-      });
-      if (res.ok) rows.push(res.data);
-      else {
-        rows.push({
-          playerId: t.playerId,
-          error: plannerErrorMessage(res.error.code, res.error.message),
-        });
-      }
+    // Day-batched server path — one Power BI call for the selected week day.
+    const res = await getPlannerDailyReviewAnalysisAction({
+      weekDayId: dayId,
+    });
+    if (!res.ok) {
+      setError(plannerErrorMessage(res.error.code, res.error.message));
+      setDailyRows([]);
+    } else {
+      setDailyRows(res.data);
     }
-    setDailyRows(rows);
     setLoadingData(false);
   }, [dayId, targets]);
 

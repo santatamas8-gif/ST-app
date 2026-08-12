@@ -507,14 +507,16 @@ Top-level segmented control (only one visible at a time):
 - Metrics: TD / HSR / Sprint / Acc / Dec only
 - Sign: Planned − Actual (Weekly: To Target; Daily: Difference)
 - Weekly uses day-batched `getPlannerWeeklyReviewProgress` + visible `throughDate` (≈1 Power BI call per included Week Day; Planning focused Progress may still use `getPlannerWeeklyProgress`)
-- Daily uses existing `getPlannerDailyAnalysis` + dynamic `planner_week_days`
+- Daily Review uses day-batched `getPlannerDailyReviewAnalysis` + dynamic `planner_week_days` (≈1 Power BI call for the selected Week Day; single-player `getPlannerDailyAnalysis` remains available)
 - Missing Daily Target: Planned/Difference `—`; Actual may still show if found
 - Missing / ambiguous / error Actual: never fake zeros; withhold Difference/To Target per existing domain
 - No new archive/history tables; no new sidebar route; no automatic coaching
 
 **Review UI state (session/page only):** Owned by `GpsLoadPlannerView` shell. Switching Planning ↔ Review preserves Review sub-tab (Weekly/Daily), Review week, through-date, and Daily week-day selection. First open of Review may seed week from Planning; later switches do not overwrite Review selections. Intentional Review week change revalidates through-date for the new week range and replaces a stale Daily week-day with a valid day from the new week.
 
-**Weekly Review Power BI loading:** Day-batched Execute Queries (one call per included Week Day for all frozen names) with bounded transient retry. Daily Review remains sequential per player for the selected day. Do not treat day-batching as a business-rule change — 0/1/>1 row quality and completeness contracts are unchanged.
+**Weekly Review Power BI loading:** Day-batched Execute Queries (one call per included Week Day for all frozen names) with bounded transient retry. Do not treat day-batching as a business-rule change — 0/1/>1 row quality and completeness contracts are unchanged.
+
+**Daily Review Power BI loading:** Day-batched Execute Queries (one call for the selected Week Day for all frozen Review player names) reusing `getTrainingActualGpsBatchForDay` with the same bounded transient retry. Per-player 0/1/>1 classification, Planned / Difference, and Daily compliance colors are unchanged.
 
 ---
 
@@ -722,6 +724,7 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
 - Phase F Planning | Review on `/admin/planner`: Planning = existing Weekly Planner; Review = Weekly/Daily Planned vs Actual via existing progress/analysis domain (frozen historical Power BI identity; Actual not persisted)
 - Weekly Review Actual loading: day-batched Power BI Execute Queries (≈1 call per included Week Day) with bounded transient retry; preserves per-player 0/1/>1 row-quality and completeness/To Target contracts
+- Daily Review Actual loading: day-batched Power BI Execute Queries (≈1 call for the selected Week Day via `getPlannerDailyReviewAnalysis` / `getTrainingActualGpsBatchForDay`); preserves per-player 0/1/>1, Planned/Difference, and Daily compliance contracts
 
 ### Verification baseline (after Power BI query modules)
 

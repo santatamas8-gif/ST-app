@@ -85,6 +85,7 @@ import {
 
 import {
   getPlannerDailyAnalysis,
+  getPlannerDailyReviewAnalysis,
   getPlannerWeeklyProgress,
   getPlannerWeeklyReviewProgress,
   type PlannerDailyAnalysisResult,
@@ -351,6 +352,13 @@ export async function getPlannerDailyAnalysisAction(input: {
   playerId: string;
 }): Promise<PlannerResult<PlannerDailyAnalysisResult>> {
   return getPlannerDailyAnalysis(input);
+}
+
+/** Daily Review — one Power BI day-batch for all Weekly Target players. */
+export async function getPlannerDailyReviewAnalysisAction(input: {
+  weekDayId: string;
+}): Promise<PlannerResult<PlannerDailyAnalysisResult[]>> {
+  return getPlannerDailyReviewAnalysis(input);
 }
 
 // ── Daily Plan print ────────────────────────────────────────────────────────

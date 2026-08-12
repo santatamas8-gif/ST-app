@@ -258,11 +258,12 @@ describe("Planner Review UI contract", () => {
     expect(review).toContain("onTabChange");
     expect(review).toContain("Through date");
     expect(review).toContain("getPlannerWeeklyReviewProgressAction");
-    expect(review).toContain("getPlannerDailyAnalysisAction");
+    expect(review).toContain("getPlannerDailyReviewAnalysisAction");
     expect(review).toContain("listPlannerWeeklyTargetsAction");
     expect(review).toContain("resolveReviewThroughDateForWeek");
     expect(review).toContain("resolveReviewDayIdForWeekDays");
     expect(review).not.toContain("getPlannerWeeklyProgressAction");
+    expect(review).not.toContain("getPlannerDailyAnalysisAction");
     expect(review).not.toContain("getPlayerMapping");
     expect(review).not.toContain("injury");
     expect(review).not.toContain("underloaded");
@@ -303,7 +304,7 @@ describe("Planner Review UI contract", () => {
     expect(shell).toContain("if (!reviewOpenedOnce)");
   });
 
-  it("Weekly Review uses day-batched Actual; Daily Review stays sequential per player", async () => {
+  it("Weekly and Daily Review use day-batched Actual loading", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
     const review = await fs.readFile(
@@ -316,10 +317,11 @@ describe("Planner Review UI contract", () => {
     );
     expect(review).toContain("getPlannerWeeklyReviewProgressAction");
     expect(review).not.toContain("getPlannerWeeklyProgressAction");
-    expect(review).toContain("getPlannerDailyAnalysisAction");
-    expect(review).toContain("for (const t of targets)");
-    expect(review).not.toContain("Promise.all(targets");
+    expect(review).toContain("getPlannerDailyReviewAnalysisAction");
+    expect(review).not.toContain("getPlannerDailyAnalysisAction");
+    expect(review).not.toContain("weekDayId: dayId,\n        playerId: t.playerId");
     expect(progress).toContain("getTrainingActualGpsBatchForDay");
+    expect(progress).toContain("getPlannerDailyReviewAnalysis");
     expect(progress).toContain("getTrainingActualGps");
   });
 

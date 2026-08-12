@@ -337,8 +337,10 @@ export async function getPlannerDailyActual(input: {
 }
 
 /**
- * Daily Analysis: Planned / Actual / Difference when safely available.
+ * Daily Analysis (single player): Planned / Actual / Difference when safely available.
  * Missing Actual ≠ zero. Ambiguous/error → no Difference.
+ * Planning / single-player callers keep this path (sequential getTrainingActualGps).
+ * Daily Review multi-player uses getPlannerDailyReviewAnalysis (day-batch).
  */
 export async function getPlannerDailyAnalysis(input: {
   weekDayId: string;
@@ -423,6 +425,200 @@ export async function getPlannerDailyAnalysis(input: {
       difference,
     },
   };
+}
+
+/**
+ * Daily Review: day-batched Full Training Actual for all Weekly Target players
+ * on ONE selected Week Day.
+ *
+ * Power BI strategy: one Execute Queries call via getTrainingActualGpsBatchForDay
+ * (not one request per player). Planned / Difference / compliance contracts are
+ * identical to getPlannerDailyAnalysis.
+ */
+export async function getPlannerDailyReviewAnalysis(input: {
+  weekDayId: string;
+}): Promise<PlannerResult<PlannerDailyAnalysisResult[]>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  const dayResult = await loadWeekDay(input.weekDayId);
+  if (!dayResult.ok) return dayResult;
+  const day = dayResult.data;
+
+  const weekResult = await loadWeek(day.week_id);
+  if (!weekResult.ok) return weekResult;
+
+  const supabase = await createClient();
+
+  const { data: weeklyRows, error: weeklyError } = await supabase
+    .from("planner_weekly_targets")
+    .select(
+      "week_id, player_id, td_pct, hsr_pct, sprint_pct, acc_pct, dec_pct"
+    )
+    .eq("week_id", day.week_id);
+  if (weeklyError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerDailyReviewAnalysis.weekly",
+        weeklyError
+      ),
+    };
+  }
+
+  const targets = (weeklyRows ?? []) as WeeklyTargetDbRow[];
+  if (targets.length === 0) {
+    return { ok: true, data: [] };
+  }
+
+  const playerIds = targets.map((t) => t.player_id);
+
+  const { data: snapshotRows, error: snapError } = await supabase
+    .from("planner_match_best_snapshots")
+    .select(
+      "week_id, player_id, td_best, hsr_best, sprint_best, acc_best, dec_best, powerbi_player_name, source_method"
+    )
+    .eq("week_id", day.week_id)
+    .in("player_id", playerIds);
+  if (snapError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerDailyReviewAnalysis.snapshots",
+        snapError
+      ),
+    };
+  }
+
+  const snapshotByPlayer = new Map<string, SnapshotDbRow>();
+  for (const row of (snapshotRows ?? []) as SnapshotDbRow[]) {
+    snapshotByPlayer.set(row.player_id, row);
+  }
+
+  const { data: dailyRows, error: dailyError } = await supabase
+    .from("planner_daily_targets")
+    .select(
+      "week_day_id, player_id, td_pct, hsr_pct, sprint_pct, acc_pct, dec_pct"
+    )
+    .eq("week_day_id", day.id)
+    .in("player_id", playerIds);
+  if (dailyError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerDailyReviewAnalysis.dailies",
+        dailyError
+      ),
+    };
+  }
+
+  const dailyByPlayer = new Map<string, DailyTargetDbRow>();
+  for (const row of (dailyRows ?? []) as DailyTargetDbRow[]) {
+    dailyByPlayer.set(row.player_id, row);
+  }
+
+  const frozenNames = [
+    ...new Set(
+      playerIds
+        .map((id) => snapshotByPlayer.get(id)?.powerbi_player_name ?? "")
+        .filter((n) => n.length > 0)
+    ),
+  ];
+
+  type BatchEntry =
+    | {
+        status: "found";
+        metrics: {
+          totalDistance: number | null;
+          hsr: number | null;
+          sprint: number | null;
+          accelerations: number | null;
+          decelerations: number | null;
+        };
+      }
+    | { status: "not_found" }
+    | { status: "ambiguous" }
+    | { status: "error" };
+
+  const byPlayerName = new Map<string, BatchEntry>();
+
+  if (frozenNames.length > 0) {
+    const batch = await getTrainingActualGpsBatchForDay({
+      weekId: weekResult.data.powerbi_week_id,
+      mdTag: day.md_tag,
+      date: day.date,
+      playerNames: frozenNames,
+    });
+
+    if (!batch.ok) {
+      for (const name of frozenNames) {
+        byPlayerName.set(name, { status: "error" });
+      }
+    } else {
+      for (const name of frozenNames) {
+        const entry = batch.byPlayerName.get(name);
+        if (!entry) {
+          byPlayerName.set(name, { status: "not_found" });
+        } else if (entry.status === "found") {
+          byPlayerName.set(name, {
+            status: "found",
+            metrics: entry.metrics,
+          });
+        } else if (entry.status === "ambiguous") {
+          byPlayerName.set(name, { status: "ambiguous" });
+        } else {
+          byPlayerName.set(name, { status: "not_found" });
+        }
+      }
+    }
+  }
+
+  const displayNames = await loadDisplayNames(playerIds);
+  const results: PlannerDailyAnalysisResult[] = [];
+
+  for (const target of targets) {
+    const snapshot = snapshotByPlayer.get(target.player_id);
+    if (!snapshot) continue;
+
+    const best = snapshotBest(snapshot);
+    const dailyRow = dailyByPlayer.get(target.player_id) ?? null;
+    const hasDailyTarget = !!dailyRow;
+    const dailyPct = dailyRow ? pctFromDaily(dailyRow) : null;
+    const planned = dailyPct
+      ? calculateDailyPlannedAbsolutes(best, dailyPct)
+      : null;
+
+    const raw =
+      byPlayerName.get(snapshot.powerbi_player_name) ??
+      ({ status: "error" } as const);
+    const mapped = dayStatusFromBatchPlayerResult(raw);
+
+    let difference: AbsoluteMetrics | null = null;
+    if (planned && mapped.status === "actual_found" && mapped.actual) {
+      difference = differenceAbsolute(planned, mapped.actual);
+    }
+
+    results.push({
+      weekId: day.week_id,
+      powerBiWeekId: weekResult.data.powerbi_week_id,
+      weekDayId: day.id,
+      date: day.date,
+      mdTag: day.md_tag,
+      playerId: target.player_id,
+      playerDisplayName:
+        displayNames.get(target.player_id) ??
+        playerDisplayName(null, null),
+      powerBiPlayerName: snapshot.powerbi_player_name,
+      hasDailyTarget,
+      dailyPct,
+      planned,
+      actualStatus: mapped.status,
+      actual: mapped.actual,
+      difference,
+    });
+  }
+
+  return { ok: true, data: results };
 }
 
 /**

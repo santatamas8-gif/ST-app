@@ -40,6 +40,7 @@ vi.mock("@/lib/gpsPlanner/progress.server", () => ({
   getPlannerWeeklyReviewProgress: vi.fn(),
   getPlannerDailyAnalysis: (...args: unknown[]) =>
     getPlannerDailyAnalysis(...args),
+  getPlannerDailyReviewAnalysis: vi.fn(),
 }));
 
 type FromHandler = (table: string) => {

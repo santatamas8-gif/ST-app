@@ -14,8 +14,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const getTrainingActualGps = vi.fn();
+const getTrainingActualGpsBatchForDay = vi.fn();
 vi.mock("@/lib/powerbi/queries/trainingActual.server", () => ({
   getTrainingActualGps: (...args: unknown[]) => getTrainingActualGps(...args),
+  getTrainingActualGpsBatchForDay: (...args: unknown[]) =>
+    getTrainingActualGpsBatchForDay(...args),
 }));
 
 const getPlayerMapping = vi.fn();
