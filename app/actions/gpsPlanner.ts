@@ -86,6 +86,7 @@ import {
 import {
   getPlannerDailyAnalysis,
   getPlannerWeeklyProgress,
+  getPlannerWeeklyReviewProgress,
   type PlannerDailyAnalysisResult,
   type PlannerWeeklyProgressResult,
 } from "@/lib/gpsPlanner/progress.server";
@@ -335,6 +336,14 @@ export async function getPlannerWeeklyProgressAction(input: {
   throughDate: string;
 }): Promise<PlannerResult<PlannerWeeklyProgressResult>> {
   return getPlannerWeeklyProgress(input);
+}
+
+/** Weekly Review — day-batched Power BI Actual for all Weekly Target players. */
+export async function getPlannerWeeklyReviewProgressAction(input: {
+  weekId: string;
+  throughDate: string;
+}): Promise<PlannerResult<PlannerWeeklyProgressResult[]>> {
+  return getPlannerWeeklyReviewProgress(input);
 }
 
 export async function getPlannerDailyAnalysisAction(input: {

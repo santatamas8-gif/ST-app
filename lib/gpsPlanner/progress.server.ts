@@ -26,13 +26,16 @@ import {
   differenceAbsolute,
   isPresentActualValue,
   remainingToAllocate,
-  sumAbsoluteMetrics,
   sumPercentageMetrics,
   type AbsoluteMetrics,
   type MatchBestMetrics,
   type PercentageMetrics,
 } from "@/lib/gpsPlanner/calculations";
-import { getTrainingActualGps } from "@/lib/powerbi/queries/trainingActual.server";
+import { aggregateWeeklyActualFromDays } from "@/lib/gpsPlanner/weeklyActualAggregation";
+import {
+  getTrainingActualGps,
+  getTrainingActualGpsBatchForDay,
+} from "@/lib/powerbi/queries/trainingActual.server";
 import type {
   DayActualStatus,
   PlannerDailyAnalysisResult,
@@ -536,12 +539,9 @@ export async function getPlannerWeeklyProgress(input: {
   const remaining = remainingToAllocate(weeklyPct, dailyAllocationSum);
 
   const dayResults: WeeklyProgressDayActual[] = [];
-  const foundActuals: AbsoluteMetrics[] = [];
-  let foundDays = 0;
-  let notFoundDays = 0;
-  let problematicDays = 0;
 
   // Sequential Power BI calls — bounded by planner week day count (~4–5).
+  // Planning single-player Progress keeps this path (not the Review day-batch).
   for (const day of includedDays) {
     const pbi = await getTrainingActualGps({
       playerName: snapshot.powerbi_player_name,
@@ -556,24 +556,15 @@ export async function getPlannerWeeklyProgress(input: {
     if (!pbi.ok) {
       if (pbi.error.code === "not_found") {
         status = "actual_not_found";
-        notFoundDays += 1;
       } else if (pbi.error.code === "ambiguous") {
         status = "actual_ambiguous";
-        problematicDays += 1;
       } else {
         status = "actual_error";
-        problematicDays += 1;
       }
     } else {
       const mapped = mapFoundActual(pbi.data);
       status = mapped.status;
       actual = mapped.actual;
-      if (mapped.status === "actual_found" && mapped.actual) {
-        foundDays += 1;
-        foundActuals.push(mapped.actual);
-      } else {
-        problematicDays += 1;
-      }
     }
 
     dayResults.push({
@@ -586,37 +577,7 @@ export async function getPlannerWeeklyProgress(input: {
     });
   }
 
-  let actualCompleteness: PlannerWeeklyProgressResult["actualCompleteness"];
-  let weeklyActual: AbsoluteMetrics | null = null;
-  let weeklyToTarget: AbsoluteMetrics | null = null;
-
-  if (includedDays.length === 0) {
-    // No days in throughDate range — not a measured-zero week.
-    actualCompleteness = "partial_not_found";
-    weeklyActual = null;
-    weeklyToTarget = null;
-  } else if (problematicDays > 0) {
-    actualCompleteness = "incomplete";
-    // Partial found values may be returned for inspection, but Weekly To Target is withheld.
-    weeklyActual =
-      foundActuals.length > 0 ? sumAbsoluteMetrics(foundActuals) : null;
-    weeklyToTarget = null;
-  } else if (notFoundDays > 0) {
-    actualCompleteness = "partial_not_found";
-    // not_found ≠ measured zero: only sum genuine found rows.
-    if (foundActuals.length > 0) {
-      weeklyActual = sumAbsoluteMetrics(foundActuals);
-      weeklyToTarget = differenceAbsolute(weeklyPlanned, weeklyActual);
-    } else {
-      weeklyActual = null;
-      weeklyToTarget = null;
-    }
-  } else {
-    actualCompleteness = "complete";
-    weeklyActual = sumAbsoluteMetrics(foundActuals);
-    weeklyToTarget = differenceAbsolute(weeklyPlanned, weeklyActual);
-  }
-
+  const aggregated = aggregateWeeklyActualFromDays(dayResults, weeklyPlanned);
   const displayName = await loadDisplayName(input.playerId);
 
   return {
@@ -638,12 +599,326 @@ export async function getPlannerWeeklyProgress(input: {
       remainingToAllocate: remaining,
       days: dayResults,
       includedDays: includedDays.length,
-      foundDays,
-      notFoundDays,
-      problematicDays,
-      weeklyActual,
-      weeklyToTarget,
-      actualCompleteness,
+      foundDays: aggregated.foundDays,
+      notFoundDays: aggregated.notFoundDays,
+      problematicDays: aggregated.problematicDays,
+      weeklyActual: aggregated.weeklyActual,
+      weeklyToTarget: aggregated.weeklyToTarget,
+      actualCompleteness: aggregated.actualCompleteness,
     },
   };
+}
+
+function dayStatusFromBatchPlayerResult(
+  entry:
+    | {
+        status: "found";
+        metrics: {
+          totalDistance: number | null;
+          hsr: number | null;
+          sprint: number | null;
+          accelerations: number | null;
+          decelerations: number | null;
+        };
+      }
+    | { status: "not_found" }
+    | { status: "ambiguous" }
+    | { status: "error" }
+): { status: DayActualStatus; actual: AbsoluteMetrics | null } {
+  if (entry.status === "error") {
+    return { status: "actual_error", actual: null };
+  }
+  if (entry.status === "not_found") {
+    return { status: "actual_not_found", actual: null };
+  }
+  if (entry.status === "ambiguous") {
+    return { status: "actual_ambiguous", actual: null };
+  }
+  const mapped = mapFoundActual(entry.metrics);
+  return { status: mapped.status, actual: mapped.actual };
+}
+
+async function loadDisplayNames(
+  playerIds: string[]
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (playerIds.length === 0) return out;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", playerIds);
+  for (const row of (data ?? []) as {
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+  }[]) {
+    out.set(row.id, playerDisplayName(row.full_name, row.email));
+  }
+  for (const id of playerIds) {
+    if (!out.has(id)) out.set(id, playerDisplayName(null, null));
+  }
+  return out;
+}
+
+/**
+ * Weekly Review: day-batched Full Training Actual for all Weekly Target players.
+ *
+ * Power BI strategy: one Execute Queries call per included Week Day (not
+ * players × days). Planning single-player Progress stays on getPlannerWeeklyProgress.
+ *
+ * Completeness / To Target contract is identical to getPlannerWeeklyProgress.
+ */
+export async function getPlannerWeeklyReviewProgress(input: {
+  weekId: string;
+  throughDate: string;
+}): Promise<PlannerResult<PlannerWeeklyProgressResult[]>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  if (!isPlannerUuid(input.weekId)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "weekId must be a valid UUID."),
+    };
+  }
+  if (!isPlannerIsoDate(input.throughDate)) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "invalid_date",
+        "throughDate must be a YYYY-MM-DD calendar date."
+      ),
+    };
+  }
+
+  const weekResult = await loadWeek(input.weekId);
+  if (!weekResult.ok) return weekResult;
+
+  const supabase = await createClient();
+
+  const { data: weeklyRows, error: weeklyError } = await supabase
+    .from("planner_weekly_targets")
+    .select(
+      "week_id, player_id, td_pct, hsr_pct, sprint_pct, acc_pct, dec_pct"
+    )
+    .eq("week_id", input.weekId);
+  if (weeklyError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerWeeklyReviewProgress.weekly",
+        weeklyError
+      ),
+    };
+  }
+
+  const targets = (weeklyRows ?? []) as WeeklyTargetDbRow[];
+  if (targets.length === 0) {
+    return { ok: true, data: [] };
+  }
+
+  const playerIds = targets.map((t) => t.player_id);
+
+  const { data: snapshotRows, error: snapError } = await supabase
+    .from("planner_match_best_snapshots")
+    .select(
+      "week_id, player_id, td_best, hsr_best, sprint_best, acc_best, dec_best, powerbi_player_name, source_method"
+    )
+    .eq("week_id", input.weekId)
+    .in("player_id", playerIds);
+  if (snapError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerWeeklyReviewProgress.snapshots",
+        snapError
+      ),
+    };
+  }
+
+  const snapshotByPlayer = new Map<string, SnapshotDbRow>();
+  for (const row of (snapshotRows ?? []) as SnapshotDbRow[]) {
+    snapshotByPlayer.set(row.player_id, row);
+  }
+
+  const { data: allDays, error: daysError } = await supabase
+    .from("planner_week_days")
+    .select("id, week_id, date, md_tag")
+    .eq("week_id", input.weekId)
+    .order("date", { ascending: true });
+  if (daysError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerWeeklyReviewProgress.days",
+        daysError
+      ),
+    };
+  }
+
+  const days = (allDays ?? []) as DayDbRow[];
+  const includedDays = days.filter((d) => d.date <= input.throughDate);
+
+  const { data: dailyRows, error: dailyError } = await supabase
+    .from("planner_daily_targets")
+    .select(
+      "week_day_id, player_id, td_pct, hsr_pct, sprint_pct, acc_pct, dec_pct"
+    )
+    .eq("week_id", input.weekId)
+    .in("player_id", playerIds);
+  if (dailyError) {
+    return {
+      ok: false,
+      error: mapPlannerDbError(
+        "getPlannerWeeklyReviewProgress.dailies",
+        dailyError
+      ),
+    };
+  }
+
+  const dailyByPlayerDay = new Map<string, DailyTargetDbRow>();
+  for (const row of (dailyRows ?? []) as DailyTargetDbRow[]) {
+    dailyByPlayerDay.set(`${row.player_id}:${row.week_day_id}`, row);
+  }
+
+  const frozenNames = [
+    ...new Set(
+      playerIds
+        .map((id) => snapshotByPlayer.get(id)?.powerbi_player_name ?? "")
+        .filter((n) => n.length > 0)
+    ),
+  ];
+
+  // dayId → powerBiPlayerName → day status/metrics
+  type BatchDayEntry =
+    | {
+        status: "found";
+        metrics: {
+          totalDistance: number | null;
+          hsr: number | null;
+          sprint: number | null;
+          accelerations: number | null;
+          decelerations: number | null;
+        };
+      }
+    | { status: "not_found" }
+    | { status: "ambiguous" }
+    | { status: "error" };
+
+  const dayActualByPlayerName = new Map<string, Map<string, BatchDayEntry>>();
+
+  // One Power BI Execute Queries call per included day (Review reliability path).
+  for (const day of includedDays) {
+    const perName = new Map<string, BatchDayEntry>();
+
+    if (frozenNames.length === 0) {
+      dayActualByPlayerName.set(day.id, perName);
+      continue;
+    }
+
+    const batch = await getTrainingActualGpsBatchForDay({
+      weekId: weekResult.data.powerbi_week_id,
+      mdTag: day.md_tag,
+      date: day.date,
+      playerNames: frozenNames,
+    });
+
+    if (!batch.ok) {
+      for (const name of frozenNames) {
+        perName.set(name, { status: "error" });
+      }
+      dayActualByPlayerName.set(day.id, perName);
+      continue;
+    }
+
+    for (const name of frozenNames) {
+      const entry = batch.byPlayerName.get(name);
+      if (!entry) {
+        perName.set(name, { status: "not_found" });
+      } else if (entry.status === "found") {
+        perName.set(name, { status: "found", metrics: entry.metrics });
+      } else if (entry.status === "ambiguous") {
+        perName.set(name, { status: "ambiguous" });
+      } else {
+        perName.set(name, { status: "not_found" });
+      }
+    }
+
+    dayActualByPlayerName.set(day.id, perName);
+  }
+
+  const displayNames = await loadDisplayNames(playerIds);
+  const results: PlannerWeeklyProgressResult[] = [];
+
+  for (const target of targets) {
+    const snapshot = snapshotByPlayer.get(target.player_id);
+    if (!snapshot) {
+      continue;
+    }
+    const best = snapshotBest(snapshot);
+    const weeklyPct = pctFromWeekly(target);
+    const weeklyPlanned = calculateWeeklyPlannedAbsolutes(best, weeklyPct);
+
+    const playerDailyPcts: PercentageMetrics[] = [];
+    for (const day of days) {
+      const daily = dailyByPlayerDay.get(`${target.player_id}:${day.id}`);
+      if (daily) playerDailyPcts.push(pctFromDaily(daily));
+    }
+    const dailyAllocationSum = sumPercentageMetrics(playerDailyPcts);
+    const remaining = remainingToAllocate(weeklyPct, dailyAllocationSum);
+
+    const dayResults: WeeklyProgressDayActual[] = [];
+    for (const day of includedDays) {
+      const byName = dayActualByPlayerName.get(day.id);
+      const raw =
+        byName?.get(snapshot.powerbi_player_name) ??
+        ({ status: "error" } as const);
+      const mapped = dayStatusFromBatchPlayerResult(raw);
+      dayResults.push({
+        weekDayId: day.id,
+        date: day.date,
+        mdTag: day.md_tag,
+        status: mapped.status,
+        actual: mapped.actual,
+        hasDailyTarget: dailyByPlayerDay.has(
+          `${target.player_id}:${day.id}`
+        ),
+      });
+    }
+
+    const aggregated = aggregateWeeklyActualFromDays(
+      dayResults,
+      weeklyPlanned
+    );
+
+    results.push({
+      weekId: input.weekId,
+      powerBiWeekId: weekResult.data.powerbi_week_id,
+      playerId: target.player_id,
+      playerDisplayName:
+        displayNames.get(target.player_id) ??
+        playerDisplayName(null, null),
+      throughDate: input.throughDate,
+      frozen: {
+        ...best,
+        powerBiPlayerName: snapshot.powerbi_player_name,
+        sourceMethod: snapshot.source_method,
+      },
+      weeklyPct,
+      weeklyPlanned,
+      dailyAllocationSum,
+      remainingToAllocate: remaining,
+      days: dayResults,
+      includedDays: includedDays.length,
+      foundDays: aggregated.foundDays,
+      notFoundDays: aggregated.notFoundDays,
+      problematicDays: aggregated.problematicDays,
+      weeklyActual: aggregated.weeklyActual,
+      weeklyToTarget: aggregated.weeklyToTarget,
+      actualCompleteness: aggregated.actualCompleteness,
+    });
+  }
+
+  return { ok: true, data: results };
 }

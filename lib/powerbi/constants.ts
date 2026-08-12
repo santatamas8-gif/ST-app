@@ -19,6 +19,18 @@ export const POWERBI_TOKEN_TIMEOUT_MS = 15_000;
 /** Execute Queries request timeout (ms). */
 export const POWERBI_QUERY_TIMEOUT_MS = 30_000;
 
+/**
+ * Max retries after the initial Execute Queries attempt for transient failures.
+ * Total attempts = 1 + this value.
+ */
+export const POWERBI_QUERY_MAX_RETRIES = 2;
+
+/** Base backoff (ms) before first retry; doubles each subsequent retry. */
+export const POWERBI_QUERY_RETRY_BASE_DELAY_MS = 250;
+
+/** Cap for Retry-After / backoff wait (ms). */
+export const POWERBI_QUERY_RETRY_MAX_DELAY_MS = 5_000;
+
 /** Refresh token this many ms before expiry (best-effort cache). */
 export const POWERBI_TOKEN_EXPIRY_SKEW_MS = 120_000;
 

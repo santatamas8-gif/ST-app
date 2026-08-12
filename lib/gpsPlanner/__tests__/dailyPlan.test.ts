@@ -37,6 +37,7 @@ const getPlannerDailyAnalysis = vi.fn();
 vi.mock("@/lib/gpsPlanner/progress.server", () => ({
   getPlannerWeeklyProgress: (...args: unknown[]) =>
     getPlannerWeeklyProgress(...args),
+  getPlannerWeeklyReviewProgress: vi.fn(),
   getPlannerDailyAnalysis: (...args: unknown[]) =>
     getPlannerDailyAnalysis(...args),
 }));

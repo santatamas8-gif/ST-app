@@ -66,6 +66,7 @@ vi.mock("@/lib/gpsPlanner/dailyTargets.server", () => ({
 
 vi.mock("@/lib/gpsPlanner/progress.server", () => ({
   getPlannerWeeklyProgress: vi.fn(),
+  getPlannerWeeklyReviewProgress: vi.fn(),
   getPlannerDailyAnalysis: vi.fn(),
 }));
 vi.mock("@/lib/gpsPlanner/dailyPlan.server", () => ({

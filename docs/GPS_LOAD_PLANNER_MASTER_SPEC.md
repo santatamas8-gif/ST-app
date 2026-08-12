@@ -433,9 +433,16 @@ Do **not** auto-redistribute, auto-correct, or hard-enforce equality in the DB.
 
 - Remains live in Power BI  
 - **No** Supabase GPS Actual mirror table  
-- Daily Actual = Power BI Full Training via `getTrainingActualGps`  
+- Daily Actual = Power BI Full Training via `getTrainingActualGps` (Planning / Daily Analysis)  
 - Weekly Actual = sum of elapsed Daily Actuals  
 - Do **not** include the game in weekly training Actual  
+
+**Weekly Review loading (implementation detail):** day-batched Full Training queries  
+(`getTrainingActualGpsBatchForDay` / `getPlannerWeeklyReviewProgress`) — one Execute Queries  
+call per included Week Day for all frozen player names — for reliability/performance.  
+Per-player **0 / 1 / >1** raw-row quality semantics are preserved (no SUM/MAX aggregation that  
+hides duplicates). Planning focused-player Weekly Progress may keep using single-player  
+`getTrainingActualGps`.
 
 For a historical planner week, resolve player via **snapshot frozen name**, then query with that week’s Power BI Week ID + day MD_Tag (+ Date as needed).
 
@@ -499,7 +506,7 @@ Top-level segmented control (only one visible at a time):
 - Historical Actual identity: frozen snapshot `powerbi_player_name` (never current mapping)
 - Metrics: TD / HSR / Sprint / Acc / Dec only
 - Sign: Planned − Actual (Weekly: To Target; Daily: Difference)
-- Weekly uses existing `getPlannerWeeklyProgress` + visible `throughDate`
+- Weekly uses day-batched `getPlannerWeeklyReviewProgress` + visible `throughDate` (≈1 Power BI call per included Week Day; Planning focused Progress may still use `getPlannerWeeklyProgress`)
 - Daily uses existing `getPlannerDailyAnalysis` + dynamic `planner_week_days`
 - Missing Daily Target: Planned/Difference `—`; Actual may still show if found
 - Missing / ambiguous / error Actual: never fake zeros; withhold Difference/To Target per existing domain
@@ -507,7 +514,7 @@ Top-level segmented control (only one visible at a time):
 
 **Review UI state (session/page only):** Owned by `GpsLoadPlannerView` shell. Switching Planning ↔ Review preserves Review sub-tab (Weekly/Daily), Review week, through-date, and Daily week-day selection. First open of Review may seed week from Planning; later switches do not overwrite Review selections. Intentional Review week change revalidates through-date for the new week range and replaces a stale Daily week-day with a valid day from the new week.
 
-**Known V1 performance characteristic (not a release defect):** Large-roster Weekly/Daily Review loads Power BI Actuals sequentially per player (correctness over concurrency). Do not treat this as a MINOR defect.
+**Weekly Review Power BI loading:** Day-batched Execute Queries (one call per included Week Day for all frozen names) with bounded transient retry. Daily Review remains sequential per player for the selected day. Do not treat day-batching as a business-rule change — 0/1/>1 row quality and completeness contracts are unchanged.
 
 ---
 
@@ -714,6 +721,7 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %
 - Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
 - Phase F Planning | Review on `/admin/planner`: Planning = existing Weekly Planner; Review = Weekly/Daily Planned vs Actual via existing progress/analysis domain (frozen historical Power BI identity; Actual not persisted)
+- Weekly Review Actual loading: day-batched Power BI Execute Queries (≈1 call per included Week Day) with bounded transient retry; preserves per-player 0/1/>1 row-quality and completeness/To Target contracts
 
 ### Verification baseline (after Power BI query modules)
 
