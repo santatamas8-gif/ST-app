@@ -219,10 +219,14 @@ describe("dailyComplianceTone (Difference = Planned − Actual)", () => {
 });
 
 describe("reviewComplianceToneClass", () => {
-  it("maps tones to mild Tailwind classes", () => {
+  it("maps tones to mild Tailwind cell-box classes", () => {
     expect(reviewComplianceToneClass("green")).toContain("emerald");
+    expect(reviewComplianceToneClass("green")).toContain("bg-");
     expect(reviewComplianceToneClass("orange")).toContain("amber");
+    expect(reviewComplianceToneClass("orange")).toContain("bg-");
     expect(reviewComplianceToneClass("red")).toContain("red");
+    expect(reviewComplianceToneClass("red")).toContain("bg-");
     expect(reviewComplianceToneClass(null)).toContain("zinc");
+    expect(reviewComplianceToneClass(null)).not.toContain("bg-");
   });
 });

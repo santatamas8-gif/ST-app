@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessMatchFeedback,
   canCreateMatchFeedback,
+  canDeleteMatchFeedback,
   canSubmitMatchFeedbackResponse,
 } from "@/lib/matchFeedback/auth";
 import { matchFeedbackParticipantCounts } from "@/lib/matchFeedback/counters";
@@ -26,6 +27,13 @@ describe("matchFeedback auth (service-role write gate)", () => {
     expect(canCreateMatchFeedback("staff")).toBe(false);
     expect(canCreateMatchFeedback("player")).toBe(false);
     expect(canCreateMatchFeedback(null)).toBe(false);
+  });
+
+  it("allows only admin to delete matches", () => {
+    expect(canDeleteMatchFeedback("admin")).toBe(true);
+    expect(canDeleteMatchFeedback("staff")).toBe(false);
+    expect(canDeleteMatchFeedback("player")).toBe(false);
+    expect(canDeleteMatchFeedback(null)).toBe(false);
   });
 
   it("allows admin and staff to access / submit, never player", () => {

@@ -15,6 +15,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import { POST as createMatch } from "@/app/api/kiosk-match/create/route";
+import { POST as deleteMatch } from "@/app/api/kiosk-match/delete/route";
 import { POST as submitMatch } from "@/app/api/kiosk-match/submit/route";
 
 const ADMIN = {
@@ -238,5 +239,45 @@ describe("POST /api/kiosk-match/submit", () => {
     expect(updatePayload).not.toBeNull();
     expect(updatePayload).not.toHaveProperty("created_at");
     expect(updatePayload).toHaveProperty("updated_at");
+  });
+});
+
+describe("POST /api/kiosk-match/delete auth", () => {
+  beforeEach(() => {
+    getAppUser.mockReset();
+    fromMock.mockReset();
+  });
+
+  it("rejects unauthenticated delete with 401", async () => {
+    getAppUser.mockResolvedValue(null);
+    const res = await deleteMatch(jsonRequest({ matchId: MATCH_ID }));
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects staff delete with 403", async () => {
+    getAppUser.mockResolvedValue(STAFF);
+    const res = await deleteMatch(jsonRequest({ matchId: MATCH_ID }));
+    expect(res.status).toBe(403);
+  });
+
+  it("deletes match for admin", async () => {
+    getAppUser.mockResolvedValue(ADMIN);
+    fromMock.mockImplementation((table: string) => {
+      if (table === "match_feedback_matches") {
+        return chain({ data: { id: MATCH_ID }, error: null }, "maybeSingle");
+      }
+      if (
+        table === "match_feedback_responses" ||
+        table === "match_feedback_participants"
+      ) {
+        return chain({ data: null, error: null }, "then");
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const res = await deleteMatch(jsonRequest({ matchId: MATCH_ID }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
   });
 });

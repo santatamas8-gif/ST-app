@@ -10,6 +10,11 @@ export function canCreateMatchFeedback(role: UserRole | null | undefined): boole
   return role === "admin";
 }
 
+/** Only admin may delete matches from Wellness results. */
+export function canDeleteMatchFeedback(role: UserRole | null | undefined): boolean {
+  return role === "admin";
+}
+
 /** Admin or staff may submit/update questionnaire responses via kiosk API. */
 export function canSubmitMatchFeedbackResponse(role: UserRole | null | undefined): boolean {
   return role === "admin" || role === "staff";

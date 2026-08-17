@@ -145,6 +145,7 @@ export default async function WellnessPage() {
       allPlayerIds={allPlayerIds}
       matchList={matchList}
       matchDetailsById={matchDetailsById}
+      canDeleteMatch={user.role === "admin"}
     />
   );
 }

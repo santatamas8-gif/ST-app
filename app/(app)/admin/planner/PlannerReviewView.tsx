@@ -707,6 +707,21 @@ export function PlannerReviewView({
           .review-print-table thead tr:nth-child(2) th:first-child {
             background: #fff !important;
           }
+
+          .review-print-table .review-tone-green {
+            background: #e2f8ec !important;
+            color: #3f3f46 !important;
+          }
+
+          .review-print-table .review-tone-orange {
+            background: #fef6d5 !important;
+            color: #3f3f46 !important;
+          }
+
+          .review-print-table .review-tone-red {
+            background: #fde8e8 !important;
+            color: #3f3f46 !important;
+          }
         }
 
         .review-print-title,

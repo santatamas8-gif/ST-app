@@ -9,6 +9,7 @@ const ALLOWED_LOCKED_API_PATHS = [
   "/api/kiosk-wellness/submit",
   "/api/kiosk-match/create",
   "/api/kiosk-match/submit",
+  "/api/kiosk-match/delete",
   "/api/kiosk-lock/enter",
   "/api/kiosk-lock/exit",
   "/api/health",

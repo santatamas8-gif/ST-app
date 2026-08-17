@@ -23,6 +23,7 @@ type StaffWellnessWorkspaceProps = {
   allPlayerIds: string[];
   matchList: MatchFeedbackListItem[];
   matchDetailsById: Record<string, MatchDetailState>;
+  canDeleteMatch?: boolean;
 };
 
 type WellnessStaffMode = "daily" | "match";
@@ -40,6 +41,7 @@ export function StaffWellnessWorkspace({
   allPlayerIds,
   matchList,
   matchDetailsById,
+  canDeleteMatch = false,
 }: StaffWellnessWorkspaceProps) {
   const [mode, setMode] = useState<WellnessStaffMode>("daily");
 
@@ -105,7 +107,11 @@ export function StaffWellnessWorkspace({
             <h1 className="mb-4 text-lg font-bold tracking-tight text-white sm:text-xl">
               Match Feedback
             </h1>
-            <MatchFeedbackResultsView matches={matchList} detailsByMatchId={matchDetailsById} />
+            <MatchFeedbackResultsView
+              matches={matchList}
+              detailsByMatchId={matchDetailsById}
+              canDeleteMatch={canDeleteMatch}
+            />
           </div>
         </div>
       )}

@@ -22,6 +22,25 @@ export async function createMatchFeedbackMatch(
   }
 }
 
+export async function deleteMatchFeedbackMatch(
+  matchId: string
+): Promise<{ ok: true } | { ok: false; message: string; status?: number }> {
+  try {
+    const res = await fetch("/api/kiosk-match/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      return { ok: false, message: json.error ?? "Failed to delete match.", status: res.status };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Network error deleting match." };
+  }
+}
+
 export async function submitMatchFeedbackResponse(
   body: MatchFeedbackSubmitRequest
 ): Promise<

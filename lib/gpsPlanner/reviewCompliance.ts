@@ -37,17 +37,17 @@ const DAILY_GREEN_MAX: Record<ReviewComplianceMetric, number> = {
   dec: 10,
 };
 
-/** Tailwind text classes — mild, coach-readable. */
+/** Tailwind cell-box classes — soft tinted background, neutral digits. */
 export function reviewComplianceToneClass(
   tone: ReviewComplianceTone | null
 ): string {
   switch (tone) {
     case "green":
-      return "text-emerald-600";
+      return "review-tone-green bg-emerald-100/70 text-zinc-700";
     case "orange":
-      return "text-amber-600";
+      return "review-tone-orange bg-amber-100/70 text-zinc-700";
     case "red":
-      return "text-red-600";
+      return "review-tone-red bg-red-100/70 text-zinc-700";
     default:
       return "text-zinc-700";
   }
