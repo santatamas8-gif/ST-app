@@ -53,6 +53,13 @@ export type PlannerGroupMemberRow = {
   playerDisplayName: string;
 };
 
+/** Live GPS Team match date candidate for official-match selection (no metrics). */
+export type PlannerMatchCandidate = {
+  gpsDate: string;
+  rawRowCount: number;
+  distinctPlayerCount: number;
+};
+
 /** Persisted Admin official-match selection (identity/display only — no GPS Actuals). */
 export type PlannerWeekOfficialMatch = {
   id: string;

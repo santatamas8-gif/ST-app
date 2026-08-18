@@ -84,6 +84,12 @@ vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
   setPlannerWeekOfficialMatch: vi.fn(),
   deletePlannerWeekOfficialMatch: vi.fn(),
 }));
+vi.mock("@/lib/gpsPlanner/totalLoad.server", () => ({
+  getPlannerTotalLoad: vi.fn(),
+}));
+vi.mock("@/lib/gpsPlanner/matchCandidates.server", () => ({
+  listPlannerMatchCandidates: vi.fn(),
+}));
 
 const listPlayerMappings = vi.fn();
 const listPowerBiPlayerCandidates = vi.fn();

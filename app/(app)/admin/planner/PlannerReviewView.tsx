@@ -37,8 +37,9 @@ import type {
   PlannerWeeklyProgressResult,
   PlannerWeeklyTargetView,
 } from "@/lib/gpsPlanner/types";
+import { PlannerTotalLoadView } from "./PlannerTotalLoadView";
 
-export type ReviewTab = "weekly" | "daily";
+export type ReviewTab = "weekly" | "daily" | "total_load";
 
 type MetricKey = ReviewComplianceMetric;
 
@@ -489,6 +490,19 @@ export function PlannerReviewView({
           >
             Daily
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "total_load"}
+            onClick={() => onTabChange("total_load")}
+            className={`min-h-[40px] rounded-md px-4 py-2 text-sm font-medium ${
+              tab === "total_load"
+                ? "bg-zinc-100 text-zinc-900"
+                : "text-zinc-300 hover:bg-zinc-900 hover:text-white"
+            }`}
+          >
+            Total Load
+          </button>
         </div>
 
         {canPrintWeekly ? (
@@ -582,19 +596,29 @@ export function PlannerReviewView({
           ) : null}
         </div>
 
-        <p className="text-[11px] text-zinc-500 no-print">
-          Each metric shows Actual, Planned, and{" "}
-          {tab === "weekly" ? "To Target" : "Difference"} side by side (Planned
-          − Actual). Missing Actual is not zero.
-        </p>
+          {tab === "weekly" || tab === "daily" ? (
+            <p className="text-[11px] text-zinc-500 no-print">
+              Each metric shows Actual, Planned, and{" "}
+              {tab === "weekly" ? "To Target" : "Difference"} side by side (Planned
+              − Actual). Missing Actual is not zero.
+            </p>
+          ) : null}
 
-        {error ? (
+        {error && tab !== "total_load" ? (
           <p className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-200 no-print">
             {error}
           </p>
         ) : null}
 
-        {loadingMeta || loadingData || pending ? (
+        {tab === "total_load" ? (
+          !weekId || !selectedWeek ? null : (
+            <PlannerTotalLoadView
+              key={selectedWeek.id}
+              week={selectedWeek}
+              players={players}
+            />
+          )
+        ) : loadingMeta || loadingData || pending ? (
           <p className="text-sm text-zinc-400 no-print">Loading review…</p>
         ) : !weekId || weeks.length === 0 ? null : targets.length === 0 ? (
           <p className="text-sm text-zinc-400 no-print">

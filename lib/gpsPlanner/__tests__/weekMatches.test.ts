@@ -440,9 +440,8 @@ describe("planner week official matches schema contract", () => {
     }
   });
 
-  it("does not wire Total Load / official-match UI into Review, Planning, or Daily Plan", async () => {
+  it("does not wire official-match persistence into Planning, Daily Plan, or Training", async () => {
     const files = [
-      "app/(app)/admin/planner/PlannerReviewView.tsx",
       "app/(app)/admin/planner/WeeklyPlannerView.tsx",
       "app/(app)/admin/planner/GpsLoadPlannerView.tsx",
       "app/(app)/admin/planner/daily-plan/page.tsx",

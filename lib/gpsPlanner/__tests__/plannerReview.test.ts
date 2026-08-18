@@ -255,6 +255,9 @@ describe("Planner Review UI contract", () => {
 
     expect(review).toContain("Weekly");
     expect(review).toContain("Daily");
+    expect(review).toContain("Total Load");
+    expect(review).toContain('onTabChange("total_load")');
+    expect(review).toContain("PlannerTotalLoadView");
     expect(review).toContain("onTabChange");
     expect(review).toContain("Through date");
     expect(review).toContain("getPlannerWeeklyReviewProgressAction");

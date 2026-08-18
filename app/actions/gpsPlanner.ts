@@ -105,6 +105,10 @@ import {
   type DailyPlanPrintResult,
 } from "@/lib/gpsPlanner/dailyPlan.server";
 
+import { getPlannerTotalLoad } from "@/lib/gpsPlanner/totalLoad.server";
+import type { TotalLoadResult } from "@/lib/gpsPlanner/totalLoadAggregation";
+import { listPlannerMatchCandidates } from "@/lib/gpsPlanner/matchCandidates.server";
+
 import {
   createPlayerMapping,
   listPlayerMappings,
@@ -117,6 +121,7 @@ import {
 import type {
   ApplyDailyTargetOutcome,
   ApplyWeeklyTargetOutcome,
+  PlannerMatchCandidate,
   PlannerUiPlayer,
 } from "@/lib/gpsPlanner/types";
 import { plannerErrorMessage } from "@/lib/gpsPlanner/uiDisplay";
@@ -191,7 +196,7 @@ export async function deletePlannerWeekDayAction(
   return result;
 }
 
-// ── Official match (Total Load identity/display only; no UI wiring yet) ──────
+// ── Official match (Total Load identity/display only) ────────────────────────
 
 export async function getPlannerWeekOfficialMatchAction(
   weekId: string
@@ -213,6 +218,18 @@ export async function deletePlannerWeekOfficialMatchAction(
   const result = await deletePlannerWeekOfficialMatch(weekId);
   if (result.ok) revalidatePlanner();
   return result;
+}
+
+export async function getPlannerTotalLoadAction(
+  weekId: string
+): Promise<PlannerResult<TotalLoadResult>> {
+  return getPlannerTotalLoad(weekId);
+}
+
+export async function listPlannerMatchCandidatesAction(
+  weekId: string
+): Promise<PlannerResult<PlannerMatchCandidate[]>> {
+  return listPlannerMatchCandidates(weekId);
 }
 
 // ── Groups + members ────────────────────────────────────────────────────────
