@@ -33,6 +33,7 @@ Supabase / PostgreSQL architecture specialist for GPS Load Planner V1.
 - Do **not** modify unrelated tables (wellness, sessions, schedule, strength, chat, etc.) unless the Lead explicitly requires a tiny shared dependency and the master spec allows it.
 - Do **not** create a second players table; use `profiles.id` / `auth.users.id`.
 - Do **not** store derived Actuals, absolute planned loads, or differences unless the master spec is updated.
+- Total Load official match (master spec **§U3** / §X): dedicated `planner_week_official_matches` when a migration is explicitly approved. Persist match identity/display only (`gps_date`, opponent, matchday, competition). `UNIQUE (week_id)`. **No** GPS Actual columns. **No CHECK** that `gps_date` is inside the Planner week range. ADMIN-only RLS. Do not add match columns onto `planner_weeks`.
 - Groups are **week-scoped**; targets never FK groups.
 - Weekly Target must FK snapshot `(week_id, player_id)`.
 - Daily Target must FK weekly target `(week_id, player_id)` and week day `(week_day_id, week_id)`.

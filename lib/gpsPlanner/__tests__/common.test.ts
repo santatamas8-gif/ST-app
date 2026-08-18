@@ -63,6 +63,12 @@ describe("mapPlannerDbError", () => {
     ).toBe("week_range_conflict");
     expect(
       mapPlannerDbError("t", {
+        message:
+          'duplicate key value violates unique constraint "planner_week_official_matches_week_id_key"',
+      }).code
+    ).toBe("official_match_already_exists");
+    expect(
+      mapPlannerDbError("t", {
         message: "planner_week_days.date must be between planner_weeks.start_date",
       }).code
     ).toBe("day_outside_week");

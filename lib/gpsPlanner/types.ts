@@ -53,6 +53,20 @@ export type PlannerGroupMemberRow = {
   playerDisplayName: string;
 };
 
+/** Persisted Admin official-match selection (identity/display only — no GPS Actuals). */
+export type PlannerWeekOfficialMatch = {
+  id: string;
+  weekId: string;
+  gpsDate: string;
+  opponent: string;
+  matchday: string;
+  competition: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PlannerMatchBestSnapshot = {
   weekId: string;
   playerId: string;

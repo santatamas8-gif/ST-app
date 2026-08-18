@@ -22,17 +22,30 @@ Power BI / DAX / semantic-model integration specialist for GPS Load Planner V1.
 - Existing server-only connector under `lib/powerbi/`
 - Verified production query modules:
   - `getTrainingActualGps` (Full Training Actual)
-  - `getMatchBestGps` (single-match best)
-- Exact field mappings (`GPS_Log`, `Match_Benchmark`)
-- Error handling: `not_found`, `ambiguous`, connector failures — never silent SUM/MAX/MIN
+  - `getMatchBestGps` (single-match best from **`Match_Benchmark` only**)
+- Future Total Load Match Actual (master spec **§U3**, not implemented until Lead approval): new parallel `GPS_Log` batch for Admin-selected official match (`MD` + `SessionType = "Team"` + `Drill IN {"1st Half","2nd Half"}`). Do **not** change or weaken Full Training queries.
+- Exact field mappings (`GPS_Log`, `Match_Benchmark` with `Max TD` / `Max Z5` / `Max Z6` / `Max Acc` / `Max Dec`)
+- Error handling: `not_found`, `ambiguous`, connector failures — never silent SUM/MAX/MIN. Match halves: per player × half 0 / 1 / >1; never SUM duplicate halves.
 - Historical weeks: use **frozen** Power BI player name from snapshot, not live mapping rematch for identity rewrite
+
+## Match Benchmark tables (do not confuse)
+
+| Table | Role | ST-AMS? |
+|---|---|---|
+| `Match_Benchmark` | CURRENT / latest Match Best | **YES** — `getMatchBestGps` |
+| `Match_Benchmark_History` | Historical benchmarks for Power BI `%` measures (`Valid_From` + `Best_*`) | **NO** — not a planner data source |
+
+Operational History workflow (append-only new full rows; never overwrite old History; update `Match_Benchmark` in place) is documented in master spec **§F2–F4**. Do **not** wire ST-AMS to History without an explicit approved phase.
 
 ## Hard constraints
 
 - **Never invent** semantic-model tables, columns, or measures.
 - Do **not** rebuild the validated connector or query modules without explicit Lead approval and need.
+- Do **not** change `getMatchBestGps` / Match_Benchmark `Max *` mappings because History exists.
+- Do **not** use `Match_Benchmark_History` or History `Best_*` columns in ST-AMS queries.
 - Do **not** use `SourceFile` as the primary production filter.
-- Drill for Actual must be exactly `"Full Training"`.
+- Drill for Training Actual must be exactly `"Full Training"`.
+- Match Actual (Total Load, when implemented) uses exact `"1st Half"` / `"2nd Half"` plus `MD_Tag = "MD"` and `SessionType = "Team"`. Never `SourceFile` as primary identity. Never Individual / training `"First Half"` / `"Second Half"`. Match Time uses raw `GPS_Log[Duration]`, not Matchday Report session-duration measures.
 - Match Best method must be exactly `"single-match best"`.
 - Credentials stay server-only; never `NEXT_PUBLIC_POWERBI_*`; never expose tokens/secrets.
 - Planner metrics only: TD, HSR(Z5), Sprint(Z6), Acc, Dec.

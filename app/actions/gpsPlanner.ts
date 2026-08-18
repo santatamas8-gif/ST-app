@@ -40,6 +40,14 @@ import {
 } from "@/lib/gpsPlanner/weekDays.server";
 
 import {
+  deletePlannerWeekOfficialMatch,
+  getPlannerWeekOfficialMatch,
+  setPlannerWeekOfficialMatch,
+  type PlannerWeekOfficialMatch,
+  type SetPlannerWeekOfficialMatchInput,
+} from "@/lib/gpsPlanner/weekMatches.server";
+
+import {
   addPlannerGroupMember,
   createPlannerGroup,
   deletePlannerGroup,
@@ -179,6 +187,30 @@ export async function deletePlannerWeekDayAction(
   input: DeletePlannerWeekDayInput
 ): Promise<PlannerResult<{ weekDayId: string }>> {
   const result = await deletePlannerWeekDay(input);
+  if (result.ok) revalidatePlanner();
+  return result;
+}
+
+// ── Official match (Total Load identity/display only; no UI wiring yet) ──────
+
+export async function getPlannerWeekOfficialMatchAction(
+  weekId: string
+): Promise<PlannerResult<PlannerWeekOfficialMatch | null>> {
+  return getPlannerWeekOfficialMatch(weekId);
+}
+
+export async function setPlannerWeekOfficialMatchAction(
+  input: SetPlannerWeekOfficialMatchInput
+): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const result = await setPlannerWeekOfficialMatch(input);
+  if (result.ok) revalidatePlanner();
+  return result;
+}
+
+export async function deletePlannerWeekOfficialMatchAction(
+  weekId: string
+): Promise<PlannerResult<{ weekId: string }>> {
+  const result = await deletePlannerWeekOfficialMatch(weekId);
   if (result.ok) revalidatePlanner();
   return result;
 }

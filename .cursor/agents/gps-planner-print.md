@@ -44,6 +44,8 @@ Daily Plan / print specialist for GPS Load Planner V1.
 
 The Daily Plan is a **clean coaching sheet**, not a dashboard.
 
+Total Load (Review §U3) is **not** a Daily Plan / print feature in V1. Do not add Actual, Match load, or Total Week onto the printable Daily Plan.
+
 ## Hard constraints
 
 - Do not change calculation semantics for print layout convenience.

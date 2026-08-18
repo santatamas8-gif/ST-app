@@ -145,6 +145,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   actual_ambiguous: "Multiple Full Training Actual rows found — not summed.",
   actual_incomplete: "Actual from Power BI is incomplete for this day.",
   invalid_date: "Date must be YYYY-MM-DD.",
+  official_match_not_found: "Official match was not found for this planner week.",
+  official_match_already_exists:
+    "An official match is already selected for this planner week.",
 };
 
 export function plannerErrorMessage(code: string, fallback?: string): string {

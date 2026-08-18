@@ -38,7 +38,9 @@ export type PlannerErrorCode =
   | "actual_not_found"
   | "actual_ambiguous"
   | "actual_incomplete"
-  | "invalid_date";
+  | "invalid_date"
+  | "official_match_not_found"
+  | "official_match_already_exists";
 
 export type PlannerSafeError = {
   code: PlannerErrorCode;
@@ -288,6 +290,21 @@ export function mapPlannerDbError(
     const e = plannerErr(
       "weekly_target_already_exists",
       "A Match Best snapshot or weekly target already exists for this week and player."
+    );
+    logPlannerError(area, e, { code: supabaseError?.code });
+    return e;
+  }
+
+  if (
+    lower.includes("planner_week_official_matches") &&
+    (lower.includes("unique") ||
+      lower.includes("duplicate") ||
+      lower.includes("week_id_key") ||
+      supabaseError?.code === "23505")
+  ) {
+    const e = plannerErr(
+      "official_match_already_exists",
+      "An official match is already selected for this planner week."
     );
     logPlannerError(area, e, { code: supabaseError?.code });
     return e;

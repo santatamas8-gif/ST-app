@@ -32,7 +32,8 @@ Independent QA / regression / security reviewer for GPS Load Planner V1.
 - Check sign conventions: `Difference = Planned − Actual`  
 - Check frozen snapshot immutability  
 - Check no duplicate week/player or day/player targets  
-- Check Training Actual `not_found` / `ambiguous` (no silent aggregation)  
+- Check Training Actual `not_found` / `ambiguous` (no silent aggregation)
+- Total Load (§U3, when implemented): Partial Training numeric Total visible but excluded from Top Values; Match half 0/1/>1; both halves absent after selection = Match zero (not copied to Training); ambiguous Match does not fall back to Training-only Total; no Total Load colors; official match Admin-only persistence; Training query unchanged  
 - Run or review: ESLint, `tsc --noEmit`, full Vitest, targeted new tests  
 - Inspect regressions in Wellness / RPE / Strength / Recovery / Schedule / auth  
 
