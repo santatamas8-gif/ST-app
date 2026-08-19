@@ -29,7 +29,7 @@ Planner domain / business-logic specialist for GPS Load Planner V1.
 - Weekly Actual = sum of elapsed Daily Actuals (exclude game)
 - Total Load (master spec **§U3**, not implemented until Lead approval):
   - Total Week = recorded Training Actual + safe Match Actual
-  - Partial Training (`partial_not_found` with valid numeric Training) **keeps and displays** that recorded load; missing Training days are **not** zero; label `Partial`; exclude from Top Values
+  - Partial Training (`partial_not_found` with valid numeric Training) **keeps and displays** that recorded load; missing Training days are **not** zero; label `Partial`; eligible for Top Values (absolute Total, same as Complete)
   - Unsafe Training or ambiguous Match → Total `—` (never Training-only Total when Match is unsafe)
   - After official match selected, both halves absent → Match zero (valid). Never copy Match-zero onto missing Training days
   - Total Week % = Total Week / frozen `planner_match_best_snapshots` (not live Match_Benchmark / History / Weekly Planned)

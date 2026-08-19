@@ -24,7 +24,7 @@ describe("Total Load Review UI", () => {
       "app/(app)/admin/planner/PlannerReviewView.tsx"
     );
     expect(review).toContain("WeeklyReviewTable");
-    expect(review).toContain('const WEEKLY_SUB_COLS = ["Actual", "Planned", "To Target"] as const');
+    expect(review).toContain('const WEEKLY_SUB_COLS = ["Actual", "Planned", "Target"] as const');
     expect(review).toContain("weeklyComplianceTone");
     expect(review).toContain("Through date");
     expect(review).toContain("canPrintWeekly");
@@ -67,18 +67,26 @@ describe("Total Load Review UI", () => {
     );
     expect(view).toContain("No Team match GPS dates found for this Power BI week.");
     expect(view).toContain("No Weekly Targets saved for this week.");
-    expect(view).toContain("formatWeeklyPlanSummaryLine");
+    expect(view).toContain("formatWeeklyPlanSharedPct");
     expect(view).toContain("result.topValues");
-    expect(view).toContain("Most TD");
-    expect(view).toContain("Most HSR");
-    expect(view).toContain("Most Sprint");
-    expect(view).toContain("Most Acc");
-    expect(view).toContain("Most Dec");
+    expect(view).toContain('title: "TD"');
+    expect(view).toContain('title: "HSR"');
+    expect(view).toContain('title: "Sprint"');
+    expect(view).toContain('title: "Acc"');
+    expect(view).toContain('title: "Dec"');
+    expect(view).not.toContain("Most TD");
     expect(view).toContain("Match Time");
-    expect(view).toContain("{m.label} Total");
+    expect(view).toContain("{m.label}");
     expect(view).toContain("{m.label} %");
+    expect(view).toContain("({m.unit})");
+    expect(view).toContain("toggleTotalSort");
+    expect(view).toContain("sortByMost");
+    expect(view).toContain("sortTotalLoadRowsByTotal");
+    expect(view).toContain("displayRows.map");
+    expect(view).toContain("formatMatchTimeMinutes");
     expect(view).toContain("formatMatchDurationSeconds");
-    expect(view).toContain("formatTotalLoadQualityBadge");
+    expect(view).not.toContain("formatTotalLoadQualityBadge");
+    expect(view).not.toContain("QualityBadge");
     expect(view).toContain("formatTotalLoadMetricBreakdown");
     expect(view).toContain("totalLoadCellValue");
     expect(view).not.toContain("computeTotalLoadTopValues");
@@ -87,9 +95,6 @@ describe("Total Load Review UI", () => {
     expect(view).not.toContain("reviewCompliance");
     expect(view).not.toContain("bg-emerald-500");
     expect(view).not.toContain("bg-amber-500");
-    expect(view).toContain(
-      "uppercase tracking-wide text-zinc-300"
-    );
     expect(view).not.toContain("Tempo");
     expect(view).not.toContain("To Target");
     expect(view).not.toContain("window.print");

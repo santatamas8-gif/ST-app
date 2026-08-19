@@ -645,7 +645,7 @@ Reuse existing Weekly Review Full Training source (`GPS_Log`, `Drill = "Full Tra
 
 `Partial` means: Total is calculated from GPS load actually recorded for the player, but not every Planner Week Day has a Full Training row.
 
-Example: player recorded Full Training only on two week days (MD-4 = 4,500 m, MD-3 = 6,000 m) and has no Full Training row on the remaining Planner days. Recorded Training Load = 10,500 m. If Match Load = 5,000 m, Total Weekly Load = **15,500 m** and **must be shown** (labelled Partial; not eligible for Top Values). Missing Training days stay omitted, not zeroed.
+Example: player recorded Full Training only on two week days (MD-4 = 4,500 m, MD-3 = 6,000 m) and has no Full Training row on the remaining Planner days. Recorded Training Load = 10,500 m. If Match Load = 5,000 m, Total Weekly Load = **15,500 m** and **must be shown** (labelled Partial; eligible for Top Values). Missing Training days stay omitted, not zeroed.
 
 **Unsafe Training** (ambiguous raw data, query error, invalid/incomplete payload, or any existing state where the numeric value cannot be trusted):
 
@@ -770,11 +770,11 @@ Partial Training with valid numeric recorded load: use that recorded Training va
 | Quality | Training | Match | Total / % | Top Values |
 |---|---|---|---|---|
 | **Complete** | `complete` | `match_ok` or `match_zero` | numeric | **eligible** |
-| **Partial** | `partial_not_found` with valid numeric Training | `match_ok` or `match_zero` | **numeric, labelled Partial** | **not eligible** |
+| **Partial** | `partial_not_found` with valid numeric Training | `match_ok` or `match_zero` | **numeric, labelled Partial** | **eligible** |
 | **Unsafe** | ambiguous / error / untrusted | **or** Match ambiguous / query error | `—` | no |
 | **Match not selected** | any | no official match | Total `—` (do not label Training as Total Week) | no |
 
-Partial rows **display** recorded Total. They are excluded from Top Values because missing Training days cannot always prove non-participation vs missing GPS.
+Partial rows **display** recorded Total and **are eligible** for Top Values (same absolute ranking as Complete). Missing Training days still cannot prove non-participation vs missing GPS; the Admin decided Most cards must match the highest displayed Total. Unsafe / match-not-selected remain excluded.
 
 ### U3.10 No Total Load compliance colors
 
@@ -791,7 +791,7 @@ Main table (V1): Player; Match Time; TD Total; TD %; HSR Total; HSR %; Sprint To
 
 Training / Match breakdown V1: tooltip / compact detail on Total (`Training: X` / `Match: Y` / `Total: Z`; Partial Training marked). No extra wide columns.
 
-Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute Total Week**, not %. Eligible **only** quality `Complete`. Exclude Partial, unsafe Training, Match ambiguous, query errors, match not selected. `match_zero` remains eligible if Training is complete. Tie: higher absolute first; exact tie → player display name ascending.
+Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute Total Week**, not %. Eligible quality `Complete` **and** `Partial` (numeric Total). Exclude unsafe Training, Match ambiguous, query errors, match not selected. `match_zero` remains eligible if Training is complete or Partial with numeric Total. Tie: higher absolute first; exact tie → player display name ascending.
 
 ### U3.12 Security
 

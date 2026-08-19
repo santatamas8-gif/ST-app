@@ -337,7 +337,7 @@ describe("Planner Review UI contract", () => {
     );
 
     expect(review).toContain(
-      'const WEEKLY_SUB_COLS = ["Actual", "Planned", "To Target"] as const'
+      'const WEEKLY_SUB_COLS = ["Actual", "Planned", "Target"] as const'
     );
     expect(review).toContain(
       'const DAILY_SUB_COLS = ["Actual", "Planned", "Difference"] as const'

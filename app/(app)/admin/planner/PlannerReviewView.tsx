@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { Calendar } from "lucide-react";
 import { Card } from "@/components/Card";
 import type { AbsoluteMetrics } from "@/lib/gpsPlanner/calculations";
 import {
@@ -22,6 +23,7 @@ import {
   resolveReviewDayIdForWeekDays,
   resolveReviewThroughDateForWeek,
 } from "@/lib/gpsPlanner/uiDisplay";
+import { formatCompactDateRange } from "@/lib/gpsPlanner/totalLoadDisplay";
 import {
   getPlannerDailyReviewAnalysisAction,
   getPlannerWeeklyReviewProgressAction,
@@ -113,8 +115,25 @@ function formatDayOption(day: PlannerWeekDayRow): string {
   return `${day.mdTag} · ${day.date}`;
 }
 
+function formatTotalLoadWeekSelectLabel(week: PlannerWeekRow): string {
+  const range = formatCompactDateRange(week.startDate, week.endDate).replace(
+    /–/g,
+    "-"
+  );
+  const title = formatWeekNumberLabel(week.powerbiWeekId);
+  return week.status === "closed"
+    ? `${title}\u2003\u2003(${range}, Closed)`
+    : `${title}\u2003\u2003(${range})`;
+}
+
+function formatWeekNumberLabel(powerbiWeekId: string): string {
+  const match = /^W(\d+)$/i.exec(powerbiWeekId.trim());
+  if (match) return `Week ${match[1]}`;
+  return powerbiWeekId.trim();
+}
+
 /** Presentation labels only — values stay Planned − Actual. */
-const WEEKLY_SUB_COLS = ["Actual", "Planned", "To Target"] as const;
+const WEEKLY_SUB_COLS = ["Actual", "Planned", "Target"] as const;
 const DAILY_SUB_COLS = ["Actual", "Planned", "Difference"] as const;
 
 function MetricValues({
@@ -456,11 +475,56 @@ export function PlannerReviewView({
     !pending &&
     weeklyRows.length > 0;
 
+  function applyWeekChange(nextWeekId: string) {
+    const nextWeek = weeks.find((w) => w.id === nextWeekId);
+    if (nextWeek) {
+      onThroughDateChange(
+        resolveReviewThroughDateForWeek({
+          previousWeekId: weekId,
+          nextWeekId,
+          previousThroughDate: throughDate,
+          nextWeekStart: nextWeek.startDate,
+          nextWeekEnd: nextWeek.endDate,
+          todayIso: todayIsoLocal(),
+        })
+      );
+    }
+    onWeekIdChange(nextWeekId);
+  }
+
+  const totalLoadWeekControl =
+    weeks.length === 0 ? (
+      <p className="text-sm text-zinc-400">No planner week available.</p>
+    ) : (
+      <div className="relative inline-flex min-w-[220px] items-center">
+        <Calendar
+          className="pointer-events-none absolute left-2.5 size-3.5 text-zinc-400"
+          aria-hidden
+        />
+        <select
+          aria-label="Week"
+          value={weekId}
+          onChange={(e) => applyWeekChange(e.target.value)}
+          className="min-h-[36px] min-w-[220px] rounded-lg border border-zinc-700 bg-zinc-950 py-1.5 pl-8 pr-8 text-sm text-white"
+        >
+          {weeks.map((w) => (
+            <option key={w.id} value={w.id}>
+              {formatTotalLoadWeekSelectLabel(w)}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+
   return (
-    <div className="space-y-4">
+    <div className={tab === "total_load" ? "space-y-3" : "space-y-4"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
-          className="inline-flex rounded-lg border border-zinc-700 bg-zinc-950 p-1 no-print"
+          className={
+            tab === "total_load"
+              ? "inline-flex items-center rounded-xl border border-zinc-700 bg-zinc-950 p-1 no-print"
+              : "inline-flex rounded-lg border border-zinc-700 bg-zinc-950 p-1 no-print"
+          }
           role="tablist"
           aria-label="Review period"
         >
@@ -469,7 +533,9 @@ export function PlannerReviewView({
             role="tab"
             aria-selected={tab === "weekly"}
             onClick={() => onTabChange("weekly")}
-            className={`min-h-[40px] rounded-md px-4 py-2 text-sm font-medium ${
+            className={`min-h-[40px] text-sm font-medium ${
+              tab === "total_load" ? "rounded-lg px-5 py-2" : "rounded-md px-4 py-2"
+            } ${
               tab === "weekly"
                 ? "bg-zinc-100 text-zinc-900"
                 : "text-zinc-300 hover:bg-zinc-900 hover:text-white"
@@ -482,7 +548,9 @@ export function PlannerReviewView({
             role="tab"
             aria-selected={tab === "daily"}
             onClick={() => onTabChange("daily")}
-            className={`min-h-[40px] rounded-md px-4 py-2 text-sm font-medium ${
+            className={`min-h-[40px] text-sm font-medium ${
+              tab === "total_load" ? "rounded-lg px-5 py-2" : "rounded-md px-4 py-2"
+            } ${
               tab === "daily"
                 ? "bg-zinc-100 text-zinc-900"
                 : "text-zinc-300 hover:bg-zinc-900 hover:text-white"
@@ -495,7 +563,9 @@ export function PlannerReviewView({
             role="tab"
             aria-selected={tab === "total_load"}
             onClick={() => onTabChange("total_load")}
-            className={`min-h-[40px] rounded-md px-4 py-2 text-sm font-medium ${
+            className={`min-h-[40px] text-sm font-medium ${
+              tab === "total_load" ? "rounded-lg px-5 py-2" : "rounded-md px-4 py-2"
+            } ${
               tab === "total_load"
                 ? "bg-zinc-100 text-zinc-900"
                 : "text-zinc-300 hover:bg-zinc-900 hover:text-white"
@@ -516,7 +586,15 @@ export function PlannerReviewView({
         ) : null}
       </div>
 
-      <Card className="space-y-4 border-zinc-800 bg-zinc-900/60 p-4 sm:p-5 review-print-card">
+      <Card
+        className={`review-print-card ${
+          tab === "total_load"
+            ? "space-y-3 border-zinc-800 bg-zinc-900/60 p-3 sm:p-4"
+            : "space-y-4 border-zinc-800 bg-zinc-900/60 p-4 sm:p-5"
+        }`}
+      >
+        {tab !== "total_load" ? (
+        <>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end no-print">
           <label className="block min-w-[220px] flex-1 space-y-1">
             <span className="text-xs font-medium text-zinc-400">Week</span>
@@ -525,23 +603,7 @@ export function PlannerReviewView({
             ) : (
               <select
                 value={weekId}
-                onChange={(e) => {
-                  const nextWeekId = e.target.value;
-                  const nextWeek = weeks.find((w) => w.id === nextWeekId);
-                  if (nextWeek) {
-                    onThroughDateChange(
-                      resolveReviewThroughDateForWeek({
-                        previousWeekId: weekId,
-                        nextWeekId,
-                        previousThroughDate: throughDate,
-                        nextWeekStart: nextWeek.startDate,
-                        nextWeekEnd: nextWeek.endDate,
-                        todayIso: todayIsoLocal(),
-                      })
-                    );
-                  }
-                  onWeekIdChange(nextWeekId);
-                }}
+                onChange={(e) => applyWeekChange(e.target.value)}
                 className="w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
               >
                 {weeks.map((w) => (
@@ -599,10 +661,12 @@ export function PlannerReviewView({
           {tab === "weekly" || tab === "daily" ? (
             <p className="text-[11px] text-zinc-500 no-print">
               Each metric shows Actual, Planned, and{" "}
-              {tab === "weekly" ? "To Target" : "Difference"} side by side (Planned
+              {tab === "weekly" ? "Target" : "Difference"} side by side (Planned
               − Actual). Missing Actual is not zero.
             </p>
           ) : null}
+        </>
+        ) : null}
 
         {error && tab !== "total_load" ? (
           <p className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-200 no-print">
@@ -616,6 +680,7 @@ export function PlannerReviewView({
               key={selectedWeek.id}
               week={selectedWeek}
               players={players}
+              weekControl={totalLoadWeekControl}
             />
           )
         ) : loadingMeta || loadingData || pending ? (

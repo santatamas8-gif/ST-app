@@ -5,11 +5,13 @@ import {
   formatCompactDateRange,
   formatCompactIsoDate,
   formatMatchDurationSeconds,
+  formatMatchTimeMinutes,
   formatTotalLoadMetricBreakdown,
   formatTotalLoadPercent,
   formatTotalLoadQualityBadge,
   formatWeeklyPlanSharedPct,
   formatWeeklyPlanSummaryLine,
+  sortTotalLoadRowsByTotal,
   totalLoadCellPercent,
   totalLoadCellValue,
 } from "@/lib/gpsPlanner/totalLoadDisplay";
@@ -81,6 +83,18 @@ describe("formatMatchDurationSeconds", () => {
     expect(formatMatchDurationSeconds(0)).toBe("0:00");
     expect(formatMatchDurationSeconds(null)).toBe("—");
     expect(formatMatchDurationSeconds(undefined)).toBe("—");
+  });
+});
+
+describe("formatMatchTimeMinutes", () => {
+  it("rounds GPS seconds to nearest whole minute", () => {
+    expect(formatMatchTimeMinutes(3885)).toBe("65");
+    expect(formatMatchTimeMinutes(5975)).toBe("100");
+    expect(formatMatchTimeMinutes(5290)).toBe("88");
+    expect(formatMatchTimeMinutes(2081)).toBe("35");
+    expect(formatMatchTimeMinutes(0)).toBe("0");
+    expect(formatMatchTimeMinutes(null)).toBe("—");
+    expect(formatMatchTimeMinutes(undefined)).toBe("—");
   });
 });
 
@@ -227,5 +241,54 @@ describe("header date formatting", () => {
       "11–14 Aug 2026"
     );
     expect(formatCompactIsoDate("2026-08-15")).toBe("15 Aug 2026");
+  });
+});
+
+describe("sortTotalLoadRowsByTotal", () => {
+  it("orders by absolute Total descending, nulls last, name tie-break", () => {
+    const high = row({
+      playerId: "b",
+      playerDisplayName: "Beta",
+      quality: "complete",
+      total: {
+        metrics: { ...ZERO, totalDistance: 2000 },
+        percentages: { ...ZERO },
+      },
+    });
+    const low = row({
+      playerId: "a",
+      playerDisplayName: "Alpha",
+      quality: "complete",
+      total: {
+        metrics: { ...ZERO, totalDistance: 1000 },
+        percentages: { ...ZERO },
+      },
+    });
+    const missing = row({
+      playerId: "c",
+      playerDisplayName: "Missing",
+      quality: "unsafe",
+      total: { metrics: null, percentages: null },
+    });
+    const tied = row({
+      playerId: "d",
+      playerDisplayName: "Ada",
+      quality: "complete",
+      total: {
+        metrics: { ...ZERO, totalDistance: 2000 },
+        percentages: { ...ZERO },
+      },
+    });
+    const sorted = sortTotalLoadRowsByTotal(
+      [low, missing, high, tied],
+      "totalDistance",
+      "desc"
+    );
+    expect(sorted.map((r) => r.playerDisplayName)).toEqual([
+      "Ada",
+      "Beta",
+      "Alpha",
+      "Missing",
+    ]);
   });
 });

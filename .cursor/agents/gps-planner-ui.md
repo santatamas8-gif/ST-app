@@ -25,7 +25,7 @@ ST-AMS **admin-only** planner UI specialist for GPS Load Planner V1.
 - Week-scoped group selection helpers (Starters / Non-Starters / Custom)
 - Player-specific weekly and daily target editing
 - Review tabs: `Weekly | Daily | Total Load` (Total Load rules in master spec **§U3**; not implemented until Lead approval). Do **not** change Weekly/Daily behavior or colors.
-- Total Load: no compliance colors; Partial rows show numeric Total labelled Partial; Top Values only `Complete`; Admin official-match picker (do not auto-resolve from week dates)
+- Total Load: no compliance colors; Partial rows show numeric Total labelled Partial; Top Values = highest absolute Total among Complete **and** Partial; Admin official-match picker (do not auto-resolve from week dates)
 - Clear presentation of derived values without changing calculation semantics
 - Destructive actions (e.g. delete week) require explicit confirmation UX when implemented
 

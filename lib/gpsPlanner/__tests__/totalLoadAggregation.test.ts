@@ -425,7 +425,7 @@ describe("composeTotalLoadResult", () => {
     expect(result.rows[0].total.metrics?.decelerations).toBe(78);
   });
 
-  it("O: Partial excluded from Top Values", () => {
+  it("O: Partial included in Top Values when absolute Total is higher", () => {
     const partial = training({
       playerId: "p1",
       name: "Partial High",
@@ -448,9 +448,9 @@ describe("composeTotalLoadResult", () => {
       ])
     );
     expect(result.topValues.totalDistance?.playerDisplayName).toBe(
-      "Complete Low"
+      "Partial High"
     );
-    expect(result.topValues.totalDistance?.value).toBe(1000);
+    expect(result.topValues.totalDistance?.value).toBe(90000);
   });
 
   it("P/Q: Complete eligible; match_zero complete remains eligible", () => {
@@ -580,7 +580,7 @@ describe("composeTotalLoadResult", () => {
 });
 
 describe("computeTotalLoadTopValues", () => {
-  it("unsafe / match_not_selected / partial are excluded", () => {
+  it("unsafe / match_not_selected are excluded", () => {
     const rows = compose(
       [
         training({

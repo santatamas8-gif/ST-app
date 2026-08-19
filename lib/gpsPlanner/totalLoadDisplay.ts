@@ -50,6 +50,14 @@ export function formatMatchDurationSeconds(
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
+/** Table display: nearest whole minute. Null → "—". 0 → "0". Does not change stored seconds. */
+export function formatMatchTimeMinutes(
+  seconds: number | null | undefined
+): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  return String(Math.round(Math.trunc(seconds) / 60));
+}
+
 /** Whole-percentage display. Null → "—". Domain value is not mutated. */
 export function formatTotalLoadPercent(
   value: number | null | undefined
@@ -124,6 +132,28 @@ export function totalLoadCellPercent(
   field: keyof NonNullable<TotalLoadPlayerRow["total"]["percentages"]>
 ): number | null {
   return row.total.percentages?.[field] ?? null;
+}
+
+export type TotalLoadMetricField =
+  keyof NonNullable<TotalLoadPlayerRow["total"]["metrics"]>;
+
+/** Display-only table order. Does not recompute totals, %, or Top Values. */
+export function sortTotalLoadRowsByTotal(
+  rows: TotalLoadPlayerRow[],
+  field: TotalLoadMetricField,
+  direction: "desc" | "asc"
+): TotalLoadPlayerRow[] {
+  return [...rows].sort((a, b) => {
+    const av = totalLoadCellValue(a, field);
+    const bv = totalLoadCellValue(b, field);
+    if (av == null && bv == null) {
+      return a.playerDisplayName.localeCompare(b.playerDisplayName);
+    }
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (av !== bv) return direction === "desc" ? bv - av : av - bv;
+    return a.playerDisplayName.localeCompare(b.playerDisplayName);
+  });
 }
 
 function unsafeReason(

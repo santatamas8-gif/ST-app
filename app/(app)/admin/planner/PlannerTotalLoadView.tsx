@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { RefreshCw, X } from "lucide-react";
 import {
   deletePlannerWeekOfficialMatchAction,
   getPlannerTotalLoadAction,
@@ -8,6 +9,7 @@ import {
   setPlannerWeekOfficialMatchAction,
 } from "@/app/actions/gpsPlanner";
 import type {
+  DailyPlanPctSummary,
   PlannerMatchCandidate,
   PlannerUiPlayer,
   PlannerWeekRow,
@@ -21,10 +23,11 @@ import {
   formatCompactDateRange,
   formatCompactIsoDate,
   formatMatchDurationSeconds,
+  formatMatchTimeMinutes,
   formatTotalLoadMetricBreakdown,
   formatTotalLoadPercent,
-  formatTotalLoadQualityBadge,
-  formatWeeklyPlanSummaryLine,
+  formatWeeklyPlanSharedPct,
+  sortTotalLoadRowsByTotal,
   totalLoadCellPercent,
   totalLoadCellValue,
 } from "@/lib/gpsPlanner/totalLoadDisplay";
@@ -36,18 +39,20 @@ import {
 type Props = {
   week: PlannerWeekRow;
   players: PlannerUiPlayer[];
+  weekControl?: ReactNode;
 };
 
 type MetricCol = {
   key: "td" | "hsr" | "sprint" | "acc" | "dec";
   label: string;
+  unit?: "m";
   field: "totalDistance" | "hsr" | "sprint" | "accelerations" | "decelerations";
 };
 
 const METRICS: MetricCol[] = [
-  { key: "td", label: "TD", field: "totalDistance" },
-  { key: "hsr", label: "HSR", field: "hsr" },
-  { key: "sprint", label: "Sprint", field: "sprint" },
+  { key: "td", label: "TD", unit: "m", field: "totalDistance" },
+  { key: "hsr", label: "HSR", unit: "m", field: "hsr" },
+  { key: "sprint", label: "Sprint", unit: "m", field: "sprint" },
   { key: "acc", label: "Acc", field: "accelerations" },
   { key: "dec", label: "Dec", field: "decelerations" },
 ];
@@ -56,11 +61,11 @@ const TOP_CARDS: {
   key: MetricCol["field"];
   title: string;
 }[] = [
-  { key: "totalDistance", title: "Most TD" },
-  { key: "hsr", title: "Most HSR" },
-  { key: "sprint", title: "Most Sprint" },
-  { key: "accelerations", title: "Most Acc" },
-  { key: "decelerations", title: "Most Dec" },
+  { key: "totalDistance", title: "TD" },
+  { key: "hsr", title: "HSR" },
+  { key: "sprint", title: "Sprint" },
+  { key: "accelerations", title: "Acc" },
+  { key: "decelerations", title: "Dec" },
 ];
 
 function ConfirmDialog({
@@ -114,19 +119,28 @@ function ConfirmDialog({
   );
 }
 
-function QualityBadge({ row }: { row: TotalLoadPlayerRow }) {
-  const label = formatTotalLoadQualityBadge(row.quality);
-  if (!label) return null;
-  if (label === "Complete") {
-    return (
-      <span className="ml-2 shrink-0 text-[11px] font-medium uppercase tracking-wide text-zinc-300">
-        Complete
-      </span>
-    );
-  }
+const WEEKLY_PLAN_METRICS: {
+  key: keyof DailyPlanPctSummary;
+  label: string;
+}[] = [
+  { key: "td", label: "TD" },
+  { key: "hsr", label: "HSR" },
+  { key: "sprint", label: "Sprint" },
+  { key: "acc", label: "Acc" },
+  { key: "dec", label: "Dec" },
+];
+
+function WeeklyPlanStrip({ summary }: { summary: DailyPlanPctSummary }) {
   return (
-    <span className="ml-2 inline-flex shrink-0 items-center rounded-md border border-zinc-600 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-300">
-      {label}
+    <span>
+      <span className="mx-1.5 text-zinc-600">·</span>
+      <span className="font-medium uppercase tracking-wide">Weekly Plan</span>
+      {WEEKLY_PLAN_METRICS.map((metric) => (
+        <span key={metric.key}>
+          <span className="mx-1.5 text-zinc-600">·</span>
+          {metric.label} {formatWeeklyPlanSharedPct(summary[metric.key])}
+        </span>
+      ))}
     </span>
   );
 }
@@ -134,39 +148,61 @@ function QualityBadge({ row }: { row: TotalLoadPlayerRow }) {
 function TopValueCard({
   title,
   value,
+  selected,
+  onSelect,
 }: {
   title: string;
   value: TotalLoadTopValue;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={`Sort table by ${title}`}
+      className={`flex min-w-0 w-full flex-col overflow-hidden rounded-lg px-2.5 py-2 text-left ${
+        selected
+          ? "bg-[#2d6a50] text-white"
+          : "bg-transparent text-zinc-300 hover:bg-[#245c45] hover:text-white"
+      }`}
+    >
+      <p
+        className={`truncate text-[10px] font-semibold uppercase tracking-normal ${
+          selected ? "text-emerald-200/80" : "text-zinc-400"
+        }`}
+      >
         {title}
       </p>
       {value ? (
         <>
-          <p className="mt-1 truncate text-sm text-zinc-200">
+          <p
+            className={`mt-0.5 truncate text-xs font-medium ${
+              selected ? "text-zinc-100" : "text-zinc-200"
+            }`}
+          >
             {value.playerDisplayName}
           </p>
-          <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-50">
+          <p className="mt-1 truncate text-lg font-semibold tabular-nums leading-none text-white">
             {formatPlannerDisplayAbsoluteOrDash(value.value)}
           </p>
         </>
       ) : (
-        <p className="mt-2 text-lg font-semibold text-zinc-500">—</p>
+        <p className="mt-1 text-lg font-semibold leading-none text-zinc-500">
+          —
+        </p>
       )}
-    </div>
+    </button>
   );
 }
 
 function PlayerCell({
   name,
   avatarUrl,
-  quality,
 }: {
   name: string;
   avatarUrl: string | null;
-  quality: TotalLoadPlayerRow;
 }) {
   const initial = name.trim().slice(0, 1).toUpperCase() || "?";
   return (
@@ -176,22 +212,21 @@ function PlayerCell({
         <img
           src={avatarUrl}
           alt=""
-          className="size-8 shrink-0 rounded-full object-cover ring-1 ring-zinc-700"
+          className="size-8 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"
         />
       ) : (
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-medium text-zinc-300 ring-1 ring-zinc-700">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200">
           {initial}
         </span>
       )}
-      <span className="ml-2 truncate text-[15px] font-medium text-zinc-100">
+      <span className="ml-2 truncate text-[15px] font-medium text-zinc-900">
         {name}
       </span>
-      <QualityBadge row={quality} />
     </div>
   );
 }
 
-export function PlannerTotalLoadView({ week, players }: Props) {
+export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   const [result, setResult] = useState<TotalLoadResult | null>(null);
   const [candidates, setCandidates] = useState<PlannerMatchCandidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,6 +243,8 @@ export function PlannerTotalLoadView({ week, players }: Props) {
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [sortField, setSortField] = useState<MetricCol["field"] | null>(null);
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const avatarById = useMemo(() => {
     const m = new Map<string, string | null>();
@@ -350,6 +387,31 @@ export function PlannerTotalLoadView({ week, players }: Props) {
     await loadWeekData();
   }
 
+  function sortByMost(field: MetricCol["field"]) {
+    setSortField(field);
+    setSortDir("desc");
+  }
+
+  function toggleTotalSort(field: MetricCol["field"]) {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortDir("desc");
+      return;
+    }
+    if (sortDir === "desc") {
+      setSortDir("asc");
+      return;
+    }
+    setSortField(null);
+    setSortDir("desc");
+  }
+
+  const displayRows = useMemo(() => {
+    if (!result) return [];
+    if (!sortField) return result.rows;
+    return sortTotalLoadRowsByTotal(result.rows, sortField, sortDir);
+  }, [result, sortField, sortDir]);
+
   const official = result?.officialMatch;
   const matchSelected = official?.selected === true;
   const showTotals = matchSelected && !loading && result != null;
@@ -364,54 +426,21 @@ export function PlannerTotalLoadView({ week, players }: Props) {
     !saving;
 
   return (
-    <div className="no-print space-y-4">
-      {loading ? (
-        <p className="text-sm text-zinc-400">Loading Total Load…</p>
-      ) : null}
-
-      {error ? (
-        <p className="rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-200">
-          {error}
-        </p>
-      ) : null}
-
-      {!loading && matchSelected && official ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 space-y-1">
-              <p className="text-xl font-semibold text-zinc-50">
-                {week.powerbiWeekId}
-              </p>
-              <p className="text-sm text-zinc-300">
-                Training: {formatCompactDateRange(week.startDate, week.endDate)}
-              </p>
-              <p className="text-sm text-zinc-300">
-                Match: {formatCompactIsoDate(official.gpsDate ?? "")}
-              </p>
-              <p className="pt-1 text-base font-medium text-zinc-100">
-                {official.opponent}
-              </p>
-              <p className="text-sm text-zinc-400">
-                {official.matchday}
-                {official.competition ? ` · ${official.competition}` : ""}
-              </p>
-              {result ? (
-                <p className="pt-2 text-sm text-zinc-200">
-                  <span className="font-medium text-zinc-400">Weekly Plan</span>
-                  {"  "}
-                  {formatWeeklyPlanSummaryLine(result.weeklyPlanSummary)}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-2">
+    <div className="no-print space-y-3">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">{weekControl}</div>
+          {!loading && matchSelected && official ? (
+            <div className="flex shrink-0 flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setChanging(true);
                   setSaveError(null);
                 }}
-                className="min-h-[44px] rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800"
               >
+                <RefreshCw className="size-3.5" aria-hidden />
                 Change match
               </button>
               <button
@@ -420,21 +449,45 @@ export function PlannerTotalLoadView({ week, players }: Props) {
                   setSaveError(null);
                   setConfirmClear(true);
                 }}
-                className="min-h-[44px] rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-zinc-700 bg-transparent px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-900"
               >
+                <X className="size-3.5" aria-hidden />
                 Clear match
               </button>
             </div>
-          </div>
+          ) : null}
         </div>
+        {!loading && matchSelected && official ? (
+          <p className="text-[11px] leading-relaxed text-zinc-500">
+            Training: {formatCompactDateRange(week.startDate, week.endDate)}
+            <span className="mx-1.5 text-zinc-600">·</span>
+            Match: {formatCompactIsoDate(official.gpsDate ?? "")}
+            {official.opponent ? (
+              <span className="text-zinc-500"> vs {official.opponent}</span>
+            ) : null}
+            {result ? (
+              <WeeklyPlanStrip summary={result.weeklyPlanSummary} />
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading Total Load…</p>
+      ) : null}
+
+      {error ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {error}
+        </p>
       ) : null}
 
       {!loading && !matchSelected ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-4">
-          <p className="text-base font-medium text-zinc-100">
+        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-4 shadow-sm">
+          <p className="text-base font-medium text-zinc-900">
             Select the official match to calculate Total Load.
           </p>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-500">
             The match date is chosen by Admin. It does not have to fall inside
             the Training date range.
           </p>
@@ -442,12 +495,12 @@ export function PlannerTotalLoadView({ week, players }: Props) {
       ) : null}
 
       {!loading && changing ? (
-        <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
-          <p className="text-sm font-medium text-zinc-200">Official match</p>
+        <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-zinc-800">Official match</p>
           {candidateError ? (
-            <p className="text-sm text-zinc-400">{candidateError}</p>
+            <p className="text-sm text-zinc-500">{candidateError}</p>
           ) : candidates.length === 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-500">
               No Team match GPS dates found for this Power BI week.
             </p>
           ) : (
@@ -461,8 +514,8 @@ export function PlannerTotalLoadView({ week, players }: Props) {
                     onClick={() => selectCandidate(c.gpsDate)}
                     className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm ${
                       selected
-                        ? "border-zinc-200 bg-zinc-100 text-zinc-900"
-                        : "border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800"
+                        ? "border-zinc-900 bg-zinc-900 text-white"
+                        : "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50"
                     }`}
                   >
                     <span className="font-medium">
@@ -479,48 +532,48 @@ export function PlannerTotalLoadView({ week, players }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-400">Opponent</span>
+              <span className="text-xs font-medium text-zinc-500">Opponent</span>
               <input
                 value={opponent}
                 onChange={(e) => setOpponent(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-400">Matchday</span>
+              <span className="text-xs font-medium text-zinc-500">Matchday</span>
               <input
                 value={matchday}
                 onChange={(e) => setMatchday(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-400">
+              <span className="text-xs font-medium text-zinc-500">
                 Competition
               </span>
               <input
                 value={competition}
                 onChange={(e) => setCompetition(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
               />
             </label>
           </div>
           {draftGpsDate ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-500">
               GPS date: {formatCompactIsoDate(draftGpsDate)}
             </p>
           ) : (
-            <p className="text-sm text-zinc-500">Choose a GPS match date.</p>
+            <p className="text-sm text-zinc-400">Choose a GPS match date.</p>
           )}
           {saveError ? (
-            <p className="text-sm text-zinc-300">{saveError}</p>
+            <p className="text-sm text-amber-800">{saveError}</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void saveOfficialMatch()}
               disabled={!canSave}
-              className="min-h-[44px] rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
+              className="min-h-[44px] rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save official match"}
             </button>
@@ -536,7 +589,7 @@ export function PlannerTotalLoadView({ week, players }: Props) {
                   setCompetition(official?.competition ?? "");
                 }}
                 disabled={saving}
-                className="min-h-[44px] rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                className="min-h-[44px] rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
               >
                 Cancel
               </button>
@@ -546,73 +599,101 @@ export function PlannerTotalLoadView({ week, players }: Props) {
       ) : null}
 
       {saveError && !changing && !confirmClear ? (
-        <p className="text-sm text-zinc-200">{saveError}</p>
+        <p className="text-sm text-amber-800">{saveError}</p>
       ) : null}
 
       {matchUnavailable ? (
-        <p className="rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-200">
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Match GPS is unavailable for this week.
         </p>
       ) : null}
 
       {!loading && emptyTargets ? (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-zinc-500">
           No Weekly Targets saved for this week.
         </p>
       ) : null}
 
       {showTotals && !emptyTargets ? (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            {TOP_CARDS.map((card) => (
-              <TopValueCard
-                key={card.key}
-                title={card.title}
-                value={result.topValues[card.key]}
-              />
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-[#245c45] bg-[#1b4332] p-1">
+            <div className="grid w-full grid-cols-5 gap-1">
+              {TOP_CARDS.map((card) => (
+                <TopValueCard
+                  key={card.key}
+                  title={card.title}
+                  value={result.topValues[card.key]}
+                  selected={sortField === card.key && sortDir === "desc"}
+                  onSelect={() => sortByMost(card.key)}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-zinc-800">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
             <table className="min-w-[920px] w-full border-collapse text-[15px]">
               <thead>
-                <tr className="bg-zinc-950 text-xs uppercase tracking-wide text-zinc-300">
-                  <th className="sticky left-0 z-10 bg-zinc-950 px-3 py-3 text-left font-medium">
+                <tr className="bg-[#1b4332] text-xs uppercase tracking-wide text-white">
+                  <th className="sticky left-0 z-10 bg-[#1b4332] px-3 py-3 text-left font-medium">
                     Player
-                  </th>
-                  <th className="px-3 py-3 text-center font-medium">
-                    Match Time
                   </th>
                   {METRICS.map((m) => (
                     <Fragment key={m.key}>
-                      <th className="border-l border-zinc-800 px-3 py-3 text-center font-medium">
-                        {m.label} Total
+                      <th className="border-l border-white/15 px-1 py-2 text-center font-medium">
+                        <button
+                          type="button"
+                          onClick={() => toggleTotalSort(m.field)}
+                          aria-label={`Sort by ${m.label}`}
+                          aria-sort={
+                            sortField === m.field
+                              ? sortDir === "desc"
+                                ? "descending"
+                                : "ascending"
+                              : "none"
+                          }
+                          className="inline-flex min-h-[36px] w-full items-center justify-center gap-1 rounded-md px-2 text-xs font-medium uppercase tracking-wide text-white hover:bg-white/10"
+                        >
+                          {m.label}
+                          {m.unit ? (
+                            <span className="normal-case text-[10px] font-normal tracking-normal text-zinc-400">
+                              ({m.unit})
+                            </span>
+                          ) : null}
+                          {sortField === m.field ? (
+                            <span className="text-[10px] text-zinc-300" aria-hidden>
+                              {sortDir === "desc" ? "▼" : "▲"}
+                            </span>
+                          ) : null}
+                        </button>
                       </th>
-                      <th className="px-3 py-3 text-center font-medium">
+                      <th className="px-2 py-3 text-center font-medium text-zinc-400">
                         {m.label} %
                       </th>
                     </Fragment>
                   ))}
+                  <th className="border-l border-white/15 px-3 py-3 text-center font-medium">
+                    Match Time
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {result.rows.map((row) => {
+                {displayRows.map((row, index) => {
                   const name = row.playerDisplayName;
                   const unsafe = row.quality === "unsafe";
+                  const stripe = index % 2 === 0 ? "bg-white" : "bg-zinc-100";
+                  const matchMinutes = formatMatchTimeMinutes(
+                    row.match.durationSeconds
+                  );
                   return (
                     <tr
                       key={row.playerId}
-                      className="border-t border-zinc-800 text-zinc-100"
+                      className={`border-b border-zinc-300 text-zinc-800 ${stripe}`}
                     >
-                      <td className="sticky left-0 z-10 bg-zinc-900 px-3 py-2.5">
+                      <td className={`sticky left-0 z-10 px-3 py-2.5 ${stripe}`}>
                         <PlayerCell
                           name={name}
                           avatarUrl={avatarById.get(row.playerId) ?? null}
-                          quality={row}
                         />
-                      </td>
-                      <td className="px-3 py-2.5 text-center tabular-nums">
-                        {formatMatchDurationSeconds(row.match.durationSeconds)}
                       </td>
                       {METRICS.map((m) => {
                         const total = unsafe
@@ -632,19 +713,34 @@ export function PlannerTotalLoadView({ week, players }: Props) {
                           <Fragment key={m.key}>
                             <td
                               title={title}
-                              className="border-l border-zinc-800 px-3 py-2.5 text-center tabular-nums"
+                              className="border-l border-zinc-200/80 px-3 py-2.5 text-center font-semibold tabular-nums"
                             >
                               {formatPlannerDisplayAbsoluteOrDash(total)}
                             </td>
                             <td
                               title={title}
-                              className="px-3 py-2.5 text-center tabular-nums"
+                              className="px-2 py-2.5 text-center text-sm tabular-nums text-zinc-500"
                             >
                               {formatTotalLoadPercent(pct)}
                             </td>
                           </Fragment>
                         );
                       })}
+                      <td
+                        title={formatMatchDurationSeconds(row.match.durationSeconds)}
+                        className="border-l border-zinc-200/80 px-3 py-2.5 text-center tabular-nums"
+                      >
+                        {matchMinutes === "—" ? (
+                          matchMinutes
+                        ) : (
+                          <>
+                            {matchMinutes}
+                            <span className="ml-0.5 text-[11px] font-normal text-zinc-400">
+                              min
+                            </span>
+                          </>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

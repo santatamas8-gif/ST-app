@@ -183,7 +183,9 @@ function pickTopValue(
   metric: keyof AbsoluteMetrics
 ): TotalLoadTopValue {
   const eligible = rows.filter(
-    (row) => row.quality === "complete" && row.total.metrics != null
+    (row) =>
+      (row.quality === "complete" || row.quality === "partial") &&
+      row.total.metrics != null
   );
   if (eligible.length === 0) return null;
   eligible.sort((a, b) => {
