@@ -419,8 +419,8 @@ export function StrengthCardPrint({ cards, teamLogoUrl }: StrengthCardPrintProps
           height: 100% !important;
           max-width: 100% !important;
           max-height: 100% !important;
-          /* Fill the same frame as other cards; tall sources crop top/bottom only */
-          object-fit: cover !important;
+          /* Same as exercise selection: full image visible, no crop */
+          object-fit: contain !important;
           object-position: center center !important;
         }
 
