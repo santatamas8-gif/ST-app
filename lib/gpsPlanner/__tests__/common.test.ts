@@ -69,6 +69,18 @@ describe("mapPlannerDbError", () => {
     ).toBe("official_match_already_exists");
     expect(
       mapPlannerDbError("t", {
+        message:
+          'duplicate key value violates unique constraint "planner_week_official_matches_week_id_match_order_key"',
+      }).code
+    ).toBe("official_match_duplicate_order");
+    expect(
+      mapPlannerDbError("t", {
+        message:
+          'duplicate key value violates unique constraint "planner_week_official_matches_week_id_gps_date_key"',
+      }).code
+    ).toBe("official_match_duplicate_date");
+    expect(
+      mapPlannerDbError("t", {
         message: "planner_week_days.date must be between planner_weeks.start_date",
       }).code
     ).toBe("day_outside_week");

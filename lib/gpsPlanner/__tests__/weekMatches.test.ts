@@ -32,10 +32,13 @@ vi.mock("@/lib/powerbi/queries/trainingActual", () => ({
 }));
 
 import {
+  createPlannerWeekOfficialMatch,
   deletePlannerWeekOfficialMatch,
+  deletePlannerWeekOfficialMatchById,
   getPlannerWeekOfficialMatch,
   getPlannerWeekOfficialMatches,
   setPlannerWeekOfficialMatch,
+  updatePlannerWeekOfficialMatchById,
 } from "@/lib/gpsPlanner/weekMatches.server";
 
 const ADMIN = {
@@ -75,12 +78,16 @@ function chain(
     maybeSingle?: boolean;
     onInsert?: (payload: unknown) => void;
     onUpdate?: (payload: unknown) => void;
+    onEq?: (column: unknown, value: unknown) => void;
   }
 ) {
   const api: Record<string, unknown> = {};
   const self = () => api;
   api.select = vi.fn(self);
-  api.eq = vi.fn(self);
+  api.eq = vi.fn((column: unknown, value: unknown) => {
+    opts?.onEq?.(column, value);
+    return api;
+  });
   api.order = vi.fn(self);
   api.delete = vi.fn(self);
   api.insert = vi.fn((payload: unknown) => {
@@ -167,6 +174,35 @@ describe("planner week official matches auth", () => {
       ok: false,
       error: { code: "unauthorized" },
     });
+    await expect(
+      createPlannerWeekOfficialMatch({
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
+    await expect(
+      updatePlannerWeekOfficialMatchById({
+        id: MATCH_ID,
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
+    await expect(
+      deletePlannerWeekOfficialMatchById({ id: MATCH_ID, weekId: WEEK_ID })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
     expect(fromMock).not.toHaveBeenCalled();
   });
 
@@ -184,6 +220,35 @@ describe("planner week official matches auth", () => {
     });
     await expect(
       deletePlannerWeekOfficialMatch(WEEK_ID)
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
+    await expect(
+      createPlannerWeekOfficialMatch({
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
+    await expect(
+      updatePlannerWeekOfficialMatchById({
+        id: MATCH_ID,
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "unauthorized" },
+    });
+    await expect(
+      deletePlannerWeekOfficialMatchById({ id: MATCH_ID, weekId: WEEK_ID })
     ).resolves.toMatchObject({
       ok: false,
       error: { code: "unauthorized" },
@@ -207,7 +272,7 @@ describe("planner week official matches CRUD", () => {
       if (table === "planner_weeks") return weekExistsChain();
       officialCalls += 1;
       if (officialCalls === 1) {
-        return chain({ data: null, error: null }, { maybeSingle: true });
+        return chain({ data: [], error: null });
       }
       return chain(
         { data: matchRow({ competition: null }), error: null },
@@ -226,11 +291,15 @@ describe("planner week official matches CRUD", () => {
     expect(result.data.opponent).toBe("FK Csikszereda");
     expect(result.data.matchday).toBe("5");
     expect(result.data.competition).toBeNull();
+    expect(result.data.matchOrder).toBe(1);
+    expect(result.data.mdTag).toBe("MD");
     expect(inserts).toHaveLength(1);
     expect(updates).toHaveLength(0);
     const inserted = inserts[0] as Record<string, unknown>;
     expect(inserted.week_id).toBe(WEEK_ID);
     expect(inserted.gps_date).toBe("2026-08-15");
+    expect(inserted.match_order).toBe(1);
+    expect(inserted.md_tag).toBe("MD");
     expect(inserted.opponent).toBe("FK Csikszereda");
     expect(inserted.matchday).toBe("5");
     expect(inserted.competition).toBeNull();
@@ -245,15 +314,13 @@ describe("planner week official matches CRUD", () => {
   it("A/C: setting again updates the existing row instead of inserting a duplicate", async () => {
     const inserts: unknown[] = [];
     const updates: unknown[] = [];
+    const eqs: Array<[unknown, unknown]> = [];
     let officialCalls = 0;
     fromMock.mockImplementation((table: string) => {
       if (table === "planner_weeks") return weekExistsChain();
       officialCalls += 1;
       if (officialCalls === 1) {
-        return chain(
-          { data: matchRow(), error: null },
-          { maybeSingle: true }
-        );
+        return chain({ data: [matchRow()], error: null });
       }
       return chain(
         {
@@ -269,6 +336,7 @@ describe("planner week official matches CRUD", () => {
           maybeSingle: true,
           onInsert: (payload) => inserts.push(payload),
           onUpdate: (payload) => updates.push(payload),
+          onEq: (column, value) => eqs.push([column, value]),
         }
       );
     });
@@ -289,11 +357,19 @@ describe("planner week official matches CRUD", () => {
     expect(updates).toHaveLength(1);
     expect(updates[0]).toMatchObject({
       gps_date: "2026-08-22",
+      match_order: 1,
+      md_tag: "MD",
       opponent: "Sepsi OSK",
       matchday: "6",
       competition: "Liga 1",
       updated_by: ADMIN.id,
     });
+    expect(eqs).toEqual(
+      expect.arrayContaining([
+        ["id", MATCH_ID],
+        ["week_id", WEEK_ID],
+      ])
+    );
   });
 
   it("D: clears/deletes official match", async () => {
@@ -328,7 +404,7 @@ describe("planner week official matches CRUD", () => {
       }
       officialCalls += 1;
       if (officialCalls === 1) {
-        return chain({ data: null, error: null }, { maybeSingle: true });
+        return chain({ data: [], error: null });
       }
       return chain(
         { data: matchRow({ gps_date: "2026-08-15" }), error: null },
@@ -502,6 +578,205 @@ describe("planner week official matches plural read", () => {
   });
 });
 
+describe("planner week official matches Phase C writes", () => {
+  beforeEach(() => {
+    getAppUser.mockReset();
+    fromMock.mockReset();
+    getAppUser.mockResolvedValue(ADMIN);
+  });
+
+  it("create maps matchOrder and mdTag and keeps nullable metadata", async () => {
+    const inserts: unknown[] = [];
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain(
+        {
+          data: matchRow({
+            match_order: 2,
+            md_tag: "MD",
+            opponent: null,
+            matchday: null,
+            competition: null,
+          }),
+          error: null,
+        },
+        {
+          single: true,
+          onInsert: (payload) => inserts.push(payload),
+        }
+      );
+    });
+    const result = await createPlannerWeekOfficialMatch({
+      weekId: WEEK_ID,
+      matchOrder: 2,
+      gpsDate: "2026-08-15",
+      mdTag: "  MD  ",
+      opponent: null,
+      matchday: "  ",
+      competition: null,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.matchOrder).toBe(2);
+    expect(result.data.mdTag).toBe("MD");
+    expect(result.data.opponent).toBeNull();
+    expect(result.data.matchday).toBeNull();
+    expect(result.data.competition).toBeNull();
+    expect(inserts).toEqual([
+      expect.objectContaining({
+        week_id: WEEK_ID,
+        match_order: 2,
+        gps_date: "2026-08-15",
+        md_tag: "MD",
+        opponent: null,
+        matchday: null,
+        competition: null,
+      }),
+    ]);
+  });
+
+  it("update is by Match row id and week_id", async () => {
+    const updates: unknown[] = [];
+    const eqs: Array<[unknown, unknown]> = [];
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain(
+        {
+          data: matchRow({
+            gps_date: "2026-08-18",
+            md_tag: "MD",
+            match_order: 1,
+          }),
+          error: null,
+        },
+        {
+          maybeSingle: true,
+          onUpdate: (payload) => updates.push(payload),
+          onEq: (column, value) => eqs.push([column, value]),
+        }
+      );
+    });
+    const result = await updatePlannerWeekOfficialMatchById({
+      id: MATCH_ID,
+      weekId: WEEK_ID,
+      matchOrder: 1,
+      gpsDate: "2026-08-18",
+      mdTag: "MD",
+      opponent: "FK Csikszereda",
+      matchday: "5",
+    });
+    expect(result.ok).toBe(true);
+    expect(updates).toHaveLength(1);
+    expect(eqs).toEqual([
+      ["id", MATCH_ID],
+      ["week_id", WEEK_ID],
+    ]);
+  });
+
+  it("delete is by Match row id and weekId, not week_id alone", async () => {
+    const eqs: Array<[unknown, unknown]> = [];
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain(
+        { data: { id: MATCH_ID, week_id: WEEK_ID }, error: null },
+        {
+          maybeSingle: true,
+          onEq: (column, value) => eqs.push([column, value]),
+        }
+      );
+    });
+    await expect(
+      deletePlannerWeekOfficialMatchById({ id: MATCH_ID, weekId: WEEK_ID })
+    ).resolves.toEqual({
+      ok: true,
+      data: { id: MATCH_ID, weekId: WEEK_ID },
+    });
+    expect(eqs).toEqual([
+      ["id", MATCH_ID],
+      ["week_id", WEEK_ID],
+    ]);
+  });
+
+  it("rejects invalid matchOrder and blank mdTag without writing", async () => {
+    await expect(
+      createPlannerWeekOfficialMatch({
+        weekId: WEEK_ID,
+        matchOrder: 3 as 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_input" },
+    });
+    await expect(
+      createPlannerWeekOfficialMatch({
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "   ",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_md_tag" },
+    });
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("create maps same-week uniqueness conflict and does not upsert", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain(
+        {
+          data: null,
+          error: {
+            code: "23505",
+            message:
+              'duplicate key value violates unique constraint "planner_week_official_matches_week_id_key"',
+          },
+        },
+        { single: true }
+      );
+    });
+    await expect(
+      createPlannerWeekOfficialMatch({
+        weekId: WEEK_ID,
+        matchOrder: 2,
+        gpsDate: "2026-08-18",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "official_match_already_exists" },
+    });
+    const src = await readFile(
+      path.join(process.cwd(), "lib/gpsPlanner/weekMatches.server.ts"),
+      "utf8"
+    );
+    expect(src).not.toContain(".upsert(");
+    expect(src).not.toContain("onConflict");
+  });
+
+  it("update returns not_found when the requested id does not exist", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain({ data: null, error: null }, { maybeSingle: true });
+    });
+    await expect(
+      updatePlannerWeekOfficialMatchById({
+        id: MATCH_ID,
+        weekId: WEEK_ID,
+        matchOrder: 1,
+        gpsDate: "2026-08-15",
+        mdTag: "MD",
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "official_match_not_found" },
+    });
+  });
+});
+
 describe("planner week official matches schema contract", () => {
   it("E/J: migration is sequential, unique week, cascade, admin RLS, no GPS Actuals, no date-range CHECK", async () => {
     const sql = await readFile(
@@ -645,7 +920,7 @@ describe("planner week official matches schema contract", () => {
     expect(src).toContain('.order("gps_date", { ascending: true })');
     const wrapper = src.slice(
       src.indexOf("export async function getPlannerWeekOfficialMatch("),
-      src.indexOf("export async function setPlannerWeekOfficialMatch")
+      src.indexOf("export async function createPlannerWeekOfficialMatch")
     );
     expect(wrapper).toContain("getPlannerWeekOfficialMatches");
     expect(wrapper).toContain("official_match_ambiguous");

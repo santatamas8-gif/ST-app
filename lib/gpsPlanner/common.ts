@@ -41,7 +41,9 @@ export type PlannerErrorCode =
   | "invalid_date"
   | "official_match_not_found"
   | "official_match_already_exists"
-  | "official_match_ambiguous";
+  | "official_match_ambiguous"
+  | "official_match_duplicate_order"
+  | "official_match_duplicate_date";
 
 export type PlannerSafeError = {
   code: PlannerErrorCode;
@@ -303,6 +305,22 @@ export function mapPlannerDbError(
       lower.includes("week_id_key") ||
       supabaseError?.code === "23505")
   ) {
+    if (lower.includes("week_id_gps_date_key")) {
+      const e = plannerErr(
+        "official_match_duplicate_date",
+        "A match with this GPS date already exists for this planner week."
+      );
+      logPlannerError(area, e, { code: supabaseError?.code });
+      return e;
+    }
+    if (lower.includes("week_id_match_order_key")) {
+      const e = plannerErr(
+        "official_match_duplicate_order",
+        "A match with this order already exists for this planner week."
+      );
+      logPlannerError(area, e, { code: supabaseError?.code });
+      return e;
+    }
     const e = plannerErr(
       "official_match_already_exists",
       "An official match is already selected for this planner week."

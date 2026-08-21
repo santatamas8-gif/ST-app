@@ -117,6 +117,32 @@ export type SetPlannerWeekOfficialMatchInput = {
   competition?: string | null;
 };
 
+export type CreatePlannerWeekOfficialMatchInput = {
+  weekId: string;
+  matchOrder: 1 | 2;
+  gpsDate: string;
+  mdTag: string;
+  opponent?: string | null;
+  matchday?: string | null;
+  competition?: string | null;
+};
+
+export type UpdatePlannerWeekOfficialMatchByIdInput = {
+  id: string;
+  weekId: string;
+  matchOrder: 1 | 2;
+  gpsDate: string;
+  mdTag: string;
+  opponent?: string | null;
+  matchday?: string | null;
+  competition?: string | null;
+};
+
+export type DeletePlannerWeekOfficialMatchByIdInput = {
+  id: string;
+  weekId: string;
+};
+
 function validateOfficialMatchInput(
   input: SetPlannerWeekOfficialMatchInput
 ):
@@ -163,6 +189,89 @@ function validateOfficialMatchInput(
     matchday,
     competition: normalizeOptionalText(input.competition),
   };
+}
+
+function validateMatchMutationInput(input: {
+  weekId: string;
+  matchOrder: unknown;
+  gpsDate: string;
+  mdTag: string;
+  opponent?: string | null;
+  matchday?: string | null;
+  competition?: string | null;
+}):
+  | {
+      ok: true;
+      weekId: string;
+      matchOrder: 1 | 2;
+      gpsDate: string;
+      mdTag: string;
+      opponent: string | null;
+      matchday: string | null;
+      competition: string | null;
+    }
+  | { ok: false; error: ReturnType<typeof plannerErr> } {
+  if (!isPlannerUuid(input.weekId)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "weekId must be a valid UUID."),
+    };
+  }
+  const matchOrder = parseMatchOrder(input.matchOrder);
+  if (matchOrder == null) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "matchOrder must be 1 or 2."),
+    };
+  }
+  if (!isPlannerIsoDate(input.gpsDate ?? "")) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_date", "gps_date must be a valid YYYY-MM-DD date."),
+    };
+  }
+  const mdTag = mapNullableText(input.mdTag);
+  if (!mdTag) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_md_tag", "mdTag is required."),
+    };
+  }
+  return {
+    ok: true,
+    weekId: input.weekId,
+    matchOrder,
+    gpsDate: input.gpsDate,
+    mdTag,
+    opponent: mapNullableText(input.opponent),
+    matchday: mapNullableText(input.matchday),
+    competition: mapNullableText(input.competition),
+  };
+}
+
+function mappedMatchResult(
+  row: OfficialMatchDbRow | null
+): PlannerResult<PlannerWeekOfficialMatch> {
+  if (!row) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "official_match_not_found",
+        "Official match was not found for this planner week."
+      ),
+    };
+  }
+  const mapped = mapOfficialMatch(row);
+  if (!mapped) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "invalid_input",
+        "Official match row is missing a valid match_order or md_tag."
+      ),
+    };
+  }
+  return { ok: true, data: mapped };
 }
 
 export async function getPlannerWeekOfficialMatches(
@@ -227,9 +336,153 @@ export async function getPlannerWeekOfficialMatch(
 }
 
 /**
- * Create or correct the single official match for a Planner week.
- * Does not auto-select from Power BI. Does not persist GPS Actuals.
- * Does not require gps_date inside the stored week training range.
+ * Explicit INSERT of one official Match row. Not an upsert.
+ * Production UNIQUE(week_id) still rejects a second row in the same week.
+ */
+export async function createPlannerWeekOfficialMatch(
+  input: CreatePlannerWeekOfficialMatchInput
+): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const auth = await requirePlannerAdminUser();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const parsed = validateMatchMutationInput(input);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  const weekError = await assertWeekExists(parsed.weekId);
+  if (weekError) return { ok: false, error: weekError };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("planner_week_official_matches")
+    .insert({
+      week_id: parsed.weekId,
+      match_order: parsed.matchOrder,
+      gps_date: parsed.gpsDate,
+      md_tag: parsed.mdTag,
+      opponent: parsed.opponent,
+      matchday: parsed.matchday,
+      competition: parsed.competition,
+      created_by: auth.user.id,
+      updated_by: auth.user.id,
+    })
+    .select(MATCH_SELECT)
+    .single();
+
+  if (error || !data) {
+    return {
+      ok: false,
+      error: mapPlannerDbError("createPlannerWeekOfficialMatch", error),
+    };
+  }
+  return mappedMatchResult(data as OfficialMatchDbRow);
+}
+
+/**
+ * Update exactly one Match row by id + week_id. Never matches another row.
+ */
+export async function updatePlannerWeekOfficialMatchById(
+  input: UpdatePlannerWeekOfficialMatchByIdInput
+): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const auth = await requirePlannerAdminUser();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!isPlannerUuid(input.id)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "id must be a valid UUID."),
+    };
+  }
+
+  const parsed = validateMatchMutationInput(input);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  const weekError = await assertWeekExists(parsed.weekId);
+  if (weekError) return { ok: false, error: weekError };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("planner_week_official_matches")
+    .update({
+      match_order: parsed.matchOrder,
+      gps_date: parsed.gpsDate,
+      md_tag: parsed.mdTag,
+      opponent: parsed.opponent,
+      matchday: parsed.matchday,
+      competition: parsed.competition,
+      updated_by: auth.user.id,
+    })
+    .eq("id", input.id)
+    .eq("week_id", parsed.weekId)
+    .select(MATCH_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      error: mapPlannerDbError("updatePlannerWeekOfficialMatchById", error),
+    };
+  }
+  if (!data) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "official_match_not_found",
+        "Official match was not found for this planner week."
+      ),
+    };
+  }
+  return mappedMatchResult(data as OfficialMatchDbRow);
+}
+
+/**
+ * Delete exactly one Match row by id + weekId. Never deletes by week_id alone.
+ */
+export async function deletePlannerWeekOfficialMatchById(
+  input: DeletePlannerWeekOfficialMatchByIdInput
+): Promise<PlannerResult<{ id: string; weekId: string }>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  if (!isPlannerUuid(input.id)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "id must be a valid UUID."),
+    };
+  }
+  const weekError = await assertWeekExists(input.weekId);
+  if (weekError) return { ok: false, error: weekError };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("planner_week_official_matches")
+    .delete()
+    .eq("id", input.id)
+    .eq("week_id", input.weekId)
+    .select("id, week_id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      error: mapPlannerDbError("deletePlannerWeekOfficialMatchById", error),
+    };
+  }
+  if (!data) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "official_match_not_found",
+        "Official match was not found for this planner week."
+      ),
+    };
+  }
+  return { ok: true, data: { id: input.id, weekId: input.weekId } };
+}
+
+/**
+ * V1 compatibility: one official Match per week.
+ * Create uses matchOrder=1 and mdTag=MD. Correction updates the existing row
+ * by its id and preserves stored matchOrder/mdTag.
  */
 export async function setPlannerWeekOfficialMatch(
   input: SetPlannerWeekOfficialMatchInput
@@ -240,99 +493,37 @@ export async function setPlannerWeekOfficialMatch(
   const parsed = validateOfficialMatchInput(input);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const weekError = await assertWeekExists(parsed.weekId);
-  if (weekError) return { ok: false, error: weekError };
+  const existing = await getPlannerWeekOfficialMatch(parsed.weekId);
+  if (!existing.ok) return existing;
 
-  const supabase = await createClient();
-  const existing = await supabase
-    .from("planner_week_official_matches")
-    .select(MATCH_SELECT)
-    .eq("week_id", parsed.weekId)
-    .maybeSingle();
-
-  if (existing.error) {
-    return {
-      ok: false,
-      error: mapPlannerDbError("setPlannerWeekOfficialMatch", existing.error),
-    };
+  if (existing.data) {
+    return updatePlannerWeekOfficialMatchById({
+      id: existing.data.id,
+      weekId: parsed.weekId,
+      matchOrder: existing.data.matchOrder,
+      gpsDate: parsed.gpsDate,
+      mdTag: existing.data.mdTag,
+      opponent: parsed.opponent,
+      matchday: parsed.matchday,
+      competition: parsed.competition,
+    });
   }
 
-  const fields = {
-    gps_date: parsed.gpsDate,
+  return createPlannerWeekOfficialMatch({
+    weekId: parsed.weekId,
+    matchOrder: 1,
+    gpsDate: parsed.gpsDate,
+    mdTag: "MD",
     opponent: parsed.opponent,
     matchday: parsed.matchday,
     competition: parsed.competition,
-  };
-
-  if (existing.data) {
-    const { data, error } = await supabase
-      .from("planner_week_official_matches")
-      .update({
-        ...fields,
-        updated_by: auth.user.id,
-      })
-      .eq("week_id", parsed.weekId)
-      .select(MATCH_SELECT)
-      .maybeSingle();
-
-    if (error) {
-      return {
-        ok: false,
-        error: mapPlannerDbError("setPlannerWeekOfficialMatch", error),
-      };
-    }
-    if (!data) {
-      return {
-        ok: false,
-        error: plannerErr(
-          "official_match_not_found",
-          "Official match was not found for this planner week."
-        ),
-      };
-    }
-    const updated = mapOfficialMatch(data as OfficialMatchDbRow);
-    if (!updated) {
-      return {
-        ok: false,
-        error: plannerErr(
-          "invalid_input",
-          "Official match row is missing a valid match_order or md_tag."
-        ),
-      };
-    }
-    return { ok: true, data: updated };
-  }
-
-  const { data, error } = await supabase
-    .from("planner_week_official_matches")
-    .insert({
-      week_id: parsed.weekId,
-      ...fields,
-      created_by: auth.user.id,
-      updated_by: auth.user.id,
-    })
-    .select(MATCH_SELECT)
-    .single();
-
-  if (error || !data) {
-    return {
-      ok: false,
-      error: mapPlannerDbError("setPlannerWeekOfficialMatch", error),
-    };
-  }
-  const created = mapOfficialMatch(data as OfficialMatchDbRow);
-  if (!created) {
-    return {
-      ok: false,
-      error: plannerErr(
-        "invalid_input",
-        "Official match row is missing a valid match_order or md_tag."
-      ),
-    };
-  }
-  return { ok: true, data: created };
+  });
 }
 
+/**
+ * V1 compatibility: delete the week's single official Match by week_id.
+ * Future two-match UI must use deletePlannerWeekOfficialMatchById.
+ */
 export async function deletePlannerWeekOfficialMatch(
   weekId: string
 ): Promise<PlannerResult<{ weekId: string }>> {

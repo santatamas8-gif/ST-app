@@ -150,6 +150,10 @@ const ERROR_MESSAGES: Record<string, string> = {
     "An official match is already selected for this planner week.",
   official_match_ambiguous:
     "Expected at most one official match for this planner week.",
+  official_match_duplicate_order:
+    "A match with this order already exists for this planner week.",
+  official_match_duplicate_date:
+    "A match with this GPS date already exists for this planner week.",
 };
 
 export function plannerErrorMessage(code: string, fallback?: string): string {
