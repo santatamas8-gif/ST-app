@@ -907,6 +907,79 @@ describe("planner week official matches schema contract", () => {
     }
   });
 
+  it("Phase D 045: drops UNIQUE(week_id) and adds Training/Match date collision protection", async () => {
+    const sql = await readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/045_planner_week_official_matches_v2_enable.sql"
+      ),
+      "utf8"
+    );
+
+    expect(sql).toContain(
+      "DROP CONSTRAINT planner_week_official_matches_week_id_key"
+    );
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_week_id_match_order_key/i
+    );
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_week_id_gps_date_key/i
+    );
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_match_order_check/i
+    );
+    expect(sql).toMatch(/UNIQUE \(week_id, match_order\)/);
+    expect(sql).toMatch(/UNIQUE \(week_id, gps_date\)/);
+    expect(sql).toMatch(/match_order IN \(1, 2\)/);
+    expect(sql).toContain(
+      "planner_week_official_matches_reject_training_date"
+    );
+    expect(sql).toContain("planner_week_days_reject_match_date");
+    expect(sql).toContain("FROM public.planner_week_days d");
+    expect(sql).toContain("d.date = NEW.gps_date");
+    expect(sql).toContain("FROM public.planner_week_official_matches m");
+    expect(sql).toContain("m.gps_date = NEW.date");
+    expect(sql).not.toContain("CREATE OR REPLACE FUNCTION public.planner_week_days_validate_date");
+    expect(sql).not.toMatch(/gps_date[\s\S]{0,200}BETWEEN/i);
+    expect(sql).not.toMatch(
+      /CONSTRAINT[\s\S]{0,120}CHECK[\s\S]{0,200}start_date/i
+    );
+    expect(sql).not.toMatch(
+      /CONSTRAINT[\s\S]{0,120}CHECK[\s\S]{0,200}end_date/i
+    );
+    expect(sql).not.toMatch(
+      /UPDATE\s+public\.planner_week_official_matches/i
+    );
+    expect(sql).not.toMatch(
+      /INSERT\s+INTO\s+public\.planner_week_official_matches/i
+    );
+    expect(sql).not.toContain("CREATE POLICY");
+    expect(sql).not.toContain("DROP POLICY");
+    expect(sql).not.toContain("ALTER POLICY");
+    expect(sql).not.toContain("match_count");
+    expect(sql).not.toMatch(/USING\s*\(\s*true\s*\)/i);
+    expect(sql.toLowerCase()).not.toContain("service_role");
+    expect(sql).not.toMatch(/UNIQUE\s*\(\s*md_tag\s*\)/i);
+    expect(sql).not.toMatch(/UNIQUE\s*\(\s*week_id\s*,\s*md_tag\s*\)/i);
+
+    const forbiddenCols = [
+      "total_distance",
+      "hsr",
+      "sprint",
+      "accelerations",
+      "decelerations",
+      "duration_actual",
+      "duration",
+      "powerbi_week_id",
+      "match_best",
+      "td_best",
+      "hsr_best",
+    ];
+    for (const col of forbiddenCols) {
+      expect(sql.toLowerCase()).not.toContain(col);
+    }
+  });
+
   it("Phase B plural reader maps match_order/md_tag; singular GET does not use maybeSingle", async () => {
     const src = await readFile(
       path.join(process.cwd(), "lib/gpsPlanner/weekMatches.server.ts"),
