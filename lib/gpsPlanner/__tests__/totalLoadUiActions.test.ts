@@ -115,6 +115,8 @@ const SAVED = {
   id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   weekId: WEEK_ID,
   gpsDate: "2026-08-15",
+  matchOrder: 1 as const,
+  mdTag: "MD",
   opponent: "FK Csikszereda",
   matchday: "Matchday 5",
   competition: "Liga 1",

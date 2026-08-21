@@ -65,8 +65,10 @@ export type PlannerWeekOfficialMatch = {
   id: string;
   weekId: string;
   gpsDate: string;
-  opponent: string;
-  matchday: string;
+  matchOrder: 1 | 2;
+  mdTag: string;
+  opponent: string | null;
+  matchday: string | null;
   competition: string | null;
   createdBy: string | null;
   updatedBy: string | null;

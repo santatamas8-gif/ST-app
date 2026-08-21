@@ -23,6 +23,8 @@ const MATCH: PlannerWeekOfficialMatch = {
   id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   weekId: WEEK.id,
   gpsDate: "2026-08-15",
+  matchOrder: 1,
+  mdTag: "MD",
   opponent: "FK Csikszereda",
   matchday: "Matchday 5",
   competition: null,

@@ -34,6 +34,7 @@ vi.mock("@/lib/powerbi/queries/trainingActual", () => ({
 import {
   deletePlannerWeekOfficialMatch,
   getPlannerWeekOfficialMatch,
+  getPlannerWeekOfficialMatches,
   setPlannerWeekOfficialMatch,
 } from "@/lib/gpsPlanner/weekMatches.server";
 
@@ -109,6 +110,8 @@ function matchRow(overrides?: Record<string, unknown>) {
     id: MATCH_ID,
     week_id: WEEK_ID,
     gps_date: "2026-08-15",
+    match_order: 1,
+    md_tag: "MD",
     opponent: "FK Csikszereda",
     matchday: "5",
     competition: null,
@@ -138,7 +141,7 @@ describe("planner week official matches auth", () => {
     getAppUser.mockResolvedValue(ADMIN);
     fromMock.mockImplementation((table: string) => {
       if (table === "planner_weeks") return weekExistsChain();
-      return chain({ data: null, error: null }, { maybeSingle: true });
+      return chain({ data: [], error: null });
     });
     await expect(getPlannerWeekOfficialMatch(WEEK_ID)).resolves.toMatchObject({
       ok: true,
@@ -378,6 +381,127 @@ describe("planner week official matches CRUD", () => {
   });
 });
 
+describe("planner week official matches plural read", () => {
+  beforeEach(() => {
+    getAppUser.mockReset();
+    fromMock.mockReset();
+    getAppUser.mockResolvedValue(ADMIN);
+  });
+
+  it("plural reader returns empty array when no rows", async () => {
+    const orders: unknown[] = [];
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      const api = chain({ data: [], error: null });
+      api.order = vi.fn((col: unknown, opts: unknown) => {
+        orders.push([col, opts]);
+        return api;
+      });
+      return api;
+    });
+    await expect(getPlannerWeekOfficialMatches(WEEK_ID)).resolves.toEqual({
+      ok: true,
+      data: [],
+    });
+    expect(orders).toEqual([
+      ["match_order", { ascending: true }],
+      ["gps_date", { ascending: true }],
+    ]);
+  });
+
+  it("plural reader maps one row including match_order and md_tag", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain({
+        data: [
+          matchRow({
+            match_order: 1,
+            md_tag: "MD",
+            opponent: "FK Csikszereda",
+            matchday: "Matchday 5",
+            competition: "Liga 1",
+          }),
+        ],
+        error: null,
+      });
+    });
+    const result = await getPlannerWeekOfficialMatches(WEEK_ID);
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        {
+          id: MATCH_ID,
+          weekId: WEEK_ID,
+          gpsDate: "2026-08-15",
+          matchOrder: 1,
+          mdTag: "MD",
+          opponent: "FK Csikszereda",
+          matchday: "Matchday 5",
+          competition: "Liga 1",
+          createdBy: ADMIN.id,
+          updatedBy: ADMIN.id,
+          createdAt: "2026-08-16T00:00:00Z",
+          updatedAt: "2026-08-16T00:00:00Z",
+        },
+      ],
+    });
+  });
+
+  it("singular wrapper returns null for 0 rows", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain({ data: [], error: null });
+    });
+    await expect(getPlannerWeekOfficialMatch(WEEK_ID)).resolves.toEqual({
+      ok: true,
+      data: null,
+    });
+  });
+
+  it("singular wrapper returns the single row", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain({ data: [matchRow()], error: null });
+    });
+    const result = await getPlannerWeekOfficialMatch(WEEK_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toMatchObject({
+      id: MATCH_ID,
+      weekId: WEEK_ID,
+      gpsDate: "2026-08-15",
+      matchOrder: 1,
+      mdTag: "MD",
+      opponent: "FK Csikszereda",
+      matchday: "5",
+    });
+  });
+
+  it("singular wrapper rejects more than one row without picking the first", async () => {
+    const first = matchRow({
+      id: "11111111-1111-4111-8111-111111111111",
+      match_order: 1,
+      gps_date: "2026-08-15",
+    });
+    const second = matchRow({
+      id: "22222222-2222-4222-8222-222222222222",
+      match_order: 2,
+      gps_date: "2026-08-18",
+    });
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks") return weekExistsChain();
+      return chain({ data: [first, second], error: null });
+    });
+    const result = await getPlannerWeekOfficialMatch(WEEK_ID);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "official_match_ambiguous" },
+    });
+    if (result.ok) return;
+    expect(result.error.message).not.toContain(first.id);
+  });
+});
+
 describe("planner week official matches schema contract", () => {
   it("E/J: migration is sequential, unique week, cascade, admin RLS, no GPS Actuals, no date-range CHECK", async () => {
     const sql = await readFile(
@@ -508,17 +632,25 @@ describe("planner week official matches schema contract", () => {
     }
   });
 
-  it("Phase A does not consume match_order/md_tag in singular runtime SELECT", async () => {
+  it("Phase B plural reader maps match_order/md_tag; singular GET does not use maybeSingle", async () => {
     const src = await readFile(
       path.join(process.cwd(), "lib/gpsPlanner/weekMatches.server.ts"),
       "utf8"
     );
+    expect(src).toContain("export async function getPlannerWeekOfficialMatches");
     expect(src).toContain(
-      "id, week_id, gps_date, opponent, matchday, competition, created_by, updated_by, created_at, updated_at"
+      "id, week_id, gps_date, match_order, md_tag, opponent, matchday, competition, created_by, updated_by, created_at, updated_at"
     );
-    expect(src).not.toContain("match_order");
-    expect(src).not.toContain("md_tag");
-    expect(src).toContain(".maybeSingle()");
+    expect(src).toContain('.order("match_order", { ascending: true })');
+    expect(src).toContain('.order("gps_date", { ascending: true })');
+    const wrapper = src.slice(
+      src.indexOf("export async function getPlannerWeekOfficialMatch("),
+      src.indexOf("export async function setPlannerWeekOfficialMatch")
+    );
+    expect(wrapper).toContain("getPlannerWeekOfficialMatches");
+    expect(wrapper).toContain("official_match_ambiguous");
+    expect(wrapper).not.toContain(".maybeSingle()");
+    expect(wrapper).not.toContain(".single()");
   });
 
   it("does not wire official-match persistence into Planning, Daily Plan, or Training", async () => {
@@ -534,6 +666,7 @@ describe("planner week official matches schema contract", () => {
       expect(src).not.toContain("weekMatches.server");
       expect(src).not.toContain("planner_week_official_matches");
       expect(src).not.toContain("getPlannerWeekOfficialMatch");
+      expect(src).not.toContain("getPlannerWeekOfficialMatches");
     }
   });
 });

@@ -27,8 +27,10 @@ type OfficialMatchDbRow = {
   id: string;
   week_id: string;
   gps_date: string;
-  opponent: string;
-  matchday: string;
+  match_order: number;
+  md_tag: string;
+  opponent: string | null;
+  matchday: string | null;
   competition: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -37,7 +39,7 @@ type OfficialMatchDbRow = {
 };
 
 const MATCH_SELECT =
-  "id, week_id, gps_date, opponent, matchday, competition, created_by, updated_by, created_at, updated_at";
+  "id, week_id, gps_date, match_order, md_tag, opponent, matchday, competition, created_by, updated_by, created_at, updated_at";
 
 function normalizeRequiredText(value: string): string | null {
   const trimmed = value.trim();
@@ -50,19 +52,44 @@ function normalizeOptionalText(value: string | null | undefined): string | null 
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function mapOfficialMatch(row: OfficialMatchDbRow): PlannerWeekOfficialMatch {
+function parseMatchOrder(value: unknown): 1 | 2 | null {
+  const n = typeof value === "string" ? Number(value) : value;
+  return n === 1 || n === 2 ? n : null;
+}
+
+function mapNullableText(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function mapOfficialMatch(row: OfficialMatchDbRow): PlannerWeekOfficialMatch | null {
+  const matchOrder = parseMatchOrder(row.match_order);
+  const mdTag = mapNullableText(row.md_tag);
+  if (matchOrder == null || mdTag == null) return null;
   return {
     id: row.id,
     weekId: row.week_id,
     gpsDate: row.gps_date,
-    opponent: row.opponent,
-    matchday: row.matchday,
-    competition: row.competition,
+    matchOrder,
+    mdTag,
+    opponent: mapNullableText(row.opponent),
+    matchday: mapNullableText(row.matchday),
+    competition: mapNullableText(row.competition),
     createdBy: row.created_by,
     updatedBy: row.updated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function sortOfficialMatches(
+  rows: PlannerWeekOfficialMatch[]
+): PlannerWeekOfficialMatch[] {
+  return rows.slice().sort((a, b) => {
+    if (a.matchOrder !== b.matchOrder) return a.matchOrder - b.matchOrder;
+    return a.gpsDate.localeCompare(b.gpsDate);
+  });
 }
 
 async function assertWeekExists(
@@ -138,9 +165,9 @@ function validateOfficialMatchInput(
   };
 }
 
-export async function getPlannerWeekOfficialMatch(
+export async function getPlannerWeekOfficialMatches(
   weekId: string
-): Promise<PlannerResult<PlannerWeekOfficialMatch | null>> {
+): Promise<PlannerResult<PlannerWeekOfficialMatch[]>> {
   const authError = await requirePlannerAdmin();
   if (authError) return { ok: false, error: authError };
 
@@ -152,16 +179,51 @@ export async function getPlannerWeekOfficialMatch(
     .from("planner_week_official_matches")
     .select(MATCH_SELECT)
     .eq("week_id", weekId)
-    .maybeSingle();
+    .order("match_order", { ascending: true })
+    .order("gps_date", { ascending: true });
 
   if (error) {
     return {
       ok: false,
-      error: mapPlannerDbError("getPlannerWeekOfficialMatch", error),
+      error: mapPlannerDbError("getPlannerWeekOfficialMatches", error),
     };
   }
-  if (!data) return { ok: true, data: null };
-  return { ok: true, data: mapOfficialMatch(data as OfficialMatchDbRow) };
+
+  const mapped: PlannerWeekOfficialMatch[] = [];
+  for (const row of Array.isArray(data) ? data : []) {
+    const match = mapOfficialMatch(row as OfficialMatchDbRow);
+    if (!match) {
+      return {
+        ok: false,
+        error: plannerErr(
+          "invalid_input",
+          "Official match row is missing a valid match_order or md_tag."
+        ),
+      };
+    }
+    mapped.push(match);
+  }
+  return { ok: true, data: sortOfficialMatches(mapped) };
+}
+
+/**
+ * Temporary V1 compatibility wrapper. Production UNIQUE(week_id) still
+ * guarantees 0 or 1 row. Does not silently pick the first of many.
+ */
+export async function getPlannerWeekOfficialMatch(
+  weekId: string
+): Promise<PlannerResult<PlannerWeekOfficialMatch | null>> {
+  const result = await getPlannerWeekOfficialMatches(weekId);
+  if (!result.ok) return result;
+  if (result.data.length === 0) return { ok: true, data: null };
+  if (result.data.length === 1) return { ok: true, data: result.data[0] };
+  return {
+    ok: false,
+    error: plannerErr(
+      "official_match_ambiguous",
+      "Expected at most one official match for this planner week."
+    ),
+  };
 }
 
 /**
@@ -228,7 +290,17 @@ export async function setPlannerWeekOfficialMatch(
         ),
       };
     }
-    return { ok: true, data: mapOfficialMatch(data as OfficialMatchDbRow) };
+    const updated = mapOfficialMatch(data as OfficialMatchDbRow);
+    if (!updated) {
+      return {
+        ok: false,
+        error: plannerErr(
+          "invalid_input",
+          "Official match row is missing a valid match_order or md_tag."
+        ),
+      };
+    }
+    return { ok: true, data: updated };
   }
 
   const { data, error } = await supabase
@@ -248,7 +320,17 @@ export async function setPlannerWeekOfficialMatch(
       error: mapPlannerDbError("setPlannerWeekOfficialMatch", error),
     };
   }
-  return { ok: true, data: mapOfficialMatch(data as OfficialMatchDbRow) };
+  const created = mapOfficialMatch(data as OfficialMatchDbRow);
+  if (!created) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "invalid_input",
+        "Official match row is missing a valid match_order or md_tag."
+      ),
+    };
+  }
+  return { ok: true, data: created };
 }
 
 export async function deletePlannerWeekOfficialMatch(

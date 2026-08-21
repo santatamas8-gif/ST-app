@@ -40,7 +40,8 @@ export type PlannerErrorCode =
   | "actual_incomplete"
   | "invalid_date"
   | "official_match_not_found"
-  | "official_match_already_exists";
+  | "official_match_already_exists"
+  | "official_match_ambiguous";
 
 export type PlannerSafeError = {
   code: PlannerErrorCode;

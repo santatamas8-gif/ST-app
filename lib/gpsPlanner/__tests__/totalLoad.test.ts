@@ -76,6 +76,8 @@ const OFFICIAL = {
   id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   weekId: WEEK_ID,
   gpsDate: "2026-08-15",
+  matchOrder: 1 as const,
+  mdTag: "MD",
   opponent: "FK Csikszereda",
   matchday: "Matchday 5",
   competition: null,
