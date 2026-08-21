@@ -143,16 +143,30 @@ function compose(
   rows: PlannerWeeklyProgressResult[],
   matchByName: Map<string, MatchActualPlayerResult> | false | null
 ) {
+  const officialMatches = matchByName === null ? [] : [MATCH];
+  const matchSources =
+    matchByName === null
+      ? []
+      : matchByName === false
+        ? [
+            {
+              officialMatch: MATCH,
+              availability: "available" as const,
+              matchBatch: { ok: false as const },
+            },
+          ]
+        : [
+            {
+              officialMatch: MATCH,
+              availability: "available" as const,
+              matchBatch: { ok: true, byPlayerName: matchByName },
+            },
+          ];
   return composeTotalLoadResult({
     week: WEEK,
-    officialMatch: matchByName === null ? null : MATCH,
+    officialMatches,
     trainingRows: rows,
-    matchBatch:
-      matchByName === null
-        ? null
-        : matchByName === false
-          ? { ok: false }
-          : { ok: true, byPlayerName: matchByName },
+    matchSources,
   });
 }
 

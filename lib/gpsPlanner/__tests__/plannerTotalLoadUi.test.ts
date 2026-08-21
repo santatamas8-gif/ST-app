@@ -58,6 +58,9 @@ describe("Total Load Review UI", () => {
     expect(view).toContain("Save official match");
     expect(view).toContain("Change match");
     expect(view).toContain("Clear match");
+    expect(view).toContain("pluralMatches");
+    expect(view).toContain("This week has two official matches. Match changes are disabled here.");
+    expect(view).toContain("Match GPS is not yet available for a configured match.");
     expect(view).toContain("setConfirmClear(true)");
     expect(view).toContain("ConfirmDialog");
     expect(view).toContain("error={saveError}");

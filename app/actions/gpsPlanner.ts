@@ -42,6 +42,7 @@ import {
 import {
   deletePlannerWeekOfficialMatch,
   getPlannerWeekOfficialMatch,
+  getPlannerWeekOfficialMatches,
   setPlannerWeekOfficialMatch,
   type PlannerWeekOfficialMatch,
   type SetPlannerWeekOfficialMatchInput,
@@ -204,9 +205,28 @@ export async function getPlannerWeekOfficialMatchAction(
   return getPlannerWeekOfficialMatch(weekId);
 }
 
+async function rejectPluralOfficialMatchMutation(
+  weekId: string
+): Promise<{ ok: false; error: ReturnType<typeof plannerErr> } | null> {
+  const existing = await getPlannerWeekOfficialMatches(weekId);
+  if (!existing.ok) return { ok: false, error: existing.error };
+  if (existing.data.length > 1) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "official_match_ambiguous",
+        "This week has two official matches. The single-match selector cannot change them."
+      ),
+    };
+  }
+  return null;
+}
+
 export async function setPlannerWeekOfficialMatchAction(
   input: SetPlannerWeekOfficialMatchInput
 ): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const blocked = await rejectPluralOfficialMatchMutation(input.weekId);
+  if (blocked) return blocked;
   const result = await setPlannerWeekOfficialMatch(input);
   if (result.ok) revalidatePlanner();
   return result;
@@ -215,6 +235,8 @@ export async function setPlannerWeekOfficialMatchAction(
 export async function deletePlannerWeekOfficialMatchAction(
   weekId: string
 ): Promise<PlannerResult<{ weekId: string }>> {
+  const blocked = await rejectPluralOfficialMatchMutation(weekId);
+  if (blocked) return blocked;
   const result = await deletePlannerWeekOfficialMatch(weekId);
   if (result.ok) revalidatePlanner();
   return result;

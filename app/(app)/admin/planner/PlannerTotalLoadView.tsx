@@ -15,7 +15,6 @@ import type {
   PlannerWeekRow,
 } from "@/lib/gpsPlanner/types";
 import type {
-  TotalLoadPlayerRow,
   TotalLoadResult,
   TotalLoadTopValue,
 } from "@/lib/gpsPlanner/totalLoadAggregation";
@@ -347,6 +346,12 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   }
 
   async function saveOfficialMatch() {
+    if ((result?.officialMatches.length ?? 0) > 1) {
+      setSaveError(
+        "This week has two official matches. Match changes are disabled here."
+      );
+      return;
+    }
     if (!draftGpsDate || !opponent.trim() || !matchday.trim()) {
       setSaveError("GPS date, opponent, and matchday are required.");
       return;
@@ -370,6 +375,13 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   }
 
   async function clearOfficialMatch() {
+    if ((result?.officialMatches.length ?? 0) > 1) {
+      setConfirmBusy(false);
+      setSaveError(
+        "This week has two official matches. Match changes are disabled here."
+      );
+      return;
+    }
     setConfirmBusy(true);
     setSaveError(null);
     const res = await deletePlannerWeekOfficialMatchAction(week.id);
@@ -413,13 +425,19 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   }, [result, sortField, sortDir]);
 
   const official = result?.officialMatch;
+  const officialMatches = result?.officialMatches ?? [];
+  const pluralMatches = officialMatches.length > 1;
   const matchSelected = official?.selected === true;
   const showTotals = matchSelected && !loading && result != null;
   const emptyTargets = result != null && result.rows.length === 0;
   const matchUnavailable =
     showTotals &&
     result.rows.some((row) => row.match.quality === "match_query_error");
+  const matchPending =
+    showTotals &&
+    result.rows.some((row) => row.quality === "match_data_pending");
   const canSave =
+    !pluralMatches &&
     draftGpsDate.length > 0 &&
     opponent.trim().length > 0 &&
     matchday.trim().length > 0 &&
@@ -430,7 +448,7 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">{weekControl}</div>
-          {!loading && matchSelected && official ? (
+          {!loading && matchSelected && official && !pluralMatches ? (
             <div className="flex shrink-0 flex-wrap gap-2">
               <button
                 type="button"
@@ -461,8 +479,13 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
           <p className="text-[11px] leading-relaxed text-zinc-500">
             Training: {formatCompactDateRange(week.startDate, week.endDate)}
             <span className="mx-1.5 text-zinc-600">·</span>
-            Match: {formatCompactIsoDate(official.gpsDate ?? "")}
-            {official.opponent ? (
+            Match:{" "}
+            {pluralMatches
+              ? officialMatches
+                  .map((match) => formatCompactIsoDate(match.gpsDate))
+                  .join(" · ")
+              : formatCompactIsoDate(official.gpsDate ?? "")}
+            {official.opponent && !pluralMatches ? (
               <span className="text-zinc-500"> vs {official.opponent}</span>
             ) : null}
             {result ? (
@@ -494,7 +517,7 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
         </div>
       ) : null}
 
-      {!loading && changing ? (
+      {!loading && changing && !pluralMatches ? (
         <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
           <p className="text-sm font-medium text-zinc-800">Official match</p>
           {candidateError ? (
@@ -602,6 +625,19 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
         <p className="text-sm text-amber-800">{saveError}</p>
       ) : null}
 
+      {pluralMatches ? (
+        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+          This week has two official matches. Match changes are disabled here.
+        </p>
+      ) : null}
+
+      {matchPending ? (
+        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+          Match GPS is not yet available for a configured match. Total Week is
+          unavailable.
+        </p>
+      ) : null}
+
       {matchUnavailable ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Match GPS is unavailable for this week.
@@ -679,7 +715,10 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
               <tbody>
                 {displayRows.map((row, index) => {
                   const name = row.playerDisplayName;
-                  const unsafe = row.quality === "unsafe";
+                  const totalsUnavailable =
+                    row.quality === "unsafe" ||
+                    row.quality === "match_data_pending" ||
+                    row.quality === "match_not_selected";
                   const stripe = index % 2 === 0 ? "bg-white" : "bg-zinc-100";
                   const matchMinutes = formatMatchTimeMinutes(
                     row.match.durationSeconds
@@ -696,10 +735,10 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
                         />
                       </td>
                       {METRICS.map((m) => {
-                        const total = unsafe
+                        const total = totalsUnavailable
                           ? null
                           : totalLoadCellValue(row, m.field);
-                        const pct = unsafe
+                        const pct = totalsUnavailable
                           ? null
                           : totalLoadCellPercent(row, m.field);
                         const title = formatTotalLoadMetricBreakdown({

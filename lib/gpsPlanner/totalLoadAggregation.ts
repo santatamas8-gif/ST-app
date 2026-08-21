@@ -1,6 +1,9 @@
 /**
  * Pure Total Load composition (Training Actual + safe Match Actual).
  * No I/O. No rounding. No persistence. No UI strings.
+ *
+ * Phase E: 0–2 configured official Matches. Configured rows are the source of
+ * truth. Pending source ≠ match_zero. Final Total is all-or-nothing.
  */
 
 import type { AbsoluteMetrics } from "@/lib/gpsPlanner/calculations";
@@ -19,12 +22,14 @@ export type TotalLoadQuality =
   | "complete"
   | "partial"
   | "unsafe"
-  | "match_not_selected";
+  | "match_not_selected"
+  | "match_data_pending";
 
 export type TotalLoadMatchQuality =
   | MatchActualQuality
   | "match_query_error"
-  | "match_not_selected";
+  | "match_not_selected"
+  | "match_data_pending";
 
 export type TotalLoadPercentages = {
   totalDistance: number | null;
@@ -32,6 +37,15 @@ export type TotalLoadPercentages = {
   sprint: number | null;
   accelerations: number | null;
   decelerations: number | null;
+};
+
+export type TotalLoadPlayerMatch = {
+  matchId: string;
+  matchOrder: 1 | 2;
+  gpsDate: string;
+  state: TotalLoadMatchQuality;
+  metrics: AbsoluteMetrics | null;
+  durationSeconds: number | null;
 };
 
 export type TotalLoadPlayerRow = {
@@ -46,6 +60,13 @@ export type TotalLoadPlayerRow = {
     notFoundDays: number;
     problematicDays: number;
   };
+  matches: TotalLoadPlayerMatch[];
+  /**
+   * Phase E compatibility for the current 1-match Total Load UI.
+   * One match: same as that Match component.
+   * Two matches: combined only when every configured Match is safe;
+   * otherwise quality/metrics/duration reflect that Final Total is unavailable.
+   */
   match: {
     quality: TotalLoadMatchQuality;
     metrics: AbsoluteMetrics | null;
@@ -79,6 +100,15 @@ export type TotalLoadOfficialMatchView = {
   competition: string | null;
 };
 
+export type TotalLoadOfficialMatchItem = {
+  matchId: string;
+  matchOrder: 1 | 2;
+  gpsDate: string;
+  opponent: string | null;
+  matchday: string | null;
+  competition: string | null;
+};
+
 export type TotalLoadResult = {
   week: {
     id: string;
@@ -86,7 +116,9 @@ export type TotalLoadResult = {
     startDate: string;
     endDate: string;
   };
+  /** Compatibility: first configured Match, or unselected when none. */
   officialMatch: TotalLoadOfficialMatchView;
+  officialMatches: TotalLoadOfficialMatchItem[];
   weeklyPlanSummary: DailyPlanPctSummary;
   rows: TotalLoadPlayerRow[];
   topValues: TotalLoadTopValues;
@@ -97,12 +129,26 @@ export type TotalLoadMatchBatchInput =
   | { ok: false }
   | null;
 
+export type TotalLoadMatchSource = {
+  officialMatch: PlannerWeekOfficialMatch;
+  availability: "available" | "pending" | "query_error";
+  matchBatch: TotalLoadMatchBatchInput;
+};
+
 const EMPTY_TOP_VALUES: TotalLoadTopValues = {
   totalDistance: null,
   hsr: null,
   sprint: null,
   accelerations: null,
   decelerations: null,
+};
+
+const ZERO_METRICS: AbsoluteMetrics = {
+  totalDistance: 0,
+  hsr: 0,
+  sprint: 0,
+  accelerations: 0,
+  decelerations: 0,
 };
 
 function isUsableDenominator(best: number): boolean {
@@ -178,6 +224,10 @@ function isMatchSafe(quality: MatchActualQuality): boolean {
   return quality === "match_ok" || quality === "match_zero";
 }
 
+function isPlayerMatchSafe(state: TotalLoadMatchQuality): boolean {
+  return state === "match_ok" || state === "match_zero";
+}
+
 function pickTopValue(
   rows: TotalLoadPlayerRow[],
   metric: keyof AbsoluteMetrics
@@ -235,9 +285,160 @@ export function officialMatchView(
   };
 }
 
+export function officialMatchItems(
+  matches: PlannerWeekOfficialMatch[]
+): TotalLoadOfficialMatchItem[] {
+  return matches.map((match) => ({
+    matchId: match.id,
+    matchOrder: match.matchOrder,
+    gpsDate: match.gpsDate,
+    opponent: match.opponent,
+    matchday: match.matchday,
+    competition: match.competition,
+  }));
+}
+
+function sourceForConfiguredMatch(
+  match: PlannerWeekOfficialMatch,
+  sources: TotalLoadMatchSource[]
+): TotalLoadMatchSource {
+  const found = sources.find((source) => source.officialMatch.id === match.id);
+  if (found) return found;
+  return {
+    officialMatch: match,
+    availability: "query_error",
+    matchBatch: { ok: false },
+  };
+}
+
+function composePlayerMatch(
+  training: PlannerWeeklyProgressResult,
+  source: TotalLoadMatchSource
+): TotalLoadPlayerMatch {
+  const base = {
+    matchId: source.officialMatch.id,
+    matchOrder: source.officialMatch.matchOrder,
+    gpsDate: source.officialMatch.gpsDate,
+  };
+
+  if (source.availability === "pending") {
+    return {
+      ...base,
+      state: "match_data_pending",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  if (
+    source.availability === "query_error" ||
+    source.matchBatch == null ||
+    source.matchBatch.ok === false
+  ) {
+    return {
+      ...base,
+      state: "match_query_error",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  const classified = source.matchBatch.byPlayerName.get(
+    training.frozen.powerBiPlayerName
+  );
+  if (!classified) {
+    return {
+      ...base,
+      state: "data_issue",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  if (!isMatchSafe(classified.quality) || classified.metrics == null) {
+    return {
+      ...base,
+      state: classified.quality,
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  return {
+    ...base,
+    state: classified.quality,
+    metrics: matchAbsolutes(classified.metrics),
+    durationSeconds: classified.metrics.durationSeconds,
+  };
+}
+
+function aggregateCompatibilityMatch(
+  matches: TotalLoadPlayerMatch[]
+): TotalLoadPlayerRow["match"] {
+  if (matches.length === 0) {
+    return {
+      quality: "match_not_selected",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  if (matches.some((match) => match.state === "match_query_error")) {
+    return {
+      quality: "match_query_error",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+  if (matches.some((match) => match.state === "match_data_pending")) {
+    return {
+      quality: "match_data_pending",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+  if (matches.some((match) => match.state === "match_ambiguous")) {
+    return {
+      quality: "match_ambiguous",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+  if (matches.some((match) => match.state === "data_issue")) {
+    return {
+      quality: "data_issue",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+  if (!matches.every((match) => isPlayerMatchSafe(match.state))) {
+    return {
+      quality: "data_issue",
+      metrics: null,
+      durationSeconds: null,
+    };
+  }
+
+  const metrics = matches.reduce(
+    (sum, match) => addAbsoluteMetrics(sum, match.metrics ?? ZERO_METRICS),
+    ZERO_METRICS
+  );
+  const durationSeconds = matches.every((match) => match.durationSeconds != null)
+    ? matches.reduce((sum, match) => sum + (match.durationSeconds ?? 0), 0)
+    : null;
+  const quality: TotalLoadMatchQuality = matches.every(
+    (match) => match.state === "match_zero"
+  )
+    ? "match_zero"
+    : "match_ok";
+
+  return { quality, metrics, durationSeconds };
+}
+
 function composePlayerRow(
   training: PlannerWeeklyProgressResult,
-  matchBatch: TotalLoadMatchBatchInput
+  officialMatches: PlannerWeekOfficialMatch[],
+  matchSources: TotalLoadMatchSource[]
 ): TotalLoadPlayerRow {
   const trainingMetrics = recordedTrainingMetrics(training);
   const trainingBlock = {
@@ -255,10 +456,11 @@ function composePlayerRow(
     training: trainingBlock,
   };
 
-  if (matchBatch === null) {
+  if (officialMatches.length === 0) {
     return {
       ...base,
       quality: "match_not_selected",
+      matches: [],
       match: {
         quality: "match_not_selected",
         metrics: null,
@@ -268,61 +470,49 @@ function composePlayerRow(
     };
   }
 
-  if (matchBatch.ok === false) {
-    return {
-      ...base,
-      quality: "unsafe",
-      match: {
-        quality: "match_query_error",
-        metrics: null,
-        durationSeconds: null,
-      },
-      total: { metrics: null, percentages: null },
-    };
-  }
-
-  const classified = matchBatch.byPlayerName.get(
-    training.frozen.powerBiPlayerName
+  const matches = officialMatches.map((match) =>
+    composePlayerMatch(training, sourceForConfiguredMatch(match, matchSources))
   );
-  if (!classified) {
+  const match = aggregateCompatibilityMatch(matches);
+  const hasPending = matches.some(
+    (item) => item.state === "match_data_pending"
+  );
+  const hasUnsafeMatch = matches.some(
+    (item) =>
+      item.state !== "match_data_pending" && !isPlayerMatchSafe(item.state)
+  );
+
+  if (hasUnsafeMatch) {
     return {
       ...base,
       quality: "unsafe",
-      match: {
-        quality: "data_issue",
-        metrics: null,
-        durationSeconds: null,
-      },
+      matches,
+      match,
       total: { metrics: null, percentages: null },
     };
   }
 
-  if (!isMatchSafe(classified.quality) || classified.metrics == null) {
+  if (hasPending) {
     return {
       ...base,
-      quality: "unsafe",
-      match: {
-        quality: classified.quality,
-        metrics: null,
-        durationSeconds: null,
-      },
+      quality: "match_data_pending",
+      matches,
+      match,
       total: { metrics: null, percentages: null },
     };
   }
 
-  const matchMetrics = matchAbsolutes(classified.metrics);
-  const durationSeconds = classified.metrics.durationSeconds;
-  const matchBlock = {
-    quality: classified.quality,
-    metrics: matchMetrics,
-    durationSeconds,
-  };
+  const matchMetrics = matches.reduce(
+    (sum, item) => addAbsoluteMetrics(sum, item.metrics ?? ZERO_METRICS),
+    ZERO_METRICS
+  );
 
-  if (trainingMetrics == null || matchMetrics == null) {
+  if (trainingMetrics == null) {
     return {
       ...base,
       quality: "unsafe",
-      match: matchBlock,
+      matches,
+      match,
       total: { metrics: null, percentages: null },
     };
   }
@@ -334,7 +524,8 @@ function composePlayerRow(
   return {
     ...base,
     quality,
-    match: matchBlock,
+    matches,
+    match,
     total: {
       metrics: totalMetrics,
       percentages: percentagesFromTotal(totalMetrics, training.frozen),
@@ -344,16 +535,17 @@ function composePlayerRow(
 
 export function composeTotalLoadResult(input: {
   week: TotalLoadResult["week"];
-  officialMatch: PlannerWeekOfficialMatch | null;
+  officialMatches: PlannerWeekOfficialMatch[];
   trainingRows: PlannerWeeklyProgressResult[];
-  matchBatch: TotalLoadMatchBatchInput;
+  matchSources: TotalLoadMatchSource[];
 }): TotalLoadResult {
   const rows = input.trainingRows.map((row) =>
-    composePlayerRow(row, input.matchBatch)
+    composePlayerRow(row, input.officialMatches, input.matchSources)
   );
   return {
     week: input.week,
-    officialMatch: officialMatchView(input.officialMatch),
+    officialMatch: officialMatchView(input.officialMatches[0] ?? null),
+    officialMatches: officialMatchItems(input.officialMatches),
     weeklyPlanSummary: buildPctSummary({
       td: input.trainingRows.map((r) => r.weeklyPct.tdPct),
       hsr: input.trainingRows.map((r) => r.weeklyPct.hsrPct),
@@ -366,4 +558,3 @@ export function composeTotalLoadResult(input: {
       rows.length === 0 ? EMPTY_TOP_VALUES : computeTotalLoadTopValues(rows),
   };
 }
-

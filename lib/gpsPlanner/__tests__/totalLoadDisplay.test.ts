@@ -44,6 +44,7 @@ function row(
       notFoundDays: 0,
       problematicDays: 0,
     },
+    matches: [],
     match: {
       quality: "match_ok",
       metrics: {
@@ -194,6 +195,16 @@ describe("quality and cell display", () => {
         matchQuality: "match_ambiguous",
       })
     ).toMatch(/ambiguous/i);
+    expect(formatTotalLoadQualityBadge("match_data_pending")).toBe("Data pending");
+    expect(
+      formatTotalLoadMetricBreakdown({
+        quality: "match_data_pending",
+        trainingValue: 6412,
+        matchValue: null,
+        totalValue: null,
+        matchQuality: "match_data_pending",
+      })
+    ).toMatch(/not yet available/i);
   });
 
   it("J: match_zero Total comes from composer Total, which includes Training + 0", () => {

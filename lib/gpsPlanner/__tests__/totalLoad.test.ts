@@ -15,10 +15,10 @@ vi.mock("@/lib/gpsPlanner/weeks.server", () => ({
   getPlannerWeek: (...args: unknown[]) => getPlannerWeek(...args),
 }));
 
-const getPlannerWeekOfficialMatch = vi.fn();
+const getPlannerWeekOfficialMatches = vi.fn();
 vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
-  getPlannerWeekOfficialMatch: (...args: unknown[]) =>
-    getPlannerWeekOfficialMatch(...args),
+  getPlannerWeekOfficialMatches: (...args: unknown[]) =>
+    getPlannerWeekOfficialMatches(...args),
 }));
 
 const getPlannerWeeklyReviewProgress = vi.fn();
@@ -30,6 +30,11 @@ vi.mock("@/lib/gpsPlanner/progress.server", () => ({
 const getMatchActualGpsBatch = vi.fn();
 vi.mock("@/lib/powerbi/queries/matchActual.server", () => ({
   getMatchActualGpsBatch: (...args: unknown[]) => getMatchActualGpsBatch(...args),
+}));
+
+const getMatchCandidateDates = vi.fn();
+vi.mock("@/lib/powerbi/queries/matchCandidates.server", () => ({
+  getMatchCandidateDates: (...args: unknown[]) => getMatchCandidateDates(...args),
 }));
 
 const getPlayerMapping = vi.fn();
@@ -149,12 +154,19 @@ describe("getPlannerTotalLoad", () => {
   beforeEach(() => {
     getAppUser.mockReset();
     getPlannerWeek.mockReset();
-    getPlannerWeekOfficialMatch.mockReset();
+    getPlannerWeekOfficialMatches.mockReset();
     getPlannerWeeklyReviewProgress.mockReset();
     getMatchActualGpsBatch.mockReset();
+    getMatchCandidateDates.mockReset();
     getPlayerMapping.mockReset();
     getAppUser.mockResolvedValue(ADMIN);
     getPlannerWeek.mockResolvedValue({ ok: true, data: WEEK });
+    getMatchCandidateDates.mockResolvedValue({
+      ok: true,
+      candidates: [
+        { gpsDate: "2026-08-15", rawRowCount: 22, distinctPlayerCount: 11 },
+      ],
+    });
   });
 
   it("rejects staff and player", async () => {
@@ -173,7 +185,7 @@ describe("getPlannerTotalLoad", () => {
 
   it("uses Weekly Target population via Weekly Review and throughDate = week.end_date", async () => {
     getPlannerWeeklyReviewProgress.mockResolvedValue({ ok: true, data: [] });
-    getPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: OFFICIAL });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
 
     const result = await getPlannerTotalLoad(WEEK_ID);
     expect(result.ok).toBe(true);
@@ -185,12 +197,13 @@ describe("getPlannerTotalLoad", () => {
 
   it("empty Weekly Target population does not call Training extras or Match Power BI", async () => {
     getPlannerWeeklyReviewProgress.mockResolvedValue({ ok: true, data: [] });
-    getPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: OFFICIAL });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
 
     const result = await getPlannerTotalLoad(WEEK_ID);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.rows).toEqual([]);
     expect(getMatchActualGpsBatch).not.toHaveBeenCalled();
+    expect(getMatchCandidateDates).not.toHaveBeenCalled();
     expect(getPlayerMapping).not.toHaveBeenCalled();
   });
 
@@ -199,7 +212,7 @@ describe("getPlannerTotalLoad", () => {
       ok: true,
       data: [trainingRow("Doru Andrei", "Doru Andrei")],
     });
-    getPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: null });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [] });
 
     const result = await getPlannerTotalLoad(WEEK_ID);
     expect(result.ok).toBe(true);
@@ -207,6 +220,7 @@ describe("getPlannerTotalLoad", () => {
     expect(result.data.officialMatch.selected).toBe(false);
     expect(result.data.rows[0].quality).toBe("match_not_selected");
     expect(getMatchActualGpsBatch).not.toHaveBeenCalled();
+    expect(getMatchCandidateDates).not.toHaveBeenCalled();
   });
 
   it("calls Match batch once with frozen snapshot names, powerbi week id, and gps_date", async () => {
@@ -215,7 +229,7 @@ describe("getPlannerTotalLoad", () => {
       ok: true,
       data: [trainingRow("Doru Andrei", "Doru Andrei Frozen")],
     });
-    getPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: OFFICIAL });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
     getMatchActualGpsBatch.mockResolvedValue({
       ok: true,
       byPlayerName: new Map([
@@ -240,6 +254,8 @@ describe("getPlannerTotalLoad", () => {
 
     const result = await getPlannerTotalLoad(WEEK_ID);
     expect(result.ok).toBe(true);
+    expect(getMatchCandidateDates).toHaveBeenCalledTimes(1);
+    expect(getMatchCandidateDates).toHaveBeenCalledWith({ weekId: "W5" });
     expect(getMatchActualGpsBatch).toHaveBeenCalledTimes(1);
     expect(getMatchActualGpsBatch).toHaveBeenCalledWith({
       weekId: "W5",
@@ -257,7 +273,7 @@ describe("getPlannerTotalLoad", () => {
       ok: true,
       data: [trainingRow("Doru Andrei", "Doru Andrei")],
     });
-    getPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: OFFICIAL });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
     getMatchActualGpsBatch.mockResolvedValue({
       ok: false,
       error: { code: "timeout", message: "Power BI request timed out." },
@@ -272,6 +288,171 @@ describe("getPlannerTotalLoad", () => {
     expect(result.data.rows[0].training.metrics?.totalDistance).toBe(14000);
   });
 
+  it("E: pending configured Match skips Match Actual batch", async () => {
+    getPlannerWeeklyReviewProgress.mockResolvedValue({
+      ok: true,
+      data: [trainingRow("Doru Andrei", "Doru Andrei")],
+    });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
+    getMatchCandidateDates.mockResolvedValue({
+      ok: true,
+      candidates: [
+        { gpsDate: "2026-08-10", rawRowCount: 20, distinctPlayerCount: 10 },
+      ],
+    });
+
+    const result = await getPlannerTotalLoad(WEEK_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(getMatchCandidateDates).toHaveBeenCalledTimes(1);
+    expect(getMatchActualGpsBatch).not.toHaveBeenCalled();
+    expect(result.data.rows[0].quality).toBe("match_data_pending");
+    expect(result.data.rows[0].matches[0].state).toBe("match_data_pending");
+    expect(result.data.rows[0].matches[0].state).not.toBe("match_zero");
+    expect(result.data.rows[0].total.metrics).toBeNull();
+  });
+
+  it("F: candidate query failure is match_query_error, not pending or zero", async () => {
+    getPlannerWeeklyReviewProgress.mockResolvedValue({
+      ok: true,
+      data: [trainingRow("Doru Andrei", "Doru Andrei")],
+    });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
+    getMatchCandidateDates.mockResolvedValue({
+      ok: false,
+      error: { code: "timeout", message: "Power BI request timed out." },
+    });
+
+    const result = await getPlannerTotalLoad(WEEK_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(getMatchActualGpsBatch).not.toHaveBeenCalled();
+    expect(result.data.rows[0].match.quality).toBe("match_query_error");
+    expect(result.data.rows[0].quality).toBe("unsafe");
+    expect(result.data.rows[0].matches[0].state).not.toBe("match_data_pending");
+    expect(result.data.rows[0].matches[0].state).not.toBe("match_zero");
+    expect(result.data.rows[0].total.metrics).toBeNull();
+  });
+
+  it("two configured Matches: 1 candidate + 2 batches; one pending of two: 1 candidate + 1 batch", async () => {
+    const match2 = {
+      ...OFFICIAL,
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      gpsDate: "2026-08-18",
+      matchOrder: 2 as const,
+    };
+    getPlannerWeeklyReviewProgress.mockResolvedValue({
+      ok: true,
+      data: [trainingRow("Doru Andrei", "Doru Andrei")],
+    });
+    getPlannerWeekOfficialMatches.mockResolvedValue({
+      ok: true,
+      data: [OFFICIAL, match2],
+    });
+    getMatchCandidateDates.mockResolvedValue({
+      ok: true,
+      candidates: [
+        { gpsDate: "2026-08-15", rawRowCount: 22, distinctPlayerCount: 11 },
+        { gpsDate: "2026-08-18", rawRowCount: 20, distinctPlayerCount: 10 },
+      ],
+    });
+    getMatchActualGpsBatch.mockResolvedValue({
+      ok: true,
+      byPlayerName: new Map([
+        [
+          "Doru Andrei",
+          {
+            playerName: "Doru Andrei",
+            quality: "match_zero",
+            halves: { first: "absent", second: "absent" },
+            metrics: {
+              totalDistance: 0,
+              hsr: 0,
+              sprint: 0,
+              accelerations: 0,
+              decelerations: 0,
+              durationSeconds: 0,
+            },
+          },
+        ],
+      ]),
+    });
+
+    const both = await getPlannerTotalLoad(WEEK_ID);
+    expect(both.ok).toBe(true);
+    expect(getMatchCandidateDates).toHaveBeenCalledTimes(1);
+    expect(getMatchActualGpsBatch).toHaveBeenCalledTimes(2);
+
+    getMatchCandidateDates.mockClear();
+    getMatchActualGpsBatch.mockClear();
+    getMatchCandidateDates.mockResolvedValue({
+      ok: true,
+      candidates: [
+        { gpsDate: "2026-08-15", rawRowCount: 22, distinctPlayerCount: 11 },
+      ],
+    });
+    const mixed = await getPlannerTotalLoad(WEEK_ID);
+    expect(mixed.ok).toBe(true);
+    if (!mixed.ok) return;
+    expect(getMatchCandidateDates).toHaveBeenCalledTimes(1);
+    expect(getMatchActualGpsBatch).toHaveBeenCalledTimes(1);
+    expect(getMatchActualGpsBatch).toHaveBeenCalledWith({
+      weekId: "W5",
+      gpsDate: "2026-08-15",
+      playerNames: ["Doru Andrei"],
+    });
+    expect(mixed.data.rows[0].quality).toBe("match_data_pending");
+    expect(mixed.data.rows[0].total.metrics).toBeNull();
+    expect(mixed.data.rows[0].matches[0].state).toBe("match_zero");
+    expect(mixed.data.rows[0].matches[1].state).toBe("match_data_pending");
+  });
+
+  it("W5 single-match parity: Training + Match 1, frozen names, 1-Match Best %", async () => {
+    getPlannerWeeklyReviewProgress.mockResolvedValue({
+      ok: true,
+      data: [trainingRow("Doru Andrei", "Doru Andrei Frozen")],
+    });
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [OFFICIAL] });
+    getMatchActualGpsBatch.mockResolvedValue({
+      ok: true,
+      byPlayerName: new Map([
+        [
+          "Doru Andrei Frozen",
+          {
+            playerName: "Doru Andrei Frozen",
+            quality: "match_ok",
+            halves: { first: "valid", second: "valid" },
+            metrics: {
+              totalDistance: 5000,
+              hsr: 50,
+              sprint: 10,
+              accelerations: 5,
+              decelerations: 6,
+              durationSeconds: 5480,
+            },
+          },
+        ],
+      ]),
+    });
+
+    const result = await getPlannerTotalLoad(WEEK_ID);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = result.data.rows[0];
+    expect(player.quality).toBe("complete");
+    expect(player.total.metrics).toEqual({
+      totalDistance: 19000,
+      hsr: 150,
+      sprint: 30,
+      accelerations: 15,
+      decelerations: 17,
+    });
+    expect(player.total.percentages?.totalDistance).toBe((19000 / 20000) * 100);
+    expect(player.match.durationSeconds).toBe(5480);
+    expect(getMatchCandidateDates).toHaveBeenCalledTimes(1);
+    expect(getMatchActualGpsBatch).toHaveBeenCalledTimes(1);
+  });
+
   it("does not import or persist Total Load GPS Actuals", async () => {
     const src = await readFile(
       path.join(process.cwd(), "lib/gpsPlanner/totalLoad.server.ts"),
@@ -282,6 +463,9 @@ describe("getPlannerTotalLoad", () => {
     expect(src).not.toContain(".upsert(");
     expect(src).not.toContain("player_external_mappings");
     expect(src).toContain("throughDate: week.endDate");
+    expect(src).toContain("getPlannerWeekOfficialMatches");
+    expect(src).not.toContain("getPlannerWeekOfficialMatch(");
+    expect(src).toContain("getMatchCandidateDates");
   });
 });
 

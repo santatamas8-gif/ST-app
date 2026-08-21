@@ -107,7 +107,7 @@ export type TotalLoadQualityBadge = "Complete" | "Partial" | "Data issue";
 
 export function formatTotalLoadQualityBadge(
   quality: TotalLoadQuality
-): TotalLoadQualityBadge | null {
+): TotalLoadQualityBadge | "Data pending" | null {
   switch (quality) {
     case "complete":
       return "Complete";
@@ -115,6 +115,8 @@ export function formatTotalLoadQualityBadge(
       return "Partial";
     case "unsafe":
       return "Data issue";
+    case "match_data_pending":
+      return "Data pending";
     case "match_not_selected":
       return null;
   }
@@ -160,6 +162,12 @@ function unsafeReason(
   quality: TotalLoadQuality,
   matchQuality: TotalLoadMatchQuality
 ): string {
+  if (quality === "match_data_pending" || matchQuality === "match_data_pending") {
+    return "Match GPS is not yet available. Total Week is unavailable.";
+  }
+  if (quality === "match_not_selected" || matchQuality === "match_not_selected") {
+    return "Select the official match to calculate Total Load.";
+  }
   if (quality !== "unsafe") return "";
   if (matchQuality === "match_ambiguous") {
     return "Match GPS is ambiguous for this player. Total Week is unavailable.";
@@ -169,9 +177,6 @@ function unsafeReason(
   }
   if (matchQuality === "data_issue") {
     return "Match GPS has a data issue for this player. Total Week is unavailable.";
-  }
-  if (matchQuality === "match_not_selected") {
-    return "Select the official match to calculate Total Load.";
   }
   return "Training or Match GPS is incomplete. Total Week is unavailable.";
 }
@@ -183,7 +188,11 @@ export function formatTotalLoadMetricBreakdown(input: {
   totalValue: number | null;
   matchQuality: TotalLoadMatchQuality;
 }): string {
-  if (input.quality === "unsafe" || input.quality === "match_not_selected") {
+  if (
+    input.quality === "unsafe" ||
+    input.quality === "match_not_selected" ||
+    input.quality === "match_data_pending"
+  ) {
     return unsafeReason(input.quality, input.matchQuality);
   }
 

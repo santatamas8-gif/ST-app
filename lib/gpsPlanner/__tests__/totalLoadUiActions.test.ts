@@ -75,11 +75,14 @@ vi.mock("@/lib/gpsPlanner/playerMappings.server", () => ({
 }));
 
 const getPlannerWeekOfficialMatch = vi.fn();
+const getPlannerWeekOfficialMatches = vi.fn();
 const setPlannerWeekOfficialMatch = vi.fn();
 const deletePlannerWeekOfficialMatch = vi.fn();
 vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
   getPlannerWeekOfficialMatch: (...args: unknown[]) =>
     getPlannerWeekOfficialMatch(...args),
+  getPlannerWeekOfficialMatches: (...args: unknown[]) =>
+    getPlannerWeekOfficialMatches(...args),
   setPlannerWeekOfficialMatch: (...args: unknown[]) =>
     setPlannerWeekOfficialMatch(...args),
   deletePlannerWeekOfficialMatch: (...args: unknown[]) =>
@@ -131,6 +134,8 @@ describe("Total Load UI actions", () => {
     getAppUser.mockReset();
     getAppUser.mockResolvedValue(ADMIN);
     getPlannerWeekOfficialMatch.mockReset();
+    getPlannerWeekOfficialMatches.mockReset();
+    getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [] });
     setPlannerWeekOfficialMatch.mockReset();
     deletePlannerWeekOfficialMatch.mockReset();
     getPlannerTotalLoad.mockReset();
@@ -213,6 +218,28 @@ describe("Total Load UI actions", () => {
     expect(candidates.ok).toBe(false);
     expect(getPlannerTotalLoad).toHaveBeenCalledWith(WEEK_ID);
     expect(listPlannerMatchCandidates).toHaveBeenCalledWith(WEEK_ID);
+  });
+
+  it("blocks singular set/delete when more than one official Match exists", async () => {
+    getPlannerWeekOfficialMatches.mockResolvedValue({
+      ok: true,
+      data: [SAVED, { ...SAVED, id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }],
+    });
+    const saved = await setPlannerWeekOfficialMatchAction({
+      weekId: WEEK_ID,
+      gpsDate: "2026-08-15",
+      opponent: "FK Csikszereda",
+      matchday: "Matchday 5",
+      competition: "Liga 1",
+    });
+    expect(saved.ok).toBe(false);
+    if (!saved.ok) expect(saved.error.code).toBe("official_match_ambiguous");
+    expect(setPlannerWeekOfficialMatch).not.toHaveBeenCalled();
+
+    const cleared = await deletePlannerWeekOfficialMatchAction(WEEK_ID);
+    expect(cleared.ok).toBe(false);
+    if (!cleared.ok) expect(cleared.error.code).toBe("official_match_ambiguous");
+    expect(deletePlannerWeekOfficialMatch).not.toHaveBeenCalled();
   });
 
   it("candidate lookup is a read-only action wrapper", async () => {
