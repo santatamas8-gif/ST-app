@@ -440,6 +440,87 @@ describe("planner week official matches schema contract", () => {
     }
   });
 
+  it("Phase A 044: prepares 0–2 schema without enabling a second row or dropping UNIQUE(week_id)", async () => {
+    const sql = await readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/044_planner_week_official_matches_v2_prep.sql"
+      ),
+      "utf8"
+    );
+
+    expect(sql).toContain("ADD COLUMN match_order smallint NOT NULL DEFAULT 1");
+    expect(sql).toContain("CHECK (match_order IN (1, 2))");
+    expect(sql).toContain("ADD COLUMN md_tag text NOT NULL DEFAULT 'MD'");
+    expect(sql).toContain(
+      "CHECK (length(trim(md_tag)) > 0)"
+    );
+    expect(sql).toContain("ALTER COLUMN opponent DROP NOT NULL");
+    expect(sql).toContain("ALTER COLUMN matchday DROP NOT NULL");
+    expect(sql).toContain(
+      "CHECK (opponent IS NULL OR length(trim(opponent)) > 0)"
+    );
+    expect(sql).toContain(
+      "CHECK (matchday IS NULL OR length(trim(matchday)) > 0)"
+    );
+    expect(sql).toContain("UNIQUE (week_id, match_order)");
+    expect(sql).toContain("UNIQUE (week_id, gps_date)");
+    expect(sql).toMatch(/KEEP[\s\S]*UNIQUE \(week_id\)/i);
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_week_id_key/i
+    );
+    expect(sql).not.toMatch(/DROP CONSTRAINT[\s\S]{0,80}UNIQUE \(week_id\)/i);
+    expect(sql).not.toContain("CREATE TABLE");
+    expect(sql).not.toMatch(/ALTER TABLE\s+public\.planner_week_days/i);
+    expect(sql).not.toMatch(
+      /CREATE TRIGGER[\s\S]{0,120}planner_week_days/i
+    );
+    expect(sql).not.toContain("CREATE POLICY");
+    expect(sql).not.toContain("DROP POLICY");
+    expect(sql).not.toContain("ALTER POLICY");
+    expect(sql).not.toContain("CREATE TRIGGER");
+    expect(sql).not.toContain("match_count");
+    expect(sql).not.toMatch(/USING\s*\(\s*true\s*\)/i);
+    expect(sql.toLowerCase()).not.toContain("service_role");
+    expect(sql).not.toMatch(
+      /CONSTRAINT[\s\S]{0,120}CHECK[\s\S]{0,200}start_date/i
+    );
+    expect(sql).not.toMatch(
+      /CONSTRAINT[\s\S]{0,120}CHECK[\s\S]{0,200}end_date/i
+    );
+    expect(sql).not.toMatch(/gps_date[\s\S]{0,200}BETWEEN/i);
+
+    const forbiddenCols = [
+      "total_distance",
+      "hsr",
+      "sprint",
+      "accelerations",
+      "decelerations",
+      "duration_actual",
+      "duration",
+      "powerbi_week_id",
+      "match_best",
+      "td_best",
+      "hsr_best",
+    ];
+    for (const col of forbiddenCols) {
+      expect(sql.toLowerCase()).not.toContain(col);
+    }
+  });
+
+  it("Phase A does not consume match_order/md_tag in singular runtime SELECT", async () => {
+    const src = await readFile(
+      path.join(process.cwd(), "lib/gpsPlanner/weekMatches.server.ts"),
+      "utf8"
+    );
+    expect(src).toContain(
+      "id, week_id, gps_date, opponent, matchday, competition, created_by, updated_by, created_at, updated_at"
+    );
+    expect(src).not.toContain("match_order");
+    expect(src).not.toContain("md_tag");
+    expect(src).toContain(".maybeSingle()");
+  });
+
   it("does not wire official-match persistence into Planning, Daily Plan, or Training", async () => {
     const files = [
       "app/(app)/admin/planner/WeeklyPlannerView.tsx",
