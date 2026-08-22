@@ -216,6 +216,31 @@ export type ApplyWeeklyTargetOutcome = {
 /** Same per-player outcome shape as weekly apply. */
 export type ApplyDailyTargetOutcome = ApplyWeeklyTargetOutcome;
 
+export type ApplyDailyDistributionDayInput = {
+  weekDayId: string;
+  tdPct: number;
+  hsrPct: number;
+  sprintPct: number;
+  accPct: number;
+  decPct: number;
+};
+
+export type ApplyDailyDistributionAssignmentOutcome = ApplyDailyTargetOutcome & {
+  weekDayId: string;
+};
+
+export type ApplyDailyDistributionSkippedDay = {
+  weekDayId: string;
+  reason: string;
+};
+
+export type ApplyDailyDistributionResult = {
+  successCount: number;
+  failedCount: number;
+  skippedDays: ApplyDailyDistributionSkippedDay[];
+  assignments: ApplyDailyDistributionAssignmentOutcome[];
+};
+
 /** Current ST-AMS ↔ Power BI mapping row (display). */
 export type PlayerExternalMappingRow = {
   id: string;

@@ -26,7 +26,12 @@ describe("combined Week structure UI — Match is display-only", () => {
     expect(view).not.toContain("M1+1");
     expect(view).not.toContain("M2-3");
     expect(view).not.toContain("day_type");
-    expect(view.indexOf("saveDaily(day.id)")).toBeGreaterThan(-1);
+    expect(view).not.toContain("saveDaily(day.id)");
+    expect(view).not.toContain("onClick={() => saveDaily(day.id)}");
+    expect(view).toContain("saveDailyDistribution");
+    expect(view).toContain("applyDailyDistributionToPlayers");
+    expect(view).toContain("Apply this day only");
+    expect(view).toContain("applyDailyToSelected(day.id)");
     expect(view).toContain('weekDayId: day.id');
   });
 

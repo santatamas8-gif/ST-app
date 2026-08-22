@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePlannerAdmin } from "@/lib/gpsPlanner/auth.server";
 import {
+  isPlannerUuid,
   plannerErr,
   type PlannerResult,
 } from "@/lib/gpsPlanner/common";
@@ -129,7 +130,10 @@ import {
   type UpdatePlayerMappingInput,
 } from "@/lib/gpsPlanner/playerMappings.server";
 
+import { isValidPlannerPercentage } from "@/lib/gpsPlanner/calculations";
 import type {
+  ApplyDailyDistributionDayInput,
+  ApplyDailyDistributionResult,
   ApplyDailyTargetOutcome,
   ApplyWeeklyTargetOutcome,
   PlannerMatchCandidate,
@@ -641,30 +645,38 @@ export type ApplyDailyTargetToPlayersInput = {
   decPct: number;
 };
 
-/**
- * Per-player create-or-update Daily Targets for one week day.
- * Same percentages for each selected player; absolutes stay player-specific
- * via frozen Match Best inside existing domain create/update.
- * Does not call Power BI.
- */
-export async function applyDailyTargetToPlayers(
-  input: ApplyDailyTargetToPlayersInput
-): Promise<PlannerResult<ApplyDailyTargetOutcome[]>> {
-  const authError = await requirePlannerAdmin();
-  if (authError) return { ok: false, error: authError };
+type DailyPctPayload = {
+  tdPct: number;
+  hsrPct: number;
+  sprintPct: number;
+  accPct: number;
+  decPct: number;
+};
 
+function isCompleteDailyPct(pct: DailyPctPayload): boolean {
+  return (
+    isValidPlannerPercentage(pct.tdPct) &&
+    isValidPlannerPercentage(pct.hsrPct) &&
+    isValidPlannerPercentage(pct.sprintPct) &&
+    isValidPlannerPercentage(pct.accPct) &&
+    isValidPlannerPercentage(pct.decPct)
+  );
+}
+
+/**
+ * Shared per-player create-or-update for one Training day.
+ * Same percentages; planned absolutes stay player-specific via existing domain.
+ */
+async function applyDailyPctToSelectedPlayers(
+  weekDayId: string,
+  playerIds: string[],
+  pct: DailyPctPayload
+): Promise<{ outcomes: ApplyDailyTargetOutcome[]; anySuccess: boolean }> {
   const outcomes: ApplyDailyTargetOutcome[] = [];
   let anySuccess = false;
-  const pct = {
-    tdPct: input.tdPct,
-    hsrPct: input.hsrPct,
-    sprintPct: input.sprintPct,
-    accPct: input.accPct,
-    decPct: input.decPct,
-  };
 
-  for (const playerId of input.playerIds) {
-    const existing = await getPlannerDailyTarget(input.weekDayId, playerId);
+  for (const playerId of playerIds) {
+    const existing = await getPlannerDailyTarget(weekDayId, playerId);
     if (!existing.ok) {
       outcomes.push({
         playerId,
@@ -679,7 +691,7 @@ export async function applyDailyTargetToPlayers(
 
     if (existing.data) {
       const updated = await updatePlannerDailyTarget({
-        weekDayId: input.weekDayId,
+        weekDayId,
         playerId,
         ...pct,
       });
@@ -698,7 +710,7 @@ export async function applyDailyTargetToPlayers(
       }
     } else {
       const created = await createPlannerDailyTarget({
-        weekDayId: input.weekDayId,
+        weekDayId,
         playerId,
         ...pct,
       });
@@ -718,8 +730,136 @@ export async function applyDailyTargetToPlayers(
     }
   }
 
+  return { outcomes, anySuccess };
+}
+
+/**
+ * Per-player create-or-update Daily Targets for one week day.
+ * Same percentages for each selected player; absolutes stay player-specific
+ * via frozen Match Best inside existing domain create/update.
+ * Does not call Power BI.
+ */
+export async function applyDailyTargetToPlayers(
+  input: ApplyDailyTargetToPlayersInput
+): Promise<PlannerResult<ApplyDailyTargetOutcome[]>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  const pct = {
+    tdPct: input.tdPct,
+    hsrPct: input.hsrPct,
+    sprintPct: input.sprintPct,
+    accPct: input.accPct,
+    decPct: input.decPct,
+  };
+  const { outcomes, anySuccess } = await applyDailyPctToSelectedPlayers(
+    input.weekDayId,
+    input.playerIds,
+    pct
+  );
+
   if (anySuccess) revalidatePlanner();
   return { ok: true, data: outcomes };
+}
+
+export type ApplyDailyDistributionToPlayersInput = {
+  weekId: string;
+  playerIds: string[];
+  days: ApplyDailyDistributionDayInput[];
+};
+
+/**
+ * One HTTP action: create-or-update Daily Targets for selected players
+ * across the submitted Training days. Match rows are not a valid week day.
+ * Best-effort: one player/day failure does not roll back others.
+ */
+export async function applyDailyDistributionToPlayers(
+  input: ApplyDailyDistributionToPlayersInput
+): Promise<PlannerResult<ApplyDailyDistributionResult>> {
+  const authError = await requirePlannerAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  if (!isPlannerUuid(input.weekId)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "weekId must be a valid UUID."),
+    };
+  }
+  if (!Array.isArray(input.playerIds) || input.playerIds.length === 0) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", "Select at least one player."),
+    };
+  }
+  for (const playerId of input.playerIds) {
+    if (!isPlannerUuid(playerId)) {
+      return {
+        ok: false,
+        error: plannerErr("invalid_input", "Each playerId must be a valid UUID."),
+      };
+    }
+  }
+
+  const daysResult = await listPlannerWeekDays(input.weekId);
+  if (!daysResult.ok) return daysResult;
+  const trainingDayIds = new Set(daysResult.data.map((day) => day.id));
+
+  const skippedDays: ApplyDailyDistributionResult["skippedDays"] = [];
+  const assignments: ApplyDailyDistributionResult["assignments"] = [];
+  let anySuccess = false;
+  const seenDayIds = new Set<string>();
+
+  for (const day of input.days ?? []) {
+    if (!isPlannerUuid(day.weekDayId) || seenDayIds.has(day.weekDayId)) {
+      continue;
+    }
+    seenDayIds.add(day.weekDayId);
+
+    if (!trainingDayIds.has(day.weekDayId)) {
+      skippedDays.push({
+        weekDayId: day.weekDayId,
+        reason: "Not a Training day for this week.",
+      });
+      continue;
+    }
+
+    const pct = {
+      tdPct: day.tdPct,
+      hsrPct: day.hsrPct,
+      sprintPct: day.sprintPct,
+      accPct: day.accPct,
+      decPct: day.decPct,
+    };
+    if (!isCompleteDailyPct(pct)) {
+      skippedDays.push({
+        weekDayId: day.weekDayId,
+        reason: "Incomplete or invalid Daily %.",
+      });
+      continue;
+    }
+
+    const applied = await applyDailyPctToSelectedPlayers(
+      day.weekDayId,
+      input.playerIds,
+      pct
+    );
+    if (applied.anySuccess) anySuccess = true;
+    for (const outcome of applied.outcomes) {
+      assignments.push({ ...outcome, weekDayId: day.weekDayId });
+    }
+  }
+
+  if (anySuccess) revalidatePlanner();
+
+  return {
+    ok: true,
+    data: {
+      successCount: assignments.filter((row) => row.status !== "failed").length,
+      failedCount: assignments.filter((row) => row.status === "failed").length,
+      skippedDays,
+      assignments,
+    },
+  };
 }
 
 // ── Player ↔ Power BI mappings ──────────────────────────────────────────────

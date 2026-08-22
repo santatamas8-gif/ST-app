@@ -38,9 +38,9 @@ import {
 } from "@/lib/gpsPlanner/uiDisplay";
 import {
   addPlannerGroupMemberAction,
+  applyDailyDistributionToPlayers,
   applyDailyTargetToPlayers,
   applyWeeklyTargetsToPlayers,
-  createPlannerDailyTargetAction,
   createPlannerGroupAction,
   createPlannerWeekAction,
   createPlannerWeekDayAction,
@@ -62,7 +62,6 @@ import {
   listPlannerWeekDaysAction,
   listPlannerWeeksAction,
   removePlannerGroupMemberAction,
-  updatePlannerDailyTargetAction,
   updatePlannerGroupAction,
   updatePlannerWeekAction,
   updatePlannerWeekDayAction,
@@ -70,6 +69,7 @@ import {
   updatePlannerWeeklyTargetAction,
 } from "@/app/actions/gpsPlanner";
 import type {
+  ApplyDailyDistributionResult,
   ApplyDailyTargetOutcome,
   ApplyWeeklyTargetOutcome,
   PlannerDailyTargetView,
@@ -286,6 +286,8 @@ export function WeeklyPlannerView({
   const [dailyApplyContext, setDailyApplyContext] = useState<string | null>(
     null
   );
+  const [distributionResult, setDistributionResult] =
+    useState<ApplyDailyDistributionResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   const [confirm, setConfirm] = useState<null | {
@@ -963,35 +965,63 @@ export function WeeklyPlannerView({
     });
   }
 
-  function saveDaily(dayId: string) {
-    if (!weekId || !focusedPlayerId) return;
-    const inputs = dailyPctInputs[dayId];
-    if (!inputs) return;
-    const pct = parsePctInputs(inputs);
-    if (!pct) {
-      setError("Enter valid daily percentages (≥ 0) for all metrics.");
+  function saveDailyDistribution() {
+    if (!weekId) return;
+    if (selectedPlayerIds.length === 0) {
+      setError("Select at least one player");
       return;
     }
+    const validDays: {
+      weekDayId: string;
+      tdPct: number;
+      hsrPct: number;
+      sprintPct: number;
+      accPct: number;
+      decPct: number;
+    }[] = [];
+    const skippedLabels: string[] = [];
+    for (const day of days) {
+      const inputs = dailyPctInputs[day.id];
+      const pct = inputs ? parsePctInputs(inputs) : null;
+      if (!pct) {
+        skippedLabels.push(`${day.mdTag} · ${day.date}`);
+        continue;
+      }
+      validDays.push({ weekDayId: day.id, ...pct });
+    }
+    if (validDays.length === 0) {
+      setError(
+        skippedLabels.length > 0
+          ? `No Training day has a complete Daily %. Skipped: ${skippedLabels.join(", ")}.`
+          : "No Training day has a complete Daily %."
+      );
+      return;
+    }
+    setDistributionResult(null);
     setError(null);
     startTransition(async () => {
-      const existing = dailyByDayId[dayId];
-      const res = existing
-        ? await updatePlannerDailyTargetAction({
-            weekDayId: dayId,
-            playerId: focusedPlayerId,
-            ...pct,
-          })
-        : await createPlannerDailyTargetAction({
-            weekDayId: dayId,
-            playerId: focusedPlayerId,
-            ...pct,
-          });
+      const res = await applyDailyDistributionToPlayers({
+        weekId,
+        playerIds: selectedPlayerIds,
+        days: validDays,
+      });
       if (!res.ok) {
         setError(errText(res.error.code, res.error.message));
         return;
       }
-      setFlash(existing ? "Daily target updated." : "Daily target created.");
-      await loadFocusedPlayerData(weekId, focusedPlayerId);
+      setDistributionResult(res.data);
+      const skippedNote =
+        skippedLabels.length > 0
+          ? ` Skipped incomplete days: ${skippedLabels.join(", ")}.`
+          : res.data.skippedDays.length > 0
+            ? ` ${res.data.skippedDays.length} day(s) skipped.`
+            : "";
+      setFlash(
+        `Daily Distribution saved — ${res.data.successCount} successful, ${res.data.failedCount} failed.${skippedNote}`
+      );
+      if (focusedPlayerId) {
+        await loadFocusedPlayerData(weekId, focusedPlayerId);
+      }
     });
   }
 
@@ -2023,10 +2053,17 @@ export function WeeklyPlannerView({
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-zinc-500">
-              Daily % is of frozen Match Best (not of Weekly Target). Same % can
-              be applied to selected players; planned meters/counts stay
-              player-specific. Values below are for the focused player. Example:
-              50 = 50%.
+              Daily % is of frozen Match Best (not of Weekly Target). Values
+              below are for the focused player.{" "}
+              <span className="text-zinc-300">
+                Save Daily Distribution writes these percentages to the selected
+                squad
+              </span>
+              {focusedPlayerId &&
+              !selectedPlayerIds.includes(focusedPlayerId)
+                ? " — the focused player is not selected, so they will not be saved."
+                : "."}{" "}
+              Planned meters/counts stay player-specific. Example: 50 = 50%.
             </p>
             {remaining && (
               <div className="flex flex-wrap gap-2 text-xs">
@@ -2050,6 +2087,27 @@ export function WeeklyPlannerView({
                 })}
               </div>
             )}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={saveDailyDistribution}
+                disabled={pending || selectedPlayerIds.length === 0}
+                title={
+                  selectedPlayerIds.length === 0
+                    ? "Select at least one player"
+                    : undefined
+                }
+                className="min-h-[44px] rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                Save Daily Distribution · {selectedPlayerIds.length} selected
+              </button>
+              {selectedPlayerIds.length === 0 ? (
+                <p className="text-xs text-amber-200">
+                  Select at least one player
+                </p>
+              ) : null}
+            </div>
 
             <div className="flex gap-3 overflow-x-auto pb-2">
               {combinedWeek.map((item) => {
@@ -2152,21 +2210,13 @@ export function WeeklyPlannerView({
                       })}
                     </div>
                     <div className="mt-3 flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => saveDaily(day.id)}
-                        disabled={pending}
-                        className="min-h-[40px] rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                      >
-                        Save Daily
-                      </button>
                         <button
                           type="button"
                           onClick={() => applyDailyToSelected(day.id)}
                           disabled={pending || selectedPlayerIds.length === 0}
-                          className="min-h-[40px] rounded-lg border border-emerald-700/50 text-sm text-emerald-200 hover:bg-emerald-950/30 disabled:opacity-40"
+                          className="min-h-[36px] rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
                         >
-                          Apply to {selectedPlayerIds.length} selected
+                          Apply this day only
                         </button>
                         <button
                           type="button"
@@ -2207,6 +2257,51 @@ export function WeeklyPlannerView({
                 );
               })}
             </div>
+
+            {distributionResult && (
+              <div className="rounded-lg border border-zinc-700/60 p-3">
+                <p className="mb-2 text-sm font-medium text-zinc-200">
+                  Daily Distribution outcomes
+                  <span className="ml-2 font-normal text-zinc-400">
+                    ({distributionResult.successCount} successful,{" "}
+                    {distributionResult.failedCount} failed
+                    {distributionResult.skippedDays.length > 0
+                      ? `, ${distributionResult.skippedDays.length} day(s) skipped`
+                      : ""}
+                    )
+                  </span>
+                </p>
+                {distributionResult.failedCount > 0 ? (
+                  <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+                    {distributionResult.assignments
+                      .filter((o) => o.status === "failed")
+                      .map((o) => {
+                        const day = days.find((d) => d.id === o.weekDayId);
+                        return (
+                          <li
+                            key={`${o.weekDayId}-${o.playerId}`}
+                            className="flex gap-2 text-red-300"
+                          >
+                            <span>
+                              {playerById.get(o.playerId)?.name ?? o.playerId}
+                            </span>
+                            <span className="text-zinc-500">
+                              · {day ? `${day.mdTag} · ${day.date}` : o.weekDayId}
+                            </span>
+                            {o.message && (
+                              <span className="text-zinc-500">· {o.message}</span>
+                            )}
+                          </li>
+                        );
+                      })}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    All submitted Training-day assignments succeeded.
+                  </p>
+                )}
+              </div>
+            )}
 
             {dailyApplyOutcomes && (
               <div className="rounded-lg border border-zinc-700/60 p-3">
