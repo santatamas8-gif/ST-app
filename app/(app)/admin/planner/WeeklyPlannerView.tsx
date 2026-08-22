@@ -268,6 +268,7 @@ export function WeeklyPlannerView({
   const [dailyPctInputs, setDailyPctInputs] = useState<
     Record<string, Record<MetricKey, string>>
   >({});
+  const [dailyPlanWeekDayId, setDailyPlanWeekDayId] = useState("");
 
   const [progress, setProgress] =
     useState<PlannerWeeklyProgressResult | null>(null);
@@ -378,6 +379,13 @@ export function WeeklyPlannerView({
   useEffect(() => {
     void loadWeekScoped(weekId);
   }, [weekId, loadWeekScoped]);
+
+  useEffect(() => {
+    setDailyPlanWeekDayId((prev) => {
+      if (prev && days.some((d) => d.id === prev)) return prev;
+      return days[0]?.id ?? "";
+    });
+  }, [days]);
 
   useEffect(() => {
     if (!selectedWeek) {
@@ -1027,6 +1035,30 @@ export function WeeklyPlannerView({
         await loadFocusedPlayerData(weekId, focusedPlayerId);
       }
     });
+  }
+
+  function openDailyPlan() {
+    if (selectedPlayerIds.length === 0) {
+      setError("Select at least one player");
+      return;
+    }
+    if (
+      !dailyPlanWeekDayId ||
+      !days.some((d) => d.id === dailyPlanWeekDayId)
+    ) {
+      setError("Select a Training day");
+      return;
+    }
+    setError(null);
+    const qs = new URLSearchParams({
+      weekDayId: dailyPlanWeekDayId,
+      playerIds: selectedPlayerIds.join(","),
+    });
+    window.open(
+      `/admin/planner/daily-plan?${qs.toString()}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   function applyDailyToSelected(dayId: string) {
@@ -2136,6 +2168,48 @@ export function WeeklyPlannerView({
               ) : null}
             </div>
 
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <span className="text-sm font-medium text-zinc-200">
+                Daily Plan
+              </span>
+              <select
+                value={dailyPlanWeekDayId}
+                onChange={(e) => setDailyPlanWeekDayId(e.target.value)}
+                disabled={days.length === 0}
+                className="min-h-[40px] min-w-[10.5rem] rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-sm text-white"
+              >
+                {days.length === 0 ? (
+                  <option value="">No Training days</option>
+                ) : (
+                  days.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.mdTag} · {d.date}
+                    </option>
+                  ))
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={openDailyPlan}
+                disabled={
+                  selectedPlayerIds.length === 0 || !dailyPlanWeekDayId
+                }
+                title={
+                  selectedPlayerIds.length === 0
+                    ? "Select at least one player"
+                    : undefined
+                }
+                className="min-h-[40px] rounded-lg border border-zinc-600 px-4 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+              >
+                Open
+              </button>
+              {selectedPlayerIds.length === 0 ? (
+                <p className="text-xs text-amber-200">
+                  Select at least one player
+                </p>
+              ) : null}
+            </div>
+
             <div className="flex gap-3 overflow-x-auto pb-2">
               {combinedWeek.map((item) => {
                 if (item.type === "match") {
@@ -2244,31 +2318,6 @@ export function WeeklyPlannerView({
                           className="min-h-[36px] rounded-lg border border-zinc-700 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
                         >
                           Apply this day only
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (selectedPlayerIds.length === 0) {
-                              setError(
-                                "Select at least one player before opening Daily Plan."
-                              );
-                              return;
-                            }
-                            setError(null);
-                            const qs = new URLSearchParams({
-                              weekDayId: day.id,
-                              playerIds: selectedPlayerIds.join(","),
-                            });
-                            window.open(
-                              `/admin/planner/daily-plan?${qs.toString()}`,
-                              "_blank",
-                              "noopener,noreferrer"
-                            );
-                          }}
-                          disabled={selectedPlayerIds.length === 0}
-                          className="min-h-[40px] rounded-lg border border-zinc-600 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                        >
-                          Daily Plan
                         </button>
                         {hasRow && (
                         <button

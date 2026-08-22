@@ -32,7 +32,9 @@ describe("combined Week structure UI — Match is display-only", () => {
     expect(view).toContain("applyDailyDistributionToPlayers");
     expect(view).toContain("Apply this day only");
     expect(view).toContain("applyDailyToSelected(day.id)");
-    expect(view).toContain('weekDayId: day.id');
+    expect(view).toContain("openDailyPlan");
+    expect(view).toContain("weekDayId: dailyPlanWeekDayId");
+    expect(view).not.toContain("weekDayId: item.matchId");
   });
 
   it("11–12: Daily Review selector and Weekly Review stay Training-only", async () => {
