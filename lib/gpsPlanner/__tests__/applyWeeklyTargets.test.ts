@@ -182,6 +182,52 @@ describe("applyWeeklyTargetsToPlayers", () => {
     expect(createPlannerWeeklyTarget).not.toHaveBeenCalled();
   });
 
+  it("continues after one player fails so others still save", async () => {
+    getPlannerWeeklyTarget
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "mapping_not_found", message: "No mapping." },
+      })
+      .mockResolvedValueOnce({ ok: true, data: null });
+    createPlannerWeeklyTarget.mockResolvedValue({
+      ok: true,
+      data: { weekId: WEEK_ID, playerId: P2 },
+    });
+
+    const result = await applyWeeklyTargetsToPlayers({
+      weekId: WEEK_ID,
+      playerIds: [P1, P2],
+      tdPct: 180,
+      hsrPct: 100,
+      sprintPct: 90,
+      accPct: 250,
+      decPct: 250,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([
+      {
+        playerId: P1,
+        status: "failed",
+        message:
+          "Power BI mapping not set — map the player before creating a Weekly Target",
+      },
+      { playerId: P2, status: "created" },
+    ]);
+    expect(createPlannerWeeklyTarget).toHaveBeenCalledTimes(1);
+    expect(createPlannerWeeklyTarget).toHaveBeenCalledWith({
+      weekId: WEEK_ID,
+      playerId: P2,
+      tdPct: 180,
+      hsrPct: 100,
+      sprintPct: 90,
+      accPct: 250,
+      decPct: 250,
+    });
+    expect(updatePlannerWeeklyTarget).not.toHaveBeenCalled();
+  });
+
   it("rejects non-admin", async () => {
     getAppUser.mockResolvedValue({
       id: ADMIN.id,

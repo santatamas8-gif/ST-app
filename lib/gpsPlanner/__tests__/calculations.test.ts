@@ -144,4 +144,45 @@ describe("weekly planned source", () => {
     expect(dailySum.hsr).toBe(960);
     expect(weekly.hsr).not.toBe(dailySum.hsr);
   });
+
+  it("same weekly % with different frozen bests yields different raw absolutes", () => {
+    const pct = {
+      tdPct: 180,
+      hsrPct: 100,
+      sprintPct: 90,
+      accPct: 250,
+      decPct: 250,
+    };
+    const playerA = calculateWeeklyPlannedAbsolutes(
+      {
+        tdBest: 10000,
+        hsrBest: 800,
+        sprintBest: 200,
+        accBest: 40,
+        decBest: 36,
+      },
+      pct
+    );
+    const playerB = calculateWeeklyPlannedAbsolutes(
+      {
+        tdBest: 9000,
+        hsrBest: 700,
+        sprintBest: 150,
+        accBest: 30,
+        decBest: 28,
+      },
+      pct
+    );
+    expect(playerA.totalDistance).toBe(18000);
+    expect(playerB.totalDistance).toBe(16200);
+    expect(playerA.hsr).toBe(800);
+    expect(playerB.hsr).toBe(700);
+    expect(playerA.sprint).toBe(180);
+    expect(playerB.sprint).toBe(135);
+    expect(playerA.accelerations).toBe(100);
+    expect(playerB.accelerations).toBe(75);
+    expect(playerA.decelerations).toBe(90);
+    expect(playerB.decelerations).toBe(70);
+    expect(playerA).not.toEqual(playerB);
+  });
 });

@@ -939,7 +939,11 @@ export function WeeklyPlannerView({
   }
 
   function applyToSelected() {
-    if (!weekId || selectedPlayerIds.length === 0) return;
+    if (!weekId) return;
+    if (selectedPlayerIds.length === 0) {
+      setError("Select at least one player");
+      return;
+    }
     const pct = parsePctInputs(weeklyPctInputs);
     if (!pct) {
       setError("Enter valid weekly percentages before applying to players.");
@@ -958,7 +962,7 @@ export function WeeklyPlannerView({
         return;
       }
       setApplyOutcomes(res.data);
-      setFlash("Apply finished — see per-player outcomes.");
+      setFlash("Save finished — see per-player outcomes.");
       if (focusedPlayerId) {
         await loadFocusedPlayerData(weekId, focusedPlayerId);
       }
@@ -1872,35 +1876,58 @@ export function WeeklyPlannerView({
                   <span className="ml-2 text-xs text-zinc-500">Loading…</span>
                 )}
               </p>
-              <div className="flex flex-wrap gap-2">
+              {weeklyTarget && (
                 <button
                   type="button"
-                  onClick={saveWeeklyForFocused}
-                  disabled={pending || matchBestLoading}
-                  className="min-h-[44px] rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  onClick={askDeleteWeekly}
+                  className="min-h-[44px] rounded-lg border border-red-800/50 px-4 py-2 text-sm text-red-300"
                 >
-                  Save Weekly
+                  Delete weekly
                 </button>
-                <button
-                  type="button"
-                  onClick={applyToSelected}
-                  disabled={
-                    pending || selectedPlayerIds.length === 0 || matchBestLoading
-                  }
-                  className="min-h-[44px] rounded-lg border border-emerald-700/50 px-4 py-2 text-sm text-emerald-200 hover:bg-emerald-950/30 disabled:opacity-40"
-                >
-                  Apply to {selectedPlayerIds.length} selected
-                </button>
-                {weeklyTarget && (
-                  <button
-                    type="button"
-                    onClick={askDeleteWeekly}
-                    className="min-h-[44px] rounded-lg border border-red-800/50 px-4 py-2 text-sm text-red-300"
-                  >
-                    Delete weekly
-                  </button>
-                )}
-              </div>
+              )}
+            </div>
+
+            <p className="text-xs text-zinc-500">
+              Save Weekly Targets writes these percentages to the selected
+              squad. Planned meters/counts stay player-specific.
+              {focusedPlayerId &&
+              !selectedPlayerIds.includes(focusedPlayerId)
+                ? " Focused player is not in the selected save group."
+                : ""}
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={applyToSelected}
+                disabled={
+                  pending || selectedPlayerIds.length === 0 || matchBestLoading
+                }
+                title={
+                  selectedPlayerIds.length === 0
+                    ? "Select at least one player"
+                    : undefined
+                }
+                className="min-h-[44px] rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                Save Weekly Targets · {selectedPlayerIds.length} selected
+              </button>
+              {selectedPlayerIds.length === 0 ? (
+                <p className="text-xs text-amber-200">
+                  Select at least one player
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={saveWeeklyForFocused}
+                disabled={pending || matchBestLoading}
+                className="min-h-[36px] rounded-lg border border-zinc-700 px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+              >
+                Save focused player only
+              </button>
             </div>
 
             {refRanges && (
@@ -2009,7 +2036,7 @@ export function WeeklyPlannerView({
             {applyOutcomes && (
               <div className="rounded-lg border border-zinc-700/60 p-3">
                 <p className="mb-2 text-sm font-medium text-zinc-200">
-                  Weekly apply outcomes
+                  Weekly save outcomes
                 </p>
                 <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
                   {applyOutcomes.map((o) => {
