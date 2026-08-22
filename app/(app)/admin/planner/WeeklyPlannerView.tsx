@@ -272,6 +272,7 @@ export function WeeklyPlannerView({
 
   const [progress, setProgress] =
     useState<PlannerWeeklyProgressResult | null>(null);
+  const [weeklyProgressExpanded, setWeeklyProgressExpanded] = useState(false);
   const [throughDate, setThroughDate] = useState("");
   const [progressLoading, setProgressLoading] = useState(false);
   const [matchBestLoading, setMatchBestLoading] = useState(false);
@@ -496,12 +497,22 @@ export function WeeklyPlannerView({
   }, [weekId, focusedPlayerId, throughDate]);
 
   useEffect(() => {
+    if (!weeklyProgressExpanded) {
+      setProgress(null);
+      return;
+    }
     if (focusedPlayerId && weeklyTarget) {
       void loadProgress();
     } else {
       setProgress(null);
     }
-  }, [focusedPlayerId, weeklyTarget, throughDate, loadProgress]);
+  }, [
+    weeklyProgressExpanded,
+    focusedPlayerId,
+    weeklyTarget,
+    throughDate,
+    loadProgress,
+  ]);
 
   function togglePlayer(id: string) {
     setSelectedPlayerIds((prev) => {
@@ -2421,138 +2432,161 @@ export function WeeklyPlannerView({
 
       {/* Progress */}
       <Card title="Weekly progress">
-        {!focusedPlayerId || !weeklyTarget ? (
-          <p className="text-sm text-zinc-400">
-            Focus a player with a Weekly Target, then set Progress through date
-            and refresh.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <Field
-                label="Progress through date"
-                hint="Weekly Actual and To Target use training days up to this date."
-              >
-                <input
-                  type="date"
-                  value={throughDate}
-                  min={selectedWeek?.startDate}
-                  max={selectedWeek?.endDate}
-                  onChange={(e) => setThroughDate(e.target.value)}
-                  className={inputClass}
-                />
-              </Field>
-              <button
-                type="button"
-                onClick={() => void loadProgress()}
-                disabled={progressLoading}
-                className="min-h-[44px] rounded-lg border border-zinc-600 px-4 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-              >
-                {progressLoading ? "Loading…" : "Refresh progress"}
-              </button>
-            </div>
-
-            {progressLoading && !progress && (
-              <p className="text-sm text-zinc-500">Loading Actual from Power BI…</p>
-            )}
-
-            {progress && (
-              <>
-                <CompletenessBanner progress={progress} />
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-sm">
-                    <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-400">
-                        <th className="py-2 pr-2 text-left">Metric</th>
-                        <th className="py-2 pr-2 text-left">Planned</th>
-                        <th className="py-2 pr-2 text-left">
-                          Actual{" "}
-                          <span className="font-normal text-zinc-500">
-                            (Full Training)
-                          </span>
-                        </th>
-                        <th className="py-2 text-left">
-                          To Target{" "}
-                          <span className="font-normal text-zinc-500">
-                            (Planned − Actual)
-                          </span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(
-                        [
-                          ["TD", "totalDistance", "m"],
-                          ["HSR", "hsr", "m"],
-                          ["Sprint", "sprint", "m"],
-                          ["Acc", "accelerations", "count"],
-                          ["Dec", "decelerations", "count"],
-                        ] as const
-                      ).map(([label, field, unit]) => {
-                        const planned = progress.weeklyPlanned[field];
-                        const actual = progress.weeklyActual?.[field];
-                        const toTarget = progress.weeklyToTarget?.[field];
-                        return (
-                          <tr
-                            key={field}
-                            className="border-b border-zinc-800/50"
-                          >
-                            <td className="py-2 pr-2 text-zinc-200">{label}</td>
-                            <td className="py-2 pr-2 text-zinc-200">
-                              {formatPlannerDisplayAbsolute(planned)} {unit}
-                            </td>
-                            <td className="py-2 pr-2 text-zinc-200">
-                              {progress.weeklyActual == null ||
-                              actual == null
-                                ? "—"
-                                : `${formatPlannerDisplayAbsolute(actual)} ${unit}`}
-                            </td>
-                            <td className="py-2 text-zinc-200">
-                              {progress.weeklyToTarget == null ||
-                              toTarget == null
-                                ? "—"
-                                : `${formatPlannerDisplayAbsolute(toTarget)} ${unit}`}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  To Target = Planned − Actual. Positive = remaining, zero =
-                  reached, negative = over target (not judged as good/bad).
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-xs">
-                    <thead>
-                      <tr className="border-b border-zinc-800 text-zinc-500">
-                        <th className="py-1.5 pr-2 text-left">Day</th>
-                        <th className="py-1.5 pr-2 text-left">Actual status</th>
-                        <th className="py-1.5 text-left">Has daily target</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {progress.days.map((d) => (
-                        <tr key={d.weekDayId} className="border-b border-zinc-900">
-                          <td className="py-1.5 pr-2 text-zinc-300">
-                            {d.mdTag} · {d.date}
-                          </td>
-                          <td className="py-1.5 pr-2 text-zinc-400">
-                            {formatProgressDayStatus(d.status)}
-                          </td>
-                          <td className="py-1.5 text-zinc-400">
-                            {d.hasDailyTarget ? "yes" : "no"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              aria-expanded={weeklyProgressExpanded}
+              onClick={() => setWeeklyProgressExpanded((open) => !open)}
+              className="min-h-[40px] rounded-lg border border-zinc-600 px-4 text-sm text-zinc-200 hover:bg-zinc-800"
+            >
+              {weeklyProgressExpanded ? "Collapse" : "Expand"}
+            </button>
           </div>
-        )}
+          {weeklyProgressExpanded ? (
+            !focusedPlayerId || !weeklyTarget ? (
+              <p className="text-sm text-zinc-400">
+                Focus a player with a Weekly Target, then set Progress through
+                date and refresh.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <Field
+                    label="Progress through date"
+                    hint="Weekly Actual and To Target use training days up to this date."
+                  >
+                    <input
+                      type="date"
+                      value={throughDate}
+                      min={selectedWeek?.startDate}
+                      max={selectedWeek?.endDate}
+                      onChange={(e) => setThroughDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => void loadProgress()}
+                    disabled={progressLoading}
+                    className="min-h-[44px] rounded-lg border border-zinc-600 px-4 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {progressLoading ? "Loading…" : "Refresh progress"}
+                  </button>
+                </div>
+
+                {progressLoading && !progress && (
+                  <p className="text-sm text-zinc-500">
+                    Loading Actual from Power BI…
+                  </p>
+                )}
+
+                {progress && (
+                  <>
+                    <CompletenessBanner progress={progress} />
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[720px] text-sm">
+                        <thead>
+                          <tr className="border-b border-zinc-800 text-zinc-400">
+                            <th className="py-2 pr-2 text-left">Metric</th>
+                            <th className="py-2 pr-2 text-left">Planned</th>
+                            <th className="py-2 pr-2 text-left">
+                              Actual{" "}
+                              <span className="font-normal text-zinc-500">
+                                (Full Training)
+                              </span>
+                            </th>
+                            <th className="py-2 text-left">
+                              To Target{" "}
+                              <span className="font-normal text-zinc-500">
+                                (Planned − Actual)
+                              </span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(
+                            [
+                              ["TD", "totalDistance", "m"],
+                              ["HSR", "hsr", "m"],
+                              ["Sprint", "sprint", "m"],
+                              ["Acc", "accelerations", "count"],
+                              ["Dec", "decelerations", "count"],
+                            ] as const
+                          ).map(([label, field, unit]) => {
+                            const planned = progress.weeklyPlanned[field];
+                            const actual = progress.weeklyActual?.[field];
+                            const toTarget = progress.weeklyToTarget?.[field];
+                            return (
+                              <tr
+                                key={field}
+                                className="border-b border-zinc-800/50"
+                              >
+                                <td className="py-2 pr-2 text-zinc-200">
+                                  {label}
+                                </td>
+                                <td className="py-2 pr-2 text-zinc-200">
+                                  {formatPlannerDisplayAbsolute(planned)} {unit}
+                                </td>
+                                <td className="py-2 pr-2 text-zinc-200">
+                                  {progress.weeklyActual == null ||
+                                  actual == null
+                                    ? "—"
+                                    : `${formatPlannerDisplayAbsolute(actual)} ${unit}`}
+                                </td>
+                                <td className="py-2 text-zinc-200">
+                                  {progress.weeklyToTarget == null ||
+                                  toTarget == null
+                                    ? "—"
+                                    : `${formatPlannerDisplayAbsolute(toTarget)} ${unit}`}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      To Target = Planned − Actual. Positive = remaining, zero =
+                      reached, negative = over target (not judged as good/bad).
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[560px] text-xs">
+                        <thead>
+                          <tr className="border-b border-zinc-800 text-zinc-500">
+                            <th className="py-1.5 pr-2 text-left">Day</th>
+                            <th className="py-1.5 pr-2 text-left">
+                              Actual status
+                            </th>
+                            <th className="py-1.5 text-left">Has daily target</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {progress.days.map((d) => (
+                            <tr
+                              key={d.weekDayId}
+                              className="border-b border-zinc-900"
+                            >
+                              <td className="py-1.5 pr-2 text-zinc-300">
+                                {d.mdTag} · {d.date}
+                              </td>
+                              <td className="py-1.5 pr-2 text-zinc-400">
+                                {formatProgressDayStatus(d.status)}
+                              </td>
+                              <td className="py-1.5 text-zinc-400">
+                                {d.hasDailyTarget ? "yes" : "no"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          ) : null}
+        </div>
       </Card>
 
       <PlayerMappingModal
