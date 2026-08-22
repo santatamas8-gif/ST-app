@@ -3,9 +3,6 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import {
-  MENTAL_DEMAND_LABELS,
-  PERFORMANCE_RATING_LABELS,
-  PHYSICAL_DEMAND_LABELS,
   PHYSICAL_DROPOFF_OPTIONS,
   PRE_MATCH_FEELINGS,
   PRE_MATCH_OTHER_MAX_LENGTH,
@@ -16,6 +13,16 @@ import {
 import { formatMatchFeedbackDate } from "@/lib/matchFeedback/format";
 import { isMatchFeedbackFormReady } from "@/lib/matchFeedback/questionnaireReady";
 import { submitMatchFeedbackResponse } from "@/lib/matchFeedback/apiClient";
+import {
+  dropoffLabel,
+  feelingLabel,
+  getMatchQuestionnaireCopy,
+  MATCH_QUESTIONNAIRE_LOCALES,
+  mentalDemandLabels,
+  performanceLabels,
+  physicalDemandLabels,
+  type MatchQuestionnaireLocale,
+} from "@/lib/matchFeedback/questionnaireI18n";
 import type { MatchFeedbackMatch, MatchFeedbackResponse } from "@/lib/matchFeedback/types";
 import type { KioskPlayer } from "@/lib/players/listPlayers";
 import { KioskPlayerAvatar } from "./KioskPlayerAvatar";
@@ -42,6 +49,7 @@ export function KioskMatchQuestionnaire({
   onCancel,
   onSaved,
 }: KioskMatchQuestionnaireProps) {
+  const [locale, setLocale] = useState<MatchQuestionnaireLocale>("en");
   const [feelings, setFeelings] = useState<PreMatchFeeling[]>(
     () => existing?.pre_match_feelings ?? []
   );
@@ -61,6 +69,7 @@ export function KioskMatchQuestionnaire({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const copy = getMatchQuestionnaireCopy(locale);
   const isUpdate = Boolean(existing);
   const wantsOther = feelings.includes(PRE_MATCH_OTHER_OPTION);
 
@@ -97,6 +106,7 @@ export function KioskMatchQuestionnaire({
     setBusy(true);
     setError(null);
 
+    // Always submit English canonical values — locale is display-only.
     const result = await submitMatchFeedbackResponse({
       matchId: match.id,
       playerId: player.id,
@@ -132,14 +142,43 @@ export function KioskMatchQuestionnaire({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to players
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          {copy.backToPlayers}
+        </button>
+
+        <div
+          className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950/80 p-1"
+          role="group"
+          aria-label={copy.languageSwitcherAria}
+        >
+          {MATCH_QUESTIONNAIRE_LOCALES.map((item) => {
+            const selected = locale === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setLocale(item.id)}
+                aria-pressed={selected}
+                aria-label={item.label}
+                title={item.label}
+                className={`flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-base leading-none transition ${
+                  selected
+                    ? "bg-zinc-100 ring-2 ring-emerald-500/70"
+                    : "opacity-55 hover:bg-zinc-800 hover:opacity-100"
+                }`}
+              >
+                <span aria-hidden>{item.flag}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="space-y-5 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 shadow-md sm:p-6">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-zinc-200 bg-white p-5 text-center shadow-sm">
@@ -151,15 +190,15 @@ export function KioskMatchQuestionnaire({
               <span className="mx-2 text-zinc-300">·</span>
               {formatMatchFeedbackDate(match.match_date)}
               <span className="mx-2 text-zinc-300">·</span>
-              Matchday {match.matchday}
+              {copy.matchday(match.matchday)}
             </p>
           </div>
         </div>
 
         <section className={MF_QUESTION_CARD}>
           <h2 className={MF_QUESTION_TITLE}>
-            How did you feel before the match?
-            <span className={MF_QUESTION_HINT}>(select all that apply)</span>
+            {copy.q1Title}
+            <span className={MF_QUESTION_HINT}>{copy.q1Hint}</span>
           </h2>
           <div className="flex flex-wrap gap-2">
             {PRE_MATCH_FEELINGS.map((option) => {
@@ -173,7 +212,7 @@ export function KioskMatchQuestionnaire({
                     selected
                   )}`}
                 >
-                  {option}
+                  {feelingLabel(locale, option)}
                 </button>
               );
             })}
@@ -181,7 +220,7 @@ export function KioskMatchQuestionnaire({
           {wantsOther ? (
             <div className="space-y-1.5">
               <label htmlFor="match-other-text" className="text-sm font-medium text-zinc-700">
-                Please specify
+                {copy.pleaseSpecify}
               </label>
               <input
                 id="match-other-text"
@@ -190,7 +229,7 @@ export function KioskMatchQuestionnaire({
                 maxLength={PRE_MATCH_OTHER_MAX_LENGTH}
                 onChange={(e) => setOtherText(e.target.value)}
                 className="min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                placeholder="Type your answer"
+                placeholder={copy.otherPlaceholder}
               />
             </div>
           ) : null}
@@ -198,26 +237,26 @@ export function KioskMatchQuestionnaire({
 
         <section className={MF_QUESTION_CARD}>
           <MatchFeedbackScale
-            label="How hard was the match physically?"
+            label={copy.q2Title}
             value={physicalDemand}
             onChange={setPhysicalDemand}
-            valueLabels={PHYSICAL_DEMAND_LABELS}
+            valueLabels={physicalDemandLabels(locale)}
             colorScale="demand"
           />
         </section>
 
         <section className={MF_QUESTION_CARD}>
           <MatchFeedbackScale
-            label="How hard was the match mentally?"
+            label={copy.q3Title}
             value={mentalDemand}
             onChange={setMentalDemand}
-            valueLabels={MENTAL_DEMAND_LABELS}
+            valueLabels={mentalDemandLabels(locale)}
             colorScale="demand"
           />
         </section>
 
         <section className={MF_QUESTION_CARD}>
-          <h2 className={MF_QUESTION_TITLE}>When did you first feel a physical drop-off?</h2>
+          <h2 className={MF_QUESTION_TITLE}>{copy.q4Title}</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {PHYSICAL_DROPOFF_OPTIONS.map((option) => {
               const selected = dropoff === option;
@@ -230,7 +269,7 @@ export function KioskMatchQuestionnaire({
                     selected
                   )}`}
                 >
-                  {option}
+                  {dropoffLabel(locale, option)}
                 </button>
               );
             })}
@@ -239,10 +278,10 @@ export function KioskMatchQuestionnaire({
 
         <section className={MF_QUESTION_CARD}>
           <MatchFeedbackScale
-            label="How would you rate your performance?"
+            label={copy.q5Title}
             value={performanceRating}
             onChange={setPerformanceRating}
-            valueLabels={PERFORMANCE_RATING_LABELS}
+            valueLabels={performanceLabels(locale)}
             colorScale="performance"
           />
         </section>
@@ -263,7 +302,7 @@ export function KioskMatchQuestionnaire({
           className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          {isUpdate ? "Update Response" : "Submit"}
+          {isUpdate ? copy.update : copy.submit}
         </button>
       </div>
     </div>
