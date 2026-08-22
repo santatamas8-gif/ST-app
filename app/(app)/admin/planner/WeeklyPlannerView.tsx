@@ -96,6 +96,11 @@ import {
   validateWeekMatchDrafts,
   type WeekMatchDraft,
 } from "@/lib/gpsPlanner/weekMatchForm";
+import {
+  buildCombinedWeekStructure,
+  formatCombinedWeekKind,
+  formatCombinedWeekMdDisplay,
+} from "@/lib/gpsPlanner/weekStructure";
 
 const METRIC_KEYS = ["td", "hsr", "sprint", "acc", "dec"] as const;
 type MetricKey = (typeof METRIC_KEYS)[number];
@@ -1065,6 +1070,11 @@ export function WeeklyPlannerView({
           }
         : null;
 
+  const combinedWeek = useMemo(
+    () => buildCombinedWeekStructure(days, officialMatches),
+    [days, officialMatches]
+  );
+
   const dailySum = useMemo(() => {
     const rows: PercentageMetrics[] = [];
     for (const day of days) {
@@ -1371,77 +1381,188 @@ export function WeeklyPlannerView({
           <p className="text-sm text-zinc-400">Select or create a week first.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-sm">
+            <div className="space-y-3 sm:hidden">
+              {combinedWeek.map((item) => {
+                if (item.type === "match") {
+                  return (
+                    <div
+                      key={item.matchId}
+                      className="rounded-xl border border-zinc-600 bg-zinc-900/50 p-3"
+                    >
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-300">
+                        {formatCombinedWeekKind(item)}
+                      </p>
+                      <p className="mt-1 text-sm text-white">{item.date}</p>
+                      <p className="text-sm text-zinc-300">{item.mdTag}</p>
+                      <p className="mt-2 text-xs text-zinc-500">Edit in Week</p>
+                    </div>
+                  );
+                }
+                const day = days.find((d) => d.id === item.trainingDayId);
+                if (!day) return null;
+                return (
+                  <div
+                    key={`${day.id}-${dayFormEpoch}-m`}
+                    className="space-y-3 rounded-xl border border-zinc-800 p-3"
+                  >
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Training
+                    </p>
+                    <Field label="Date">
+                      <input
+                        type="date"
+                        defaultValue={day.date}
+                        onBlur={(e) => {
+                          if (e.target.value !== day.date) {
+                            saveDay(day, { date: e.target.value });
+                          }
+                        }}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="MD tag">
+                      <input
+                        defaultValue={day.mdTag}
+                        onBlur={(e) => {
+                          if (e.target.value.trim() !== day.mdTag) {
+                            saveDay(day, { mdTag: e.target.value.trim() });
+                          }
+                        }}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Order">
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        defaultValue={day.displayOrder}
+                        onBlur={(e) => {
+                          const n = Number(e.target.value);
+                          if (Number.isInteger(n) && n !== day.displayOrder) {
+                            saveDay(day, { displayOrder: n });
+                          }
+                        }}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <button
+                      type="button"
+                      onClick={() => askDeleteDay(day)}
+                      className="min-h-[44px] rounded-lg border border-red-800/50 px-3 text-xs text-red-300 hover:bg-red-950/30"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                );
+              })}
+              {combinedWeek.length === 0 ? (
+                <p className="text-sm text-zinc-500">
+                  No days yet — add a date and MD tag below.
+                </p>
+              ) : null}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-400">
                     <th className="py-2 pr-3 font-medium">Date</th>
                     <th className="py-2 pr-3 font-medium">MD tag</th>
+                    <th className="py-2 pr-3 font-medium">Kind</th>
                     <th className="py-2 pr-3 font-medium">Order</th>
                     <th className="py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {days.map((day) => (
-                    <tr
-                      key={`${day.id}-${dayFormEpoch}`}
-                      className="border-b border-zinc-800/60"
-                    >
-                      <td className="py-2 pr-3">
-                        <input
-                          type="date"
-                          defaultValue={day.date}
-                          onBlur={(e) => {
-                            if (e.target.value !== day.date) {
-                              saveDay(day, { date: e.target.value });
-                            }
-                          }}
-                          className={inputClass}
-                        />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input
-                          defaultValue={day.mdTag}
-                          onBlur={(e) => {
-                            if (e.target.value.trim() !== day.mdTag) {
-                              saveDay(day, { mdTag: e.target.value.trim() });
-                            }
-                          }}
-                          className={inputClass}
-                        />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          defaultValue={day.displayOrder}
-                          onBlur={(e) => {
-                            const n = Number(e.target.value);
-                            if (
-                              Number.isInteger(n) &&
-                              n !== day.displayOrder
-                            ) {
-                              saveDay(day, { displayOrder: n });
-                            }
-                          }}
-                          className={`${inputClass} w-20`}
-                        />
-                      </td>
-                      <td className="py-2">
-                        <button
-                          type="button"
-                          onClick={() => askDeleteDay(day)}
-                          className="min-h-[40px] rounded-lg border border-red-800/50 px-3 text-xs text-red-300 hover:bg-red-950/30"
+                  {combinedWeek.map((item) => {
+                    if (item.type === "match") {
+                      return (
+                        <tr
+                          key={item.matchId}
+                          className="border-b border-zinc-800/60 bg-zinc-900/50"
                         >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {days.length === 0 && (
+                          <td className="py-2 pr-3 text-zinc-200">{item.date}</td>
+                          <td className="py-2 pr-3 text-zinc-200">{item.mdTag}</td>
+                          <td className="py-2 pr-3">
+                            <span className="inline-flex min-h-[28px] items-center rounded-md border border-zinc-600 bg-zinc-800/70 px-2 text-[11px] font-medium uppercase tracking-wide text-zinc-200">
+                              {formatCombinedWeekKind(item)}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 text-zinc-500">—</td>
+                          <td className="py-2 text-xs text-zinc-500">
+                            Edit in Week
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const day = days.find((d) => d.id === item.trainingDayId);
+                    if (!day) return null;
+                    return (
+                      <tr
+                        key={`${day.id}-${dayFormEpoch}`}
+                        className="border-b border-zinc-800/60"
+                      >
+                        <td className="py-2 pr-3">
+                          <input
+                            type="date"
+                            defaultValue={day.date}
+                            onBlur={(e) => {
+                              if (e.target.value !== day.date) {
+                                saveDay(day, { date: e.target.value });
+                              }
+                            }}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="py-2 pr-3">
+                          <input
+                            defaultValue={day.mdTag}
+                            onBlur={(e) => {
+                              if (e.target.value.trim() !== day.mdTag) {
+                                saveDay(day, { mdTag: e.target.value.trim() });
+                              }
+                            }}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="py-2 pr-3">
+                          <span className="inline-flex min-h-[28px] items-center rounded-md border border-zinc-700 px-2 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+                            Training
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3">
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            defaultValue={day.displayOrder}
+                            onBlur={(e) => {
+                              const n = Number(e.target.value);
+                              if (
+                                Number.isInteger(n) &&
+                                n !== day.displayOrder
+                              ) {
+                                saveDay(day, { displayOrder: n });
+                              }
+                            }}
+                            className={`${inputClass} w-20`}
+                          />
+                        </td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => askDeleteDay(day)}
+                            className="min-h-[40px] rounded-lg border border-red-800/50 px-3 text-xs text-red-300 hover:bg-red-950/30"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {combinedWeek.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 text-zinc-500">
+                      <td colSpan={5} className="py-4 text-zinc-500">
                         No days yet — add a date and MD tag below.
                       </td>
                     </tr>
@@ -1931,7 +2052,35 @@ export function WeeklyPlannerView({
             )}
 
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {days.map((day) => {
+              {combinedWeek.map((item) => {
+                if (item.type === "match") {
+                  return (
+                    <div
+                      key={item.matchId}
+                      className="w-[260px] shrink-0 rounded-xl border border-zinc-600 bg-zinc-900/50 p-3"
+                    >
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-300">
+                        {formatCombinedWeekKind(item)}
+                      </p>
+                      <p className="font-medium text-white">
+                        {formatCombinedWeekMdDisplay(item)}
+                      </p>
+                      <p className="text-xs text-zinc-500">{item.date}</p>
+                      <div className="mt-3 space-y-2">
+                        {METRIC_KEYS.map((key) => (
+                          <div key={key}>
+                            <p className="text-xs text-zinc-500">
+                              {METRIC_LABEL[key]}
+                            </p>
+                            <p className="text-sm text-zinc-400">—</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                const day = days.find((d) => d.id === item.trainingDayId);
+                if (!day) return null;
                 const inputs = dailyPctInputs[day.id] ?? pctInputsFrom(null);
                 const parsed = parsePctInputs(inputs);
                 const best = snapshot
@@ -1953,6 +2102,9 @@ export function WeeklyPlannerView({
                     key={day.id}
                     className="w-[260px] shrink-0 rounded-xl border border-zinc-800 bg-zinc-950/40 p-3"
                   >
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                      Training
+                    </p>
                     <p className="font-medium text-white">{day.mdTag}</p>
                     <p className="text-xs text-zinc-500">{day.date}</p>
                     <div className="mt-3 space-y-2">
