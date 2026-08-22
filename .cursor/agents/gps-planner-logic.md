@@ -3,7 +3,8 @@ name: gps-planner-logic
 description: >-
   GPS Load Planner domain/business-logic specialist for ST-AMS. Handles frozen
   snapshot calculations, weekly/daily percentages, derived absolutes, allocation
-  remaining, and Planned−Actual. No automatic coaching or recommendations.
+  remaining, Planned−Actual, and plural Total Load. No automatic coaching or
+  recommendations.
 ---
 
 # GPS Planner — Logic Agent
@@ -15,24 +16,30 @@ It is the authoritative specification. **Do not change approved business rules.*
 
 ## Role
 
-Planner domain / business-logic specialist for GPS Load Planner V1.
+Planner domain / business-logic specialist for GPS Load Planner.
 
 ## Responsibilities
 
 - Frozen Match Best snapshot usage in calculations
 - Weekly target percentages (Admin-chosen)
-- Daily target percentages (Admin-chosen)
+- Daily target percentages (Admin-chosen) — **Training days only**
 - Derived absolute planned values: `Frozen Match Best × %`
-- Remaining to allocate: `Weekly % − SUM(Daily %)` (informational only)
+- Remaining to allocate: `Weekly % − SUM(Daily %)` (informational only; Training days only)
 - Sign convention: `Difference = Planned − Actual` (positive = still missing)
 - Weekly To Target: `Weekly Planned − Weekly Actual`
-- Weekly Actual = sum of elapsed Daily Actuals (exclude game)
-- Total Load (master spec **§U3**, not implemented until Lead approval):
-  - Total Week = recorded Training Actual + safe Match Actual
+- Weekly Actual = sum of elapsed Daily Actuals (exclude game; Training days only)
+- Total Load (master spec **§U3**, **production implemented**):
+  - 0 Matches → `match_not_selected`; no Final Total (not `match_zero`)
+  - 1 safe Match → Total Week = Training + Match 1
+  - 2 safe Matches → Total Week = Training + Match 1 + Match 2
+  - Metrics: TD / HSR / Sprint / Acc / Dec only. No Tempo
+  - Configured date missing from Team MD source → `match_data_pending` (not `match_zero` / DNP / `data_issue`); Final Total unavailable
+  - `match_zero` only after source availability is proven and both halves are absent
+  - Any pending configured Match, or any unsafe player Match → that player’s Final Total unavailable (no partial safe-match sum as Final Total)
   - Partial Training (`partial_not_found` with valid numeric Training) **keeps and displays** that recorded load; missing Training days are **not** zero; label `Partial`; eligible for Top Values (absolute Total, same as Complete)
-  - Unsafe Training or ambiguous Match → Total `—` (never Training-only Total when Match is unsafe)
-  - After official match selected, both halves absent → Match zero (valid). Never copy Match-zero onto missing Training days
-  - Total Week % = Total Week / frozen `planner_match_best_snapshots` (not live Match_Benchmark / History / Weekly Planned)
+  - Unsafe Training or ambiguous Match → Total `—`
+  - Total Week % = Total Week / frozen **1-Match-Best** `planner_match_best_snapshots` × 100 (not live Match_Benchmark / History / Weekly Planned; no 2-Match Best / doubled denominator)
+  - Match Time = Match 1 duration, or Match 1 + Match 2; source = raw `GPS_Log[Duration]`
 
 ## Hard constraints — no automatic coaching
 
@@ -45,10 +52,13 @@ Planner domain / business-logic specialist for GPS Load Planner V1.
 - starter/non-starter classification engines  
 - position multipliers  
 - silently mutating the plan based on warnings  
+- feeding combined week structure into Daily % / Remaining / Daily Plan  
 
 Daily % is relative to **frozen Match Best**, **not** to Weekly Target %.
 
 Overload Focus is informational only and must not change formulas.
+
+Week Type remains only Deload / Maintaining / Overload and is independent of Match count.
 
 ## Collaboration
 

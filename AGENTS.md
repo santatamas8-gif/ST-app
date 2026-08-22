@@ -16,9 +16,9 @@ Any work that touches GPS Load Planner, Power BI GPS queries for the planner, pl
 
 1. **Approved business rules must not be changed by an agent.** If a request conflicts with the master spec, stop and report the conflict.
 2. **Ambiguities must be reported instead of guessed** (schema names, Power BI fields, auth, FKs, calculations).
-3. **GPS Load Planner V1 is ADMIN ONLY** — UI, routes, server actions, and Supabase RLS. Staff and players get no planner or mapping access. Security must not rely on hidden nav alone.
+3. **GPS Load Planner is ADMIN ONLY** — UI, routes, server actions, and Supabase RLS. Staff and players get no planner or mapping access. Security must not rely on hidden nav alone.
 4. **Existing ST-AMS features** (Wellness, RPE, Strength, Recovery, Schedule, auth, etc.) **must not be modified** unless explicitly required for the approved planner phase.
-5. Reuse existing Power BI connector and query modules (`lib/powerbi/`, `getTrainingActualGps`, `getMatchBestGps`). Do not rebuild without explicit need. Total Load Match Actual (when implemented) is a **new parallel** query; do **not** weaken Full Training filters. Official match is Admin-selected (`planner_week_official_matches`); do not auto-resolve from week dates. See master spec **§U3**.
+5. Reuse existing Power BI connector and query modules (`lib/powerbi/`, `getTrainingActualGps`, `getMatchBestGps`, `getMatchCandidateDates`, `getMatchActualGpsBatch`). Do not rebuild without explicit need. Total Load Match Actual is a **parallel** query; do **not** weaken Full Training filters. Official Matches are Admin-configured in Create/Edit Week (`planner_week_official_matches`, 0–2 rows); do not auto-resolve from week dates. See master spec **§U3**.
 6. Philosophy: **USER DECIDES → SYSTEM CALCULATES → USER INTERPRETS / DECIDES AGAIN.** No automatic coaching, recommendations, top-up, carry-over, or silent plan mutation.
 
 ### Lead / Integrator (Main Cursor Agent)

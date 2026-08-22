@@ -1,10 +1,10 @@
-# ST-AMS GPS Load Planner — Master Specification (V1)
+# ST-AMS GPS Load Planner — Master Specification
 
 **Status:** Authoritative project specification  
-**Scope:** GPS Load Planner V1 only  
-**Last architecture lock:** GPS Load Planner Review → Total Load rules (spec lock; not implemented) on `/admin/planner`
+**Scope:** GPS Load Planner production architecture (Training planner + Two-Match Week V2)  
+**Last architecture lock:** `TWO-MATCH WEEK V2: PRODUCTION READY` (`c09958c`) on `/admin/planner`
 
-This document is the **single source of truth** for GPS Load Planner V1.  
+This document is the **single source of truth** for GPS Load Planner.  
 Any Cursor agent or human implementing planner work **must read this file first**.  
 Approved business rules in this document **must not be changed by an agent**.  
 If anything is ambiguous: **STOP and report** — do not invent silently.
@@ -40,7 +40,7 @@ Warnings must **never** silently modify the plan.
 
 ## B. Access control — FINAL DECISION (ADMIN ONLY)
 
-GPS Load Planner V1 is **ADMIN ONLY** for the **entire** feature.
+GPS Load Planner is **ADMIN ONLY** for the **entire** feature.
 
 This supersedes any earlier staff+admin planner suggestions.
 
@@ -274,7 +274,7 @@ Match_Benchmark
 
 ---
 
-## G. Planner metrics — V1 only
+## G. Planner metrics — locked
 
 The planner contains **ONLY:**
 
@@ -313,6 +313,8 @@ A planner week has conceptually:
 - `deload`  
 - `maintaining`  
 - `overload`  
+
+Number of official Matches (0 / 1 / 2) is **independent** of Week Type.  
 
 ### Overload focus
 
@@ -439,10 +441,43 @@ Rules:
 - one date once per week → `UNIQUE (week_id, date)`  
 - one display_order once per week → `UNIQUE (week_id, display_order)`  
 - day `date` must lie between week `start_date` and `end_date`  
-- do **NOT** make `(week_id, md_tag)` unique (future two-match compatibility)  
-- V1 remains single-match only  
+- do **NOT** make `(week_id, md_tag)` unique (two-match weeks may reuse MD tags)  
+- Training days **only** — Match rows are **not** stored here  
 
 Also: `UNIQUE (id, week_id)` to enable composite FKs from daily targets.
+
+Weekly Target, Daily Target, Remaining to Allocate, Weekly Review, Daily Review, and Daily Plan all use `planner_week_days` only. Match rows do not receive Daily Target %, planned absolutes, Remaining, Training completeness, Daily Review Training days, or Daily Plan targets.
+
+---
+
+## N2. Official matches and combined week structure
+
+A Planner week may have **0, 1, or 2** configured official Matches.
+
+| Store | Meaning |
+|---|---|
+| `planner_week_days` | Training days only |
+| `planner_week_official_matches` | Match identity / display metadata only (no GPS Actuals) |
+
+These remain **separate stores**. Combined weekly structure is **UI / read-model only** — do not persist the merged array, and do not feed it into Daily % / Remaining / write paths.
+
+**Create/Edit Week** is the **only** user-visible Match identity editor. Supports 0 / 1 / 2 Matches. Date and mdTag are typed manually. No Planned Match Date. No automatic fixture inference. No automatic MD1 / MD2 / M1+1 / M2-3 generation. Both matches may use `md_tag = MD`. Match 1 cannot be removed while Match 2 exists. Match 2 is deleted by row ID.
+
+The Planning week-days UI merges Training + Match rows **chronologically for display**. Example:
+
+```text
+18 Aug | MD-1 | Training
+19 Aug | MD   | Match 1
+20 Aug | MD+1 | Training
+22 Aug | MD-1 | Training
+23 Aug | MD   | Match 2
+```
+
+Stored mdTag is unchanged. Match cards show Match 1 / Match 2 context. Match rows have no TD/HSR/Sprint/Acc/Dec inputs, no planned absolutes, no Daily Target mutation, and no Daily Plan action.
+
+Same Planner week + same date **cannot** be both Training and Match. Protected by application validation and DB triggers (migration `045`). Match `gps_date` **may** fall outside `planner_weeks.start_date`..`end_date` (verified: W5 Training `2026-08-11`→`2026-08-14`, Match `2026-08-15`).
+
+Singular V1 compatibility APIs remain internally. New Create/Edit Week UI uses row-safe multi-match APIs. Legacy functions are **not** the current multi-match UI workflow. Do not delete them as a cleanup.
 
 ---
 
@@ -574,7 +609,7 @@ Top-level segmented control (only one visible at a time):
 
 **Review:** secondary segmented control `Weekly | Daily | Total Load`.
 
-**Weekly and Daily** behavior, loaders, calculations, compliance colors, and print remain **completely unchanged**. Total Load is a **new additional** Review tab (rules in **§U3**). It is **not implemented** until an explicit implementation phase.
+**Weekly and Daily** behavior, loaders, calculations, compliance colors, and print remain **Training-only** and **completely unchanged** by Match rows. Total Load is an additional Review tab (**§U3**, production implemented).
 
 - Week selector: any saved `planner_weeks` (including closed/historical)
 - Review population: players with a saved Weekly Target for that week
@@ -588,7 +623,7 @@ Top-level segmented control (only one visible at a time):
 - Missing / ambiguous / error Actual: never fake zeros; withhold Difference/To Target per existing domain
 - No new archive/history tables; no new sidebar route; no automatic coaching
 
-**Review UI state (session/page only):** Owned by `GpsLoadPlannerView` shell. Switching Planning ↔ Review preserves Review sub-tab (`Weekly` / `Daily` / `Total Load`), Review week, through-date, and Daily week-day selection. First open of Review may seed week from Planning; later switches do not overwrite Review selections. Intentional Review week change revalidates through-date for the new week range and replaces a stale Daily week-day with a valid day from the new week. Total Load official-match selection is persisted (see §U3), not session-only.
+**Review UI state (session/page only):** Owned by `GpsLoadPlannerView` shell. Switching Planning ↔ Review preserves Review sub-tab (`Weekly` / `Daily` / `Total Load`), Review week, through-date, and Daily week-day selection. First open of Review may seed week from Planning; later switches do not overwrite Review selections. Intentional Review week change revalidates through-date for the new week range and replaces a stale Daily week-day with a valid day from the new week. Official Match identity is persisted on `planner_week_official_matches` and edited only in Create/Edit Week (see §N2 / §U3). Total Load Match cards are **read-only**.
 
 **Weekly Review Power BI loading:** Day-batched Execute Queries (one call per included Week Day for all frozen names) with bounded transient retry. Do not treat day-batching as a business-rule change — 0/1/>1 row quality and completeness contracts are unchanged.
 
@@ -596,20 +631,20 @@ Top-level segmented control (only one visible at a time):
 
 ---
 
-## U3. Total Load (Review) — LOCKED RULES (not yet implemented)
+## U3. Total Load (Review) — PRODUCTION IMPLEMENTED
 
 Admin Review tab **Total Load**. Purpose: show recorded weekly external load.
 
 ```text
 Recorded Training Load
 +
-Recorded Match Load
+Recorded Match Load (0, 1, or 2 configured Matches)
 =
 Total Weekly Load
 ```
 
 Metrics only: TD, HSR (`Z5`), Sprint (`Z6`), Acc, Dec.  
-**Z4 / Tempo is OUT of Total Load V1.**
+**Z4 / Tempo is OUT of Total Load.**
 
 Do **not** change Planning, Weekly Review, Daily Review, Daily Plan, Training Actual queries, Matchday Report, `Match_Benchmark`, or `Match_Benchmark_History`.
 
@@ -636,7 +671,7 @@ Reuse existing Weekly Review Full Training source (`GPS_Log`, `Drill = "Full Tra
 **Partial Training** (`actualCompleteness = partial_not_found` **and** a valid numeric recorded Training Actual exists):
 
 - **KEEP** that recorded numeric Training Actual  
-- add valid Match Actual  
+- add valid Match Actual (all configured Matches must be safe)  
 - **show numeric Total Week and Total Week %**  
 - label quality **`Partial`**  
 - do **not** convert missing Training days to zero  
@@ -654,48 +689,70 @@ Example: player recorded Full Training only on two week days (MD-4 = 4,500 m, MD
 - Top Values eligibility = **NO**  
 - Do not invent values. Do not treat unsafe Training as zero.
 
-### U3.3 Official match selection (persisted)
+### U3.3 Official Match configuration (Create/Edit Week)
 
-Admin **explicitly** selects the official match for the Planner week.  
-Do **not** auto-resolve from `planner_weeks.start_date` / `end_date`.
+**Create/Edit Week** is the only user-visible Match identity editor. Total Load does **not** Change / Clear / pick a match date.
 
+A Planner week supports **0, 1, or 2** official Matches in `planner_week_official_matches` (see §N2 / §X). Persist identity / display metadata only. **Do not persist GPS Actual metrics.**
+
+Do **not** auto-resolve from `planner_weeks.start_date` / `end_date`.  
 Verified reason: W5 `end_date` = 2026-08-14; official Team match GPS date = 2026-08-15.
 
-V1: **one official match per Planner week.**
-
-Dedicated Admin-only table `planner_week_official_matches` (see §X). Persist identity / display metadata only. **Do not persist GPS Actual metrics.**
+Required per Match: `gps_date`, `md_tag` (manual).  
+Optional: `opponent`, `matchday`, `competition`.  
+Both matches may use `md_tag = MD`. Date distinguishes Match 1 / Match 2. No automatic MD1 / MD2.
 
 | Persisted | Role |
 |---|---|
 | `gps_date` | Runtime `GPS_Log[Date]` query key |
-| `opponent` | Frozen display at Admin save |
-| `matchday` | Frozen display at Admin save |
+| `match_order` | Slot 1 or 2 |
+| `md_tag` | Display / context (not unique; not a Power BI MD1/MD2) |
+| `opponent` | Frozen display at Admin save (nullable) |
+| `matchday` | Frozen display at Admin save (nullable) |
 | `competition` | Frozen display at Admin save (nullable) |
 
 Do **not** require `gps_date` inside the Planner week date range.  
 Do **not** auto-rewrite historical headers if Power BI `Match_Info` later changes.
 
-If **no official match is selected:** Total Week = `—`, Total Week % = `—`, Top Values excluded. Training may still exist as a component but must **not** be labelled Total Week.
+**0 configured Matches:** quality `match_not_selected`. Final Total Week / % unavailable. Training may still exist as a component but must **not** be labelled Total Week. This is **not** `match_zero`.
 
-### U3.4 Match Actual source
+### U3.4 Match source availability and Match Actual
 
-Live `GPS_Log`. Exact filters:
+Power BI semantic model is **unchanged**. Live `GPS_Log`. Exact filters:
 
 - `Player` IN frozen Planner Power BI names  
 - `Week ID` = that week’s `powerbi_week_id`  
-- `Date` = Admin-selected `gps_date`  
+- `Date` = that Match’s `gps_date`  
 - `MD_Tag` = `"MD"`  
 - `SessionType` = `"Team"`  
 - `Drill` IN `{ "1st Half", "2nd Half" }`  
 
-Exact half strings: `"1st Half"` and `"2nd Half"`.
+Exact half strings: `"1st Half"` and `"2nd Half"`. Date distinguishes Match 1 / Match 2.
 
 Do **not** use `SourceFile` as primary identity.  
 Do **not** use `SessionType = "Individual"`, `Drill = "Individual"`, or training drills `"First Half"` / `"Second Half"`.
 
-**One** raw-row Execute Queries batch for all frozen names for the selected match. Classify per Player × Half. No player-by-player query storm. New parallel Match Actual module — **do not weaken** the Full Training query.
+Maximum Match-path queries per Total Load load:
 
-Reuse: Power BI auth, `executePowerBiDaxQuery`, bounded retry, DAX escaping, raw-row safety.
+```text
+1 candidate / source-availability query
++
+0–2 Match Actual batch queries (only for dates proven in the Team MD candidate set)
+```
+
+No player-by-player query loop. Parallel Match Actual module — **do not weaken** the Full Training query.
+
+Reuse: Power BI auth, `executePowerBiDaxQuery`, bounded retry, DAX escaping, raw-row safety, existing `getMatchCandidateDates` + `getMatchActualGpsBatch`.
+
+**Configured Match date missing** from the Power BI Team MD candidate set:
+
+- quality = `match_data_pending`  
+- **not** `match_zero`, **not** DNP, **not** `data_issue`  
+- Final Total Week / % unavailable  
+- Available Training / other Match components may remain visible internally  
+- Do **not** label Training + Match 1 as final Total when Match 2 is pending  
+
+Candidate / batch failure → unsafe (`match_query_error` / equivalent). Final Total unavailable.
 
 ### U3.5 Match raw-row contract (per player, per half)
 
@@ -709,12 +766,11 @@ Reuse: Power BI auth, `executePowerBiDaxQuery`, bounded retry, DAX escaping, raw
 
 If **either** half is `>1`:
 
-- Match Actual = unsafe  
+- that Match is unsafe (`match_ambiguous`)  
 - Match Time = `—`  
-- Total Week = `—`  
-- Total Week % = `—`  
+- that player’s Final Total Week / % = `—`  
 - Top Values eligibility = **NO**  
-- Do **not** fall back to Training-only as Total Week  
+- Do **not** present a partial safe-match sum as Final Total  
 
 ### U3.6 Match aggregation and Match zero
 
@@ -726,16 +782,16 @@ Match Actual = valid 1st Half + valid 2nd Half
 
 Supported: 1st only; 2nd only; both; both absent.
 
-**After an official match is selected**, if both halves have 0 rows:
+`match_zero` is valid **only after** Match source availability is proven **and** the player has 0 first-half rows **and** 0 second-half rows:
 
 - Match quality = `match_zero`  
 - Match TD/HSR/Sprint/Acc/Dec = **0**  
 - Match Time = `0:00`  
-- This is a **valid** V1 Total Load state  
 
 Operational assumption: players who played are normally in the official STATSports **Team** match export. No manual Played list.
 
-**This Match-zero rule must NEVER be copied to missing Training days.**
+**This Match-zero rule must NEVER be copied to missing Training days.**  
+Pending source ≠ `match_zero`.
 
 ### U3.7 Match Time
 
@@ -743,38 +799,46 @@ Use raw `GPS_Log[Duration]` only.
 Do **not** use Matchday Report `[Session Duration (min)]`.
 
 ```text
-Match Time = valid 1st Half Duration + valid 2nd Half Duration
+1 Match:  Match Time = Match 1 duration
+2 Matches: Match Time = Match 1 duration + Match 2 duration
 ```
 
-Display as total **minutes:seconds** (not clock hours).  
-`match_zero` → `0:00`. Unsafe / unselected → `—`.
+Per-Match durations remain available internally. Display as total **minutes:seconds** (not clock hours).  
+`match_zero` → `0:00`. Unsafe / unselected / pending → `—`.
 
 Verified examples (reference only; do not hard-code in production): Doru `99:35`; Fabio `88:10`; Raul 2nd-only `34:41`.
 
 ### U3.8 Total Week and %
 
 ```text
-Total Week = Recorded Training Actual + Safe Match Actual
-Total Week % = Total Week / frozen Match Best × 100
+0 Matches:     Final Total unavailable (`match_not_selected`)
+1 safe Match:  Total Week = Training + Match 1
+2 safe Matches: Total Week = Training + Match 1 + Match 2
+Total Week % = Total Week / Frozen 1-Match-Best × 100
 ```
 
-Denominator: **`planner_match_best_snapshots`** for that week + player.  
+Denominator: **`planner_match_best_snapshots`** for that week + player (frozen **1-Match-Best**).  
+Even during two-match weeks: **no** 2-Match Best, **no** doubled denominator.
+
 **Not** current `Match_Benchmark`, **not** `Match_Benchmark_History`, **not** Weekly Planned, **not** Weekly Target %.
 
 Raw math unrounded; display rounding only. Frozen Best = 0 → Total Week % = `—`.
 
 Partial Training with valid numeric recorded load: use that recorded Training value; do not add artificial zero Training days.
 
+If any configured Match is pending, or any of that player’s Matches is unsafe: Final Total Week / % unavailable. Do not present Training + one safe Match as Final Total.
+
 ### U3.9 Total Load quality
 
 | Quality | Training | Match | Total / % | Top Values |
 |---|---|---|---|---|
-| **Complete** | `complete` | `match_ok` or `match_zero` | numeric | **eligible** |
-| **Partial** | `partial_not_found` with valid numeric Training | `match_ok` or `match_zero` | **numeric, labelled Partial** | **eligible** |
-| **Unsafe** | ambiguous / error / untrusted | **or** Match ambiguous / query error | `—` | no |
-| **Match not selected** | any | no official match | Total `—` (do not label Training as Total Week) | no |
+| **Complete** | `complete` | all configured Matches `match_ok` or `match_zero` | numeric | **eligible** |
+| **Partial** | `partial_not_found` with valid numeric Training | all configured Matches `match_ok` or `match_zero` | **numeric, labelled Partial** | **eligible** |
+| **Pending** | any | any configured Match `match_data_pending` | `—` | no |
+| **Unsafe** | ambiguous / error / untrusted | **or** any Match ambiguous / query error / data issue | `—` | no |
+| **Match not selected** | any | 0 configured Matches | Total `—` (do not label Training as Total Week) | no |
 
-Partial rows **display** recorded Total and **are eligible** for Top Values (same absolute ranking as Complete). Missing Training days still cannot prove non-participation vs missing GPS; the Admin decided Most cards must match the highest displayed Total. Unsafe / match-not-selected remain excluded.
+Partial rows **display** recorded Total and **are eligible** for Top Values (same absolute ranking as Complete). Missing Training days still cannot prove non-participation vs missing GPS; Most cards must match the highest displayed Total. Pending / unsafe / match-not-selected remain excluded.
 
 ### U3.10 No Total Load compliance colors
 
@@ -783,20 +847,22 @@ Weekly and Daily compliance colors remain unchanged.
 
 ### U3.11 Header, table, Top Values
 
-Header: Week; Training date range; Match date (may be after `end_date`); Weekly Plan %; frozen match info (`opponent`, `gps_date`, `matchday`, `competition`).
+Header: Week; Training date range; read-only Configured Matches (date / mdTag / opponent / matchday / competition / source status). Match identity is edited in Create/Edit Week, not on this tab.
 
 Weekly Plan % across the Total Load Weekly Target population, per metric: all same → that %; different → `Mixed`; none → `—`. **Do not average percentages.**
 
-Main table (V1): Player; Match Time; TD Total; TD %; HSR Total; HSR %; Sprint Total; Sprint %; Acc Total; Acc %; Dec Total; Dec %. No colors. Quality must be visible (`Complete` / `Partial` / data issue). Partial keeps numeric Total and %.
+Main table: Player; Match Time; TD Total; TD %; HSR Total; HSR %; Sprint Total; Sprint %; Acc Total; Acc %; Dec Total; Dec %. No colors. Quality must be visible (`Complete` / `Partial` / pending / data issue). Partial keeps numeric Total and %.
 
-Training / Match breakdown V1: tooltip / compact detail on Total (`Training: X` / `Match: Y` / `Total: Z`; Partial Training marked). No extra wide columns.
+Training / Match breakdown: tooltip / compact detail on Total. No extra wide columns. Do not label a pending two-match week as final `Training + Match 1`.
 
-Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute Total Week**, not %. Eligible quality `Complete` **and** `Partial` (numeric Total). Exclude unsafe Training, Match ambiguous, query errors, match not selected. `match_zero` remains eligible if Training is complete or Partial with numeric Total. Tie: higher absolute first; exact tie → player display name ascending.
+Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute Total Week**, not %. Eligible quality `Complete` **and** `Partial` when numeric Total exists. Exclude pending, unsafe, unavailable, match not selected. `match_zero` remains eligible if Training is complete or Partial with numeric Total. Tie: higher absolute first; exact tie → player display name ascending.
+
+Do **not** revert Top Values to Complete-only.
 
 ### U3.12 Security
 
-Total Load is **ADMIN ONLY** (UI, actions, RLS).  
-`planner_week_official_matches`: RLS enabled; SELECT/INSERT/UPDATE/DELETE for `public.current_user_role() = 'admin'` only. Existing Planner Admin guards. No service-role bypass. Staff and Player: **no** access.
+Total Load and Match CRUD are **ADMIN ONLY** (UI, actions, RLS).  
+`planner_week_official_matches`: RLS enabled; SELECT/INSERT/UPDATE/DELETE for `public.current_user_role() = 'admin'` only. Existing Planner Admin guards. No new service-role application CRUD. Staff and Player: **no** access.
 
 ---
 
@@ -882,11 +948,10 @@ Legend: Green — Within planned tolerance; Orange — Below planned load; Red �
 
 ---
 
-## W. V1 exclusions
+## W. Locked exclusions
 
-Do **not** implement in V1:
+Do **not** implement unless explicitly re-approved:
 
-- two-match-week logic  
 - season model  
 - team membership model  
 - position-specific targets  
@@ -896,10 +961,13 @@ Do **not** implement in V1:
 - Original vs Revised history  
 - previous-week planner targets  
 - automated injury-risk calculations  
+- 2-Match Best / doubled Total % denominator  
+
+Two-Match Week V2 (0 / 1 / 2 official Matches, combined week display, plural Total Load) is **production implemented**. Do not revert it to a single-match-only product.
 
 ---
 
-## X. Database design — approved direction
+## X. Database design — production schema
 
 ### Tables
 
@@ -907,17 +975,42 @@ Do **not** implement in V1:
 |---|---|
 | `player_external_mappings` | ST-AMS UUID ↔ Power BI player name |
 | `planner_weeks` | Microcycle header |
-| `planner_week_days` | Dynamic training days |
+| `planner_week_days` | Dynamic **Training** days only |
 | `planner_groups` | Week-scoped selection helpers |
 | `planner_group_members` | Group membership |
-| `planner_match_best_snapshots` | Frozen Match Best per week+player |
+| `planner_match_best_snapshots` | Frozen 1-Match-Best per week+player |
 | `planner_weekly_targets` | Player weekly % targets |
-| `planner_daily_targets` | Player daily % targets |
-| `planner_week_official_matches` | Admin-selected official match for Total Load (one per week; identity/display only — **no GPS Actuals**) |
+| `planner_daily_targets` | Player daily % targets (Training days only) |
+| `planner_week_official_matches` | Admin-configured official Matches (0–2 per week; identity/display only — **no GPS Actuals**) |
 
 All planner entities + mappings: **ADMIN ONLY** (RLS + app).
 
-`planner_week_official_matches` (locked direction, **migration not created in this documentation step**): `UNIQUE (week_id)`; FK `week_id` → `planner_weeks(id)` ON DELETE CASCADE; persist `gps_date`, `opponent`, `matchday`, optional `competition`, audit columns. **No CHECK** requiring `gps_date` inside the Planner week date range. Do not store GPS Actual metrics, Duration Actual, Match Best, or redundant Power BI Week ID.
+### Official Match constraints (current production)
+
+`planner_week_official_matches`:
+
+- `CHECK (match_order IN (1, 2))`  
+- `UNIQUE (week_id, match_order)`  
+- `UNIQUE (week_id, gps_date)`  
+- FK `week_id` → `planner_weeks(id)` ON DELETE CASCADE  
+- required: `gps_date`, `md_tag`  
+- optional: `opponent`, `matchday`, `competition`  
+- **No CHECK** requiring `gps_date` inside the Planner week date range  
+- Do not store GPS Actual metrics, Duration Actual, Match Best, or redundant Power BI Week ID  
+
+The old `UNIQUE (week_id)` one-row-per-week constraint was **removed by migration `045`**. It is **not** the current production constraint.
+
+### Official Match migration history (do not rewrite)
+
+| Migration | Role |
+|---|---|
+| `043_planner_week_official_matches.sql` | Initial official Match persistence (then one row per week) |
+| `044_planner_week_official_matches_v2_prep.sql` | Multi-match schema preparation (`match_order`, `md_tag`; still one row per week) |
+| `045_planner_week_official_matches_v2_enable.sql` | Enabled max 2 Match rows; dropped `UNIQUE (week_id)`; added Training/Match same-date collision triggers |
+
+### Collision protection
+
+Same Planner week + same date cannot be both Training (`planner_week_days`) and Match (`planner_week_official_matches`). Protected by application validation **and** DB triggers from `045`.
 
 ### Key integrity
 
@@ -925,16 +1018,15 @@ All planner entities + mappings: **ADMIN ONLY** (RLS + app).
 - Daily Target → weekly target composite FK **and** week_day+week composite FK  
 - Groups week-scoped; targets never FK groups  
 - Snapshot metric / name / source fields immutable  
-- Day date inside week range  
+- Training day date inside week range  
 - `UNIQUE (week_id, display_order)` on days  
-
-Detailed column-level design from the approved architecture discussion remains the migration blueprint; migration SQL is **not** created in this documentation phase.
+- Match date may be outside the Training week range  
 
 ---
 
 ## Y. Deletion safety
 
-Deleting a planner week may cascade: days → snapshots → weekly targets → daily targets → groups/members → official match selection (`planner_week_official_matches`).
+Deleting a planner week may cascade: days → snapshots → weekly targets → daily targets → groups/members → official Match rows (`planner_week_official_matches`).
 
 - Admin only  
 - Explicit application confirmation when implemented  
@@ -1011,9 +1103,18 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %
 - Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
 - Phase F Planning | Review on `/admin/planner`: Planning = existing Weekly Planner; Review = Weekly/Daily Planned vs Actual via existing progress/analysis domain (frozen historical Power BI identity; Actual not persisted)
-- Total Load Review rules locked (§U2 / §U3): recorded Training + Match; Admin-selected official match; Partial Training numeric load preserved; no Total Load colors — **not implemented yet**
+- Total Load Review **PRODUCTION IMPLEMENTED** (§U2 / §U3): recorded Training + 0–2 Matches; Create/Edit Week owns Match identity; Partial Training numeric load preserved; no Total Load colors; Top Values = Complete **and** Partial with numeric Total
 - Weekly Review Actual loading: day-batched Power BI Execute Queries (≈1 call per included Week Day) with bounded transient retry; preserves per-player 0/1/>1 row-quality and completeness/To Target contracts
 - Daily Review Actual loading: day-batched Power BI Execute Queries (≈1 call for the selected Week Day via `getPlannerDailyReviewAnalysis` / `getTrainingActualGpsBatchForDay`); preserves per-player 0/1/>1, Planned/Difference, and Daily compliance contracts
+- Migrations `043` / `044` / `045` applied to production (official Match persistence → prep → max 2 rows + collision triggers)
+- **`TWO-MATCH WEEK V2: PRODUCTION READY`**
+  - 0 / 1 / 2 Match weeks
+  - manual Match management in Create/Edit Week
+  - Training / Match storage separation
+  - combined week structure (UI / read-model only)
+  - plural Total Load + `match_data_pending` + source availability gate
+  - Training-only Weekly/Daily planning preserved
+  - Admin-only security
 
 ### Verification baseline (after Power BI query modules)
 
@@ -1021,12 +1122,10 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 
 ### Not implemented yet
 
-- Review → Total Load (rules locked in §U3; no runtime code / migration in this spec-lock step)
 - Carry-over / microdosing / automatic coaching  
 
 ### Next phase (requires explicit approval)
 
-Total Load implementation (after this spec lock).  
 Carry-over / microdosing / automatic coaching remain excluded unless explicitly re-approved.
 
 ---

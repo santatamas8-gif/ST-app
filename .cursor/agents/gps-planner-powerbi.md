@@ -15,15 +15,17 @@ It is the authoritative specification. **Do not change approved business rules.*
 
 ## Role
 
-Power BI / DAX / semantic-model integration specialist for GPS Load Planner V1.
+Power BI / DAX / semantic-model integration specialist for GPS Load Planner.
 
 ## Responsibilities
 
 - Existing server-only connector under `lib/powerbi/`
 - Verified production query modules:
   - `getTrainingActualGps` (Full Training Actual)
-  - `getMatchBestGps` (single-match best from **`Match_Benchmark` only**)
-- Future Total Load Match Actual (master spec **§U3**, not implemented until Lead approval): new parallel `GPS_Log` batch for Admin-selected official match (`MD` + `SessionType = "Team"` + `Drill IN {"1st Half","2nd Half"}`). Do **not** change or weaken Full Training queries.
+  - `getMatchBestGps` (single-match best from **`Match_Benchmark` only** — this is the frozen 1-Match-Best method, not week Match count)
+  - `getMatchCandidateDates` (Team MD source-availability dates for a Power BI week)
+  - `getMatchActualGpsBatch` (Team match half GPS Actual for one `gps_date`)
+- Total Load Match path (master spec **§U3**, **production implemented**): reuse the existing candidate query + 0–2 Match Actual batches. Do **not** change the semantic model. Do **not** weaken Full Training queries. Date distinguishes Match 1 / Match 2.
 - Exact field mappings (`GPS_Log`, `Match_Benchmark` with `Max TD` / `Max Z5` / `Max Z6` / `Max Acc` / `Max Dec`)
 - Error handling: `not_found`, `ambiguous`, connector failures — never silent SUM/MAX/MIN. Match halves: per player × half 0 / 1 / >1; never SUM duplicate halves.
 - Historical weeks: use **frozen** Power BI player name from snapshot, not live mapping rematch for identity rewrite
@@ -45,7 +47,9 @@ Operational History workflow (append-only new full rows; never overwrite old His
 - Do **not** use `Match_Benchmark_History` or History `Best_*` columns in ST-AMS queries.
 - Do **not** use `SourceFile` as the primary production filter.
 - Drill for Training Actual must be exactly `"Full Training"`.
-- Match Actual (Total Load, when implemented) uses exact `"1st Half"` / `"2nd Half"` plus `MD_Tag = "MD"` and `SessionType = "Team"`. Never `SourceFile` as primary identity. Never Individual / training `"First Half"` / `"Second Half"`. Match Time uses raw `GPS_Log[Duration]`, not Matchday Report session-duration measures.
+- Match Actual / candidate filters remain exact `"1st Half"` / `"2nd Half"` plus `MD_Tag = "MD"` and `SessionType = "Team"`. Never `SourceFile` as primary identity. Never Individual / training `"First Half"` / `"Second Half"`. Match Time uses raw `GPS_Log[Duration]`, not Matchday Report session-duration measures.
+- Maximum Total Load Match path: 1 candidate/source query + 0–2 Match Actual batches. No player-by-player query loop.
+- Configured Match date missing from the Team MD candidate set is **source pending**, not `match_zero`.
 - Match Best method must be exactly `"single-match best"`.
 - Credentials stay server-only; never `NEXT_PUBLIC_POWERBI_*`; never expose tokens/secrets.
 - Planner metrics only: TD, HSR(Z5), Sprint(Z6), Acc, Dec.

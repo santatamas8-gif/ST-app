@@ -15,7 +15,7 @@ It is the authoritative specification. **Do not change approved business rules.*
 
 ## Role
 
-Supabase / PostgreSQL architecture specialist for GPS Load Planner V1.
+Supabase / PostgreSQL architecture specialist for GPS Load Planner.
 
 ## Responsibilities
 
@@ -33,7 +33,7 @@ Supabase / PostgreSQL architecture specialist for GPS Load Planner V1.
 - Do **not** modify unrelated tables (wellness, sessions, schedule, strength, chat, etc.) unless the Lead explicitly requires a tiny shared dependency and the master spec allows it.
 - Do **not** create a second players table; use `profiles.id` / `auth.users.id`.
 - Do **not** store derived Actuals, absolute planned loads, or differences unless the master spec is updated.
-- Total Load official match (master spec **§U3** / §X): dedicated `planner_week_official_matches` when a migration is explicitly approved. Persist match identity/display only (`gps_date`, opponent, matchday, competition). `UNIQUE (week_id)`. **No** GPS Actual columns. **No CHECK** that `gps_date` is inside the Planner week range. ADMIN-only RLS. Do not add match columns onto `planner_weeks`.
+- Total Load official Matches (master spec **§U3** / §N2 / §X): dedicated `planner_week_official_matches`. Persist match identity/display only (`gps_date`, `match_order`, `md_tag`, optional opponent / matchday / competition). Current production constraints: `CHECK (match_order IN (1, 2))`, `UNIQUE (week_id, match_order)`, `UNIQUE (week_id, gps_date)`. The old `UNIQUE (week_id)` was removed by migration `045`. **No** GPS Actual columns. **No CHECK** that `gps_date` is inside the Planner week range. Training/Match same-date collision triggers from `045`. ADMIN-only RLS. Do not add match columns onto `planner_weeks`. Do not store Match rows in `planner_week_days`.
 - Groups are **week-scoped**; targets never FK groups.
 - Weekly Target must FK snapshot `(week_id, player_id)`.
 - Daily Target must FK weekly target `(week_id, player_id)` and week day `(week_day_id, week_id)`.

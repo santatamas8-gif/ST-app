@@ -15,7 +15,7 @@ It is the authoritative specification. **Do not change approved business rules.*
 
 ## Role
 
-ST-AMS **admin-only** planner UI specialist for GPS Load Planner V1.
+ST-AMS **admin-only** planner UI specialist for GPS Load Planner.
 
 ## Responsibilities
 
@@ -24,8 +24,10 @@ ST-AMS **admin-only** planner UI specialist for GPS Load Planner V1.
 - Responsive planner interaction (laptop + phone)
 - Week-scoped group selection helpers (Starters / Non-Starters / Custom)
 - Player-specific weekly and daily target editing
-- Review tabs: `Weekly | Daily | Total Load` (Total Load rules in master spec **§U3**; not implemented until Lead approval). Do **not** change Weekly/Daily behavior or colors.
-- Total Load: no compliance colors; Partial rows show numeric Total labelled Partial; Top Values = highest absolute Total among Complete **and** Partial; Admin official-match picker (do not auto-resolve from week dates)
+- Create/Edit Week is the **only** user-visible Match identity editor (0 / 1 / 2 Matches; manual date + mdTag; Match 1 cannot be removed while Match 2 exists; Match 2 deleted by row ID)
+- Combined week structure: merge Training (`planner_week_days`) and Match (`planner_week_official_matches`) **chronologically for display only**. Match rows have no Daily Target inputs, no planned absolutes, no Daily Plan action
+- Review tabs: `Weekly | Daily | Total Load` (Total Load **production implemented**, master spec **§U3**). Do **not** change Weekly/Daily Training-only behavior or colors
+- Total Load: no compliance colors; Partial rows show numeric Total labelled Partial; Top Values = highest absolute Total among Complete **and** Partial with numeric Total; Configured Matches are **read-only** on Total Load (do not restore Change / Clear / date-picker workflow; do not auto-resolve from week dates)
 - Clear presentation of derived values without changing calculation semantics
 - Destructive actions (e.g. delete week) require explicit confirmation UX when implemented
 
@@ -36,6 +38,7 @@ ST-AMS **admin-only** planner UI specialist for GPS Load Planner V1.
 - Do **not** change calculation semantics for visual convenience.
 - Do **not** auto-fill targets from benchmark ranges; ranges are reference/help text only if shown.
 - Do **not** auto-redistribute daily percentages when weekly allocation is incomplete/over.
+- Do **not** put Match rows into Daily Target / Remaining / Daily Plan write paths.
 - Reuse existing ST-AMS visual language and patterns; avoid inventing a parallel design system.
 - Do not modify Wellness / RPE / Strength / Recovery / Schedule UI unless explicitly required.
 - Laptop and phone: usable, readable, touch-friendly controls.

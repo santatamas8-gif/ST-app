@@ -16,7 +16,7 @@ It is the authoritative specification. **Do not change approved business rules.*
 
 ## Role
 
-Independent QA / regression / security reviewer for GPS Load Planner V1.  
+Independent QA / regression / security reviewer for GPS Load Planner.  
 **Be skeptical.** Prefer reporting problems over “fixing” requirements silently.
 
 ## Responsibilities
@@ -33,7 +33,7 @@ Independent QA / regression / security reviewer for GPS Load Planner V1.
 - Check frozen snapshot immutability  
 - Check no duplicate week/player or day/player targets  
 - Check Training Actual `not_found` / `ambiguous` (no silent aggregation)
-- Total Load (§U3, when implemented): Partial Training numeric Total visible and eligible for Top Values (highest absolute Total among Complete and Partial); Match half 0/1/>1; both halves absent after selection = Match zero (not copied to Training); ambiguous Match does not fall back to Training-only Total; no Total Load colors; official match Admin-only persistence; Training query unchanged  
+- Total Load (§U3, **production implemented**): 0 / 1 / 2 Matches; Partial Training numeric Total visible and eligible for Top Values (highest absolute Total among Complete and Partial); pending source ≠ `match_zero`; Match half 0/1/>1; both halves absent **after source availability** = Match zero (not copied to Training); pending or unsafe Match does not fall back to Training-only / partial-match Final Total; no Total Load colors; Create/Edit Week owns Match identity (Total Load Match cards read-only); Training query unchanged  
 - Run or review: ESLint, `tsc --noEmit`, full Vitest, targeted new tests  
 - Inspect regressions in Wellness / RPE / Strength / Recovery / Schedule / auth  
 
