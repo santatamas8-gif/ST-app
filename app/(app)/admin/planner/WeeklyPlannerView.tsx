@@ -44,15 +44,18 @@ import {
   createPlannerGroupAction,
   createPlannerWeekAction,
   createPlannerWeekDayAction,
+  createPlannerWeekOfficialMatchAction,
   createPlannerWeeklyTargetAction,
   deletePlannerDailyTargetAction,
   deletePlannerGroupAction,
   deletePlannerWeekAction,
   deletePlannerWeekDayAction,
+  deletePlannerWeekOfficialMatchByIdAction,
   deletePlannerWeeklyTargetAction,
   getPlannerMatchBestSnapshotAction,
   getPlannerWeeklyProgressAction,
   getPlannerWeeklyTargetAction,
+  getPlannerWeekOfficialMatchesAction,
   listPlannerDailyTargetsForPlayerWeekAction,
   listPlannerGroupMembersAction,
   listPlannerGroupsAction,
@@ -63,6 +66,7 @@ import {
   updatePlannerGroupAction,
   updatePlannerWeekAction,
   updatePlannerWeekDayAction,
+  updatePlannerWeekOfficialMatchByIdAction,
   updatePlannerWeeklyTargetAction,
 } from "@/app/actions/gpsPlanner";
 import type {
@@ -74,11 +78,24 @@ import type {
   PlannerMatchBestSnapshot,
   PlannerUiPlayer,
   PlannerWeekDayRow,
+  PlannerWeekOfficialMatch,
   PlannerWeekRow,
   PlannerWeeklyProgressResult,
   PlannerWeeklyTargetView,
 } from "@/lib/gpsPlanner/types";
 import { PlayerMappingModal } from "./PlayerMappingModal";
+import { PlannerWeekMatchesFields } from "./PlannerWeekMatchesFields";
+import {
+  buildWeekMatchPersistPlan,
+  canRemoveConfiguredMatch,
+  draftFromStoredMatch,
+  emptyMatchDraft,
+  optionalMatchText,
+  REMOVE_MATCH_1_BLOCKED_MESSAGE,
+  TRAINING_MATCH_DATE_COLLISION_MESSAGE,
+  validateWeekMatchDrafts,
+  type WeekMatchDraft,
+} from "@/lib/gpsPlanner/weekMatchForm";
 
 const METRIC_KEYS = ["td", "hsr", "sprint", "acc", "dec"] as const;
 type MetricKey = (typeof METRIC_KEYS)[number];
@@ -222,6 +239,10 @@ export function WeeklyPlannerView({
   const selectedWeek = weeks.find((w) => w.id === weekId) ?? null;
 
   const [days, setDays] = useState<PlannerWeekDayRow[]>([]);
+  const [officialMatches, setOfficialMatches] = useState<
+    PlannerWeekOfficialMatch[]
+  >([]);
+  const [matchDrafts, setMatchDrafts] = useState<WeekMatchDraft[]>([]);
   const [groups, setGroups] = useState<PlannerGroupRow[]>([]);
   const [groupMembers, setGroupMembers] = useState<
     Record<string, PlannerGroupMemberRow[]>
@@ -309,16 +330,20 @@ export function WeeklyPlannerView({
   const loadWeekScoped = useCallback(async (id: string) => {
     if (!id) {
       setDays([]);
+      setOfficialMatches([]);
       setGroups([]);
       setGroupMembers({});
       return;
     }
-    const [dRes, gRes] = await Promise.all([
+    const [dRes, gRes, mRes] = await Promise.all([
       listPlannerWeekDaysAction(id),
       listPlannerGroupsAction(id),
+      getPlannerWeekOfficialMatchesAction(id),
     ]);
     if (dRes.ok) setDays(dRes.data);
     else setError(errText(dRes.error.code, dRes.error.message));
+    if (mRes.ok) setOfficialMatches(mRes.data);
+    else setOfficialMatches([]);
     if (gRes.ok) {
       setGroups(gRes.data);
       const memberMap: Record<string, PlannerGroupMemberRow[]> = {};
@@ -493,6 +518,7 @@ export function WeeklyPlannerView({
       overloadFocus: [],
       status: "draft",
     });
+    setMatchDrafts([]);
     setShowWeekForm(true);
   }
 
@@ -507,6 +533,7 @@ export function WeeklyPlannerView({
       overloadFocus: [...selectedWeek.overloadFocus],
       status: selectedWeek.status,
     });
+    setMatchDrafts(officialMatches.map(draftFromStoredMatch));
     setShowWeekForm(true);
   }
 
@@ -520,9 +547,91 @@ export function WeeklyPlannerView({
     }));
   }
 
+  function matchInputFromDraft(draft: WeekMatchDraft) {
+    return {
+      matchOrder: draft.matchOrder,
+      gpsDate: draft.gpsDate.trim(),
+      mdTag: draft.mdTag.trim(),
+      opponent: optionalMatchText(draft.opponent),
+      matchday: optionalMatchText(draft.matchday),
+      competition: optionalMatchText(draft.competition),
+    };
+  }
+
+  async function persistMatchDrafts(weekIdToSave: string): Promise<string | null> {
+    const plan = buildWeekMatchPersistPlan(matchDrafts);
+    for (const draft of plan.update) {
+      if (!draft.id) continue;
+      const res = await updatePlannerWeekOfficialMatchByIdAction({
+        id: draft.id,
+        weekId: weekIdToSave,
+        ...matchInputFromDraft(draft),
+      });
+      if (!res.ok) {
+        return `Match ${draft.matchOrder} was not saved. ${errText(res.error.code, res.error.message)}`;
+      }
+    }
+    for (const draft of plan.create) {
+      const res = await createPlannerWeekOfficialMatchAction({
+        weekId: weekIdToSave,
+        ...matchInputFromDraft(draft),
+      });
+      if (!res.ok) {
+        return `Match ${draft.matchOrder} was not saved. ${errText(res.error.code, res.error.message)}`;
+      }
+    }
+    return null;
+  }
+
+  function addMatchDraft() {
+    setMatchDrafts((prev) => {
+      if (prev.length >= 2) return prev;
+      const nextOrder: 1 | 2 = prev.some((d) => d.matchOrder === 1) ? 2 : 1;
+      if (prev.some((d) => d.matchOrder === nextOrder)) return prev;
+      return [...prev, emptyMatchDraft(nextOrder)];
+    });
+  }
+
+  function askRemoveMatchDraft(draft: WeekMatchDraft) {
+    if (!canRemoveConfiguredMatch(matchDrafts, draft.matchOrder)) {
+      setError(REMOVE_MATCH_1_BLOCKED_MESSAGE);
+      return;
+    }
+    if (!draft.id) {
+      setMatchDrafts((prev) =>
+        prev.filter((item) => item.matchOrder !== draft.matchOrder)
+      );
+      return;
+    }
+    if (!selectedWeek) return;
+    setConfirm({
+      title: `Remove Match ${draft.matchOrder}?`,
+      body: `Remove Match ${draft.matchOrder}${draft.gpsDate ? ` (${draft.gpsDate})` : ""} from this week?`,
+      run: async () => {
+        const res = await deletePlannerWeekOfficialMatchByIdAction({
+          id: draft.id!,
+          weekId: selectedWeek.id,
+        });
+        if (!res.ok) {
+          setError(errText(res.error.code, res.error.message));
+          return;
+        }
+        setMatchDrafts((prev) => prev.filter((item) => item.id !== draft.id));
+        setFlash(`Match ${draft.matchOrder} removed.`);
+        await loadWeekScoped(selectedWeek.id);
+      },
+    });
+  }
+
   function saveWeekForm() {
     setError(null);
     setFlash(null);
+    const trainingDates = editingWeek ? days.map((day) => day.date) : [];
+    const matchError = validateWeekMatchDrafts(matchDrafts, trainingDates);
+    if (matchError) {
+      setError(errText(matchError.code, matchError.message));
+      return;
+    }
     startTransition(async () => {
       const focus =
         weekForm.weekType === "overload" ? weekForm.overloadFocus : [];
@@ -540,6 +649,12 @@ export function WeeklyPlannerView({
           setError(errText(res.error.code, res.error.message));
           return;
         }
+        const matchSaveError = await persistMatchDrafts(selectedWeek.id);
+        if (matchSaveError) {
+          setError(`Week updated, but ${matchSaveError}`);
+          await loadWeekScoped(selectedWeek.id);
+          return;
+        }
         setFlash("Week updated.");
       } else {
         const res = await createPlannerWeekAction({
@@ -555,10 +670,19 @@ export function WeeklyPlannerView({
           return;
         }
         setWeekId(res.data.id);
+        const matchSaveError = await persistMatchDrafts(res.data.id);
+        if (matchSaveError) {
+          setError(`Week created, but ${matchSaveError}`);
+          setShowWeekForm(false);
+          await refreshWeeks();
+          await loadWeekScoped(res.data.id);
+          return;
+        }
         setFlash("Week created.");
       }
       setShowWeekForm(false);
       await refreshWeeks();
+      if (editingWeek && selectedWeek) await loadWeekScoped(selectedWeek.id);
     });
   }
 
@@ -590,6 +714,13 @@ export function WeeklyPlannerView({
     if (!weekId) return;
     const displayOrder = Number(dayForm.displayOrder);
     setError(null);
+    if (
+      officialMatches.some((match) => match.gpsDate === dayForm.date) ||
+      matchDrafts.some((draft) => draft.gpsDate === dayForm.date)
+    ) {
+      setError(TRAINING_MATCH_DATE_COLLISION_MESSAGE);
+      return;
+    }
     startTransition(async () => {
       const res = await createPlannerWeekDayAction({
         weekId,
@@ -627,6 +758,15 @@ export function WeeklyPlannerView({
   }
 
   function saveDay(day: PlannerWeekDayRow, patch: Partial<PlannerWeekDayRow>) {
+    const nextDate = patch.date ?? day.date;
+    if (
+      nextDate !== day.date &&
+      officialMatches.some((match) => match.gpsDate === nextDate)
+    ) {
+      setError(TRAINING_MATCH_DATE_COLLISION_MESSAGE);
+      setDayFormEpoch((n) => n + 1);
+      return;
+    }
     startTransition(async () => {
       const res = await updatePlannerWeekDayAction({
         dayId: day.id,
@@ -1198,6 +1338,12 @@ export function WeeklyPlannerView({
                 ))}
               </div>
             </div>
+            <PlannerWeekMatchesFields
+              drafts={matchDrafts}
+              onChange={setMatchDrafts}
+              onRemove={askRemoveMatchDraft}
+              onAdd={addMatchDraft}
+            />
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"

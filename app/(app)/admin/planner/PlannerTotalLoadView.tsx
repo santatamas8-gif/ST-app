@@ -1,20 +1,14 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { RefreshCw, X } from "lucide-react";
-import {
-  deletePlannerWeekOfficialMatchAction,
-  getPlannerTotalLoadAction,
-  listPlannerMatchCandidatesAction,
-  setPlannerWeekOfficialMatchAction,
-} from "@/app/actions/gpsPlanner";
+import { getPlannerTotalLoadAction } from "@/app/actions/gpsPlanner";
 import type {
   DailyPlanPctSummary,
-  PlannerMatchCandidate,
   PlannerUiPlayer,
   PlannerWeekRow,
 } from "@/lib/gpsPlanner/types";
 import type {
+  TotalLoadOfficialMatchItem,
   TotalLoadResult,
   TotalLoadTopValue,
 } from "@/lib/gpsPlanner/totalLoadAggregation";
@@ -23,6 +17,7 @@ import {
   formatCompactIsoDate,
   formatMatchDurationSeconds,
   formatMatchTimeMinutes,
+  formatTotalLoadMatchSourceStatus,
   formatTotalLoadMetricBreakdown,
   formatTotalLoadPercent,
   formatWeeklyPlanSharedPct,
@@ -66,57 +61,6 @@ const TOP_CARDS: {
   { key: "accelerations", title: "Acc" },
   { key: "decelerations", title: "Dec" },
 ];
-
-function ConfirmDialog({
-  open,
-  title,
-  body,
-  error,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-  busy,
-}: {
-  open: boolean;
-  title: string;
-  body: string;
-  error?: string | null;
-  confirmLabel: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-  busy: boolean;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-      <div className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-5 shadow-xl">
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
-        <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">{body}</p>
-        {error ? (
-          <p className="mt-3 text-sm text-zinc-200">{error}</p>
-        ) : null}
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="min-h-[44px] rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={busy}
-            className="min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-          >
-            {busy ? "Working…" : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const WEEKLY_PLAN_METRICS: {
   key: keyof DailyPlanPctSummary;
@@ -225,23 +169,29 @@ function PlayerCell({
   );
 }
 
+function ConfiguredMatchStatus({ match }: { match: TotalLoadOfficialMatchItem }) {
+  const gps = formatTotalLoadMatchSourceStatus(match.sourceStatus);
+  return (
+    <div className="min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        Match {match.matchOrder}
+      </p>
+      <p className="mt-0.5 font-medium text-zinc-900">
+        {formatCompactIsoDate(match.gpsDate)}
+      </p>
+      <p className="text-zinc-600">{match.mdTag}</p>
+      {match.opponent ? (
+        <p className="text-zinc-500">vs {match.opponent}</p>
+      ) : null}
+      {gps ? <p className="mt-1 text-zinc-500">{gps}</p> : null}
+    </div>
+  );
+}
+
 export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   const [result, setResult] = useState<TotalLoadResult | null>(null);
-  const [candidates, setCandidates] = useState<PlannerMatchCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [candidateError, setCandidateError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const [changing, setChanging] = useState(false);
-  const [draftGpsDate, setDraftGpsDate] = useState("");
-  const [opponent, setOpponent] = useState("");
-  const [matchday, setMatchday] = useState("");
-  const [competition, setCompetition] = useState("");
-
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [confirmBusy, setConfirmBusy] = useState(false);
   const [sortField, setSortField] = useState<MetricCol["field"] | null>(null);
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
@@ -251,57 +201,13 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
     return m;
   }, [players]);
 
-  async function loadWeekData() {
-    setLoading(true);
-    setError(null);
-    setCandidateError(null);
-    setResult(null);
-    try {
-      const [totalRes, candidateRes] = await Promise.all([
-        getPlannerTotalLoadAction(week.id),
-        listPlannerMatchCandidatesAction(week.id),
-      ]);
-      if (!totalRes.ok) {
-        setError(
-          plannerErrorMessage(totalRes.error.code, totalRes.error.message)
-        );
-        setResult(null);
-      } else {
-        setResult(totalRes.data);
-        if (!totalRes.data.officialMatch.selected) {
-          setChanging(true);
-        } else {
-          setChanging(false);
-          setDraftGpsDate(totalRes.data.officialMatch.gpsDate ?? "");
-          setOpponent(totalRes.data.officialMatch.opponent ?? "");
-          setMatchday(totalRes.data.officialMatch.matchday ?? "");
-          setCompetition(totalRes.data.officialMatch.competition ?? "");
-        }
-      }
-      if (!candidateRes.ok) {
-        setCandidateError(
-          plannerErrorMessage(candidateRes.error.code, candidateRes.error.message)
-        );
-        setCandidates([]);
-      } else {
-        setCandidates(candidateRes.data);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setResult(null);
     setError(null);
-    setSaveError(null);
     void (async () => {
-      const [totalRes, candidateRes] = await Promise.all([
-        getPlannerTotalLoadAction(week.id),
-        listPlannerMatchCandidatesAction(week.id),
-      ]);
+      const totalRes = await getPlannerTotalLoadAction(week.id);
       if (cancelled) return;
       if (!totalRes.ok) {
         setError(
@@ -310,28 +216,6 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
         setResult(null);
       } else {
         setResult(totalRes.data);
-        if (!totalRes.data.officialMatch.selected) {
-          setChanging(true);
-          setDraftGpsDate("");
-          setOpponent("");
-          setMatchday("");
-          setCompetition("");
-        } else {
-          setChanging(false);
-          setDraftGpsDate(totalRes.data.officialMatch.gpsDate ?? "");
-          setOpponent(totalRes.data.officialMatch.opponent ?? "");
-          setMatchday(totalRes.data.officialMatch.matchday ?? "");
-          setCompetition(totalRes.data.officialMatch.competition ?? "");
-        }
-      }
-      if (!candidateRes.ok) {
-        setCandidateError(
-          plannerErrorMessage(candidateRes.error.code, candidateRes.error.message)
-        );
-        setCandidates([]);
-      } else {
-        setCandidateError(null);
-        setCandidates(candidateRes.data);
       }
       setLoading(false);
     })();
@@ -339,65 +223,6 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
       cancelled = true;
     };
   }, [week.id]);
-
-  function selectCandidate(gpsDate: string) {
-    setDraftGpsDate(gpsDate);
-    setSaveError(null);
-  }
-
-  async function saveOfficialMatch() {
-    if ((result?.officialMatches.length ?? 0) > 1) {
-      setSaveError(
-        "This week has two official matches. Match changes are disabled here."
-      );
-      return;
-    }
-    if (!draftGpsDate || !opponent.trim() || !matchday.trim()) {
-      setSaveError("GPS date, opponent, and matchday are required.");
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-    const res = await setPlannerWeekOfficialMatchAction({
-      weekId: week.id,
-      gpsDate: draftGpsDate,
-      opponent: opponent.trim(),
-      matchday: matchday.trim(),
-      competition: competition.trim() || null,
-    });
-    setSaving(false);
-    if (!res.ok) {
-      setSaveError(plannerErrorMessage(res.error.code, res.error.message));
-      return;
-    }
-    setChanging(false);
-    await loadWeekData();
-  }
-
-  async function clearOfficialMatch() {
-    if ((result?.officialMatches.length ?? 0) > 1) {
-      setConfirmBusy(false);
-      setSaveError(
-        "This week has two official matches. Match changes are disabled here."
-      );
-      return;
-    }
-    setConfirmBusy(true);
-    setSaveError(null);
-    const res = await deletePlannerWeekOfficialMatchAction(week.id);
-    setConfirmBusy(false);
-    if (!res.ok) {
-      setSaveError(plannerErrorMessage(res.error.code, res.error.message));
-      return;
-    }
-    setConfirmClear(false);
-    setDraftGpsDate("");
-    setOpponent("");
-    setMatchday("");
-    setCompetition("");
-    setChanging(true);
-    await loadWeekData();
-  }
 
   function sortByMost(field: MetricCol["field"]) {
     setSortField(field);
@@ -424,10 +249,8 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
     return sortTotalLoadRowsByTotal(result.rows, sortField, sortDir);
   }, [result, sortField, sortDir]);
 
-  const official = result?.officialMatch;
   const officialMatches = result?.officialMatches ?? [];
-  const pluralMatches = officialMatches.length > 1;
-  const matchSelected = official?.selected === true;
+  const matchSelected = officialMatches.length > 0;
   const showTotals = matchSelected && !loading && result != null;
   const emptyTargets = result != null && result.rows.length === 0;
   const matchUnavailable =
@@ -436,61 +259,17 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
   const matchPending =
     showTotals &&
     result.rows.some((row) => row.quality === "match_data_pending");
-  const canSave =
-    !pluralMatches &&
-    draftGpsDate.length > 0 &&
-    opponent.trim().length > 0 &&
-    matchday.trim().length > 0 &&
-    !saving;
 
   return (
     <div className="no-print space-y-3">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">{weekControl}</div>
-          {!loading && matchSelected && official && !pluralMatches ? (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setChanging(true);
-                  setSaveError(null);
-                }}
-                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800"
-              >
-                <RefreshCw className="size-3.5" aria-hidden />
-                Change match
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSaveError(null);
-                  setConfirmClear(true);
-                }}
-                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-zinc-700 bg-transparent px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-900"
-              >
-                <X className="size-3.5" aria-hidden />
-                Clear match
-              </button>
-            </div>
-          ) : null}
         </div>
-        {!loading && matchSelected && official ? (
+        {!loading && result ? (
           <p className="text-[11px] leading-relaxed text-zinc-500">
             Training: {formatCompactDateRange(week.startDate, week.endDate)}
-            <span className="mx-1.5 text-zinc-600">·</span>
-            Match:{" "}
-            {pluralMatches
-              ? officialMatches
-                  .map((match) => formatCompactIsoDate(match.gpsDate))
-                  .join(" · ")
-              : formatCompactIsoDate(official.gpsDate ?? "")}
-            {official.opponent && !pluralMatches ? (
-              <span className="text-zinc-500"> vs {official.opponent}</span>
-            ) : null}
-            {result ? (
-              <WeeklyPlanStrip summary={result.weeklyPlanSummary} />
-            ) : null}
+            <WeeklyPlanStrip summary={result.weeklyPlanSummary} />
           </p>
         ) : null}
       </div>
@@ -505,130 +284,24 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
         </p>
       ) : null}
 
-      {!loading && !matchSelected ? (
-        <div className="rounded-lg border border-zinc-200 bg-white px-4 py-4 shadow-sm">
-          <p className="text-base font-medium text-zinc-900">
-            Select the official match to calculate Total Load.
+      {!loading ? (
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+            Configured Matches
           </p>
-          <p className="mt-1 text-sm text-zinc-500">
-            The match date is chosen by Admin. It does not have to fall inside
-            the Training date range.
-          </p>
-        </div>
-      ) : null}
-
-      {!loading && changing && !pluralMatches ? (
-        <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-medium text-zinc-800">Official match</p>
-          {candidateError ? (
-            <p className="text-sm text-zinc-500">{candidateError}</p>
-          ) : candidates.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No Team match GPS dates found for this Power BI week.
+          {officialMatches.length === 0 ? (
+            <p className="rounded-lg border border-zinc-200 bg-white px-4 py-4 text-sm text-zinc-600 shadow-sm">
+              No configured matches. Add them in Create/Edit Week. Total Load is
+              unavailable until a Match is configured.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {candidates.map((c) => {
-                const selected = draftGpsDate === c.gpsDate;
-                return (
-                  <button
-                    key={c.gpsDate}
-                    type="button"
-                    onClick={() => selectCandidate(c.gpsDate)}
-                    className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm ${
-                      selected
-                        ? "border-zinc-900 bg-zinc-900 text-white"
-                        : "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50"
-                    }`}
-                  >
-                    <span className="font-medium">
-                      {formatCompactIsoDate(c.gpsDate)}
-                    </span>
-                    <span className="ml-2 text-xs opacity-80">
-                      {c.distinctPlayerCount} players · {c.rawRowCount} rows
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {officialMatches.map((match) => (
+                <ConfiguredMatchStatus key={match.matchId} match={match} />
+              ))}
             </div>
           )}
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-500">Opponent</span>
-              <input
-                value={opponent}
-                onChange={(e) => setOpponent(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-500">Matchday</span>
-              <input
-                value={matchday}
-                onChange={(e) => setMatchday(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs font-medium text-zinc-500">
-                Competition
-              </span>
-              <input
-                value={competition}
-                onChange={(e) => setCompetition(e.target.value)}
-                className="w-full min-h-[44px] rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
-              />
-            </label>
-          </div>
-          {draftGpsDate ? (
-            <p className="text-sm text-zinc-500">
-              GPS date: {formatCompactIsoDate(draftGpsDate)}
-            </p>
-          ) : (
-            <p className="text-sm text-zinc-400">Choose a GPS match date.</p>
-          )}
-          {saveError ? (
-            <p className="text-sm text-amber-800">{saveError}</p>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void saveOfficialMatch()}
-              disabled={!canSave}
-              className="min-h-[44px] rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save official match"}
-            </button>
-            {matchSelected ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setChanging(false);
-                  setSaveError(null);
-                  setDraftGpsDate(official?.gpsDate ?? "");
-                  setOpponent(official?.opponent ?? "");
-                  setMatchday(official?.matchday ?? "");
-                  setCompetition(official?.competition ?? "");
-                }}
-                disabled={saving}
-                className="min-h-[44px] rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-              >
-                Cancel
-              </button>
-            ) : null}
-          </div>
         </div>
-      ) : null}
-
-      {saveError && !changing && !confirmClear ? (
-        <p className="text-sm text-amber-800">{saveError}</p>
-      ) : null}
-
-      {pluralMatches ? (
-        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
-          This week has two official matches. Match changes are disabled here.
-        </p>
       ) : null}
 
       {matchPending ? (
@@ -639,7 +312,7 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
       ) : null}
 
       {matchUnavailable ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
           Match GPS is unavailable for this week.
         </p>
       ) : null}
@@ -788,24 +461,6 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
           </div>
         </>
       ) : null}
-
-      <ConfirmDialog
-        open={confirmClear}
-        title="Clear official match?"
-        body="This removes the official match for this planner week. Total Load will be unavailable until a match is selected again."
-        error={saveError}
-        confirmLabel="Clear match"
-        busy={confirmBusy}
-        onCancel={() => {
-          if (!confirmBusy) {
-            setConfirmClear(false);
-            setSaveError(null);
-          }
-        }}
-        onConfirm={() => {
-          void clearOfficialMatch();
-        }}
-      />
     </div>
   );
 }

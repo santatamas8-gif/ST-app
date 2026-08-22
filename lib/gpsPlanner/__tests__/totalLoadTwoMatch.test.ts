@@ -272,6 +272,10 @@ describe("Phase E Total Load 0–2 Match composition", () => {
     expect(player.match.durationSeconds).toBe(7600);
     expect(player.matches[0].durationSeconds).toBe(5480);
     expect(player.matches[1].durationSeconds).toBe(2120);
+    expect(result.officialMatches).toHaveLength(2);
+    expect(result.officialMatches[0].mdTag).toBe("MD");
+    expect(result.officialMatches[0].sourceStatus).toBe("available");
+    expect(result.officialMatches[1].sourceStatus).toBe("available");
   });
 
   it("D: one pending of two → no final Total, available component preserved, not match_zero", () => {
@@ -313,6 +317,8 @@ describe("Phase E Total Load 0–2 Match composition", () => {
     expect(player.match.metrics).toBeNull();
     expect(player.match.durationSeconds).toBeNull();
     expect(result.topValues.totalDistance).toBeNull();
+    expect(result.officialMatches[0].sourceStatus).toBe("available");
+    expect(result.officialMatches[1].sourceStatus).toBe("pending");
   });
 
   it("G: proven source + player 0/0 halves remains match_zero with numeric zeros", () => {

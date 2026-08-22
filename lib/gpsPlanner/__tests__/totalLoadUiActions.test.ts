@@ -78,6 +78,9 @@ const getPlannerWeekOfficialMatch = vi.fn();
 const getPlannerWeekOfficialMatches = vi.fn();
 const setPlannerWeekOfficialMatch = vi.fn();
 const deletePlannerWeekOfficialMatch = vi.fn();
+const createPlannerWeekOfficialMatch = vi.fn();
+const updatePlannerWeekOfficialMatchById = vi.fn();
+const deletePlannerWeekOfficialMatchById = vi.fn();
 vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
   getPlannerWeekOfficialMatch: (...args: unknown[]) =>
     getPlannerWeekOfficialMatch(...args),
@@ -87,6 +90,12 @@ vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
     setPlannerWeekOfficialMatch(...args),
   deletePlannerWeekOfficialMatch: (...args: unknown[]) =>
     deletePlannerWeekOfficialMatch(...args),
+  createPlannerWeekOfficialMatch: (...args: unknown[]) =>
+    createPlannerWeekOfficialMatch(...args),
+  updatePlannerWeekOfficialMatchById: (...args: unknown[]) =>
+    updatePlannerWeekOfficialMatchById(...args),
+  deletePlannerWeekOfficialMatchById: (...args: unknown[]) =>
+    deletePlannerWeekOfficialMatchById(...args),
 }));
 
 const getPlannerTotalLoad = vi.fn();
@@ -101,10 +110,13 @@ vi.mock("@/lib/gpsPlanner/matchCandidates.server", () => ({
 }));
 
 import {
+  createPlannerWeekOfficialMatchAction,
   deletePlannerWeekOfficialMatchAction,
+  deletePlannerWeekOfficialMatchByIdAction,
   getPlannerTotalLoadAction,
   listPlannerMatchCandidatesAction,
   setPlannerWeekOfficialMatchAction,
+  updatePlannerWeekOfficialMatchByIdAction,
 } from "@/app/actions/gpsPlanner";
 
 const WEEK_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -138,6 +150,9 @@ describe("Total Load UI actions", () => {
     getPlannerWeekOfficialMatches.mockResolvedValue({ ok: true, data: [] });
     setPlannerWeekOfficialMatch.mockReset();
     deletePlannerWeekOfficialMatch.mockReset();
+    createPlannerWeekOfficialMatch.mockReset();
+    updatePlannerWeekOfficialMatchById.mockReset();
+    deletePlannerWeekOfficialMatchById.mockReset();
     getPlannerTotalLoad.mockReset();
     listPlannerMatchCandidates.mockReset();
   });
@@ -263,5 +278,78 @@ describe("Total Load UI actions", () => {
     );
     expect(src).not.toContain(".insert(");
     expect(src).not.toContain("setPlannerWeekOfficialMatch");
+  });
+
+  it("create / update-by-id / delete-by-id wrap domain APIs; Match 1 cannot be deleted while Match 2 exists", async () => {
+    const match2 = {
+      ...SAVED,
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      matchOrder: 2 as const,
+      gpsDate: "2026-08-18",
+    };
+    createPlannerWeekOfficialMatch.mockResolvedValue({ ok: true, data: match2 });
+    const created = await createPlannerWeekOfficialMatchAction({
+      weekId: WEEK_ID,
+      matchOrder: 2,
+      gpsDate: "2026-08-18",
+      mdTag: "MD",
+    });
+    expect(created.ok).toBe(true);
+    expect(createPlannerWeekOfficialMatch).toHaveBeenCalledWith({
+      weekId: WEEK_ID,
+      matchOrder: 2,
+      gpsDate: "2026-08-18",
+      mdTag: "MD",
+    });
+
+    updatePlannerWeekOfficialMatchById.mockResolvedValue({
+      ok: true,
+      data: { ...SAVED, gpsDate: "2026-08-16" },
+    });
+    const updated = await updatePlannerWeekOfficialMatchByIdAction({
+      id: SAVED.id,
+      weekId: WEEK_ID,
+      matchOrder: 1,
+      gpsDate: "2026-08-16",
+      mdTag: "MD",
+    });
+    expect(updated.ok).toBe(true);
+    expect(updatePlannerWeekOfficialMatchById).toHaveBeenCalledWith({
+      id: SAVED.id,
+      weekId: WEEK_ID,
+      matchOrder: 1,
+      gpsDate: "2026-08-16",
+      mdTag: "MD",
+    });
+
+    getPlannerWeekOfficialMatches.mockResolvedValue({
+      ok: true,
+      data: [SAVED, match2],
+    });
+    const blocked = await deletePlannerWeekOfficialMatchByIdAction({
+      id: SAVED.id,
+      weekId: WEEK_ID,
+    });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.error.message).toBe("Remove Match 2 first.");
+    expect(deletePlannerWeekOfficialMatchById).not.toHaveBeenCalled();
+
+    getPlannerWeekOfficialMatches.mockResolvedValue({
+      ok: true,
+      data: [SAVED, match2],
+    });
+    deletePlannerWeekOfficialMatchById.mockResolvedValue({
+      ok: true,
+      data: { id: match2.id, weekId: WEEK_ID },
+    });
+    const deleted = await deletePlannerWeekOfficialMatchByIdAction({
+      id: match2.id,
+      weekId: WEEK_ID,
+    });
+    expect(deleted.ok).toBe(true);
+    expect(deletePlannerWeekOfficialMatchById).toHaveBeenCalledWith({
+      id: match2.id,
+      weekId: WEEK_ID,
+    });
   });
 });

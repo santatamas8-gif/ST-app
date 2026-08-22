@@ -78,6 +78,9 @@ vi.mock("@/lib/gpsPlanner/weekMatches.server", () => ({
   getPlannerWeekOfficialMatches: vi.fn(),
   setPlannerWeekOfficialMatch: vi.fn(),
   deletePlannerWeekOfficialMatch: vi.fn(),
+  createPlannerWeekOfficialMatch: vi.fn(),
+  updatePlannerWeekOfficialMatchById: vi.fn(),
+  deletePlannerWeekOfficialMatchById: vi.fn(),
 }));
 vi.mock("@/lib/gpsPlanner/totalLoad.server", () => ({
   getPlannerTotalLoad: vi.fn(),

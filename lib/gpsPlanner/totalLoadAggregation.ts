@@ -100,13 +100,18 @@ export type TotalLoadOfficialMatchView = {
   competition: string | null;
 };
 
+export type TotalLoadMatchSourceStatus = "available" | "pending" | "query_error";
+
 export type TotalLoadOfficialMatchItem = {
   matchId: string;
   matchOrder: 1 | 2;
   gpsDate: string;
+  mdTag: string;
   opponent: string | null;
   matchday: string | null;
   competition: string | null;
+  /** Null when Total Load did not run a source gate (no Weekly Target players). */
+  sourceStatus: TotalLoadMatchSourceStatus | null;
 };
 
 export type TotalLoadResult = {
@@ -286,16 +291,24 @@ export function officialMatchView(
 }
 
 export function officialMatchItems(
-  matches: PlannerWeekOfficialMatch[]
+  matches: PlannerWeekOfficialMatch[],
+  matchSources: TotalLoadMatchSource[] = []
 ): TotalLoadOfficialMatchItem[] {
-  return matches.map((match) => ({
-    matchId: match.id,
-    matchOrder: match.matchOrder,
-    gpsDate: match.gpsDate,
-    opponent: match.opponent,
-    matchday: match.matchday,
-    competition: match.competition,
-  }));
+  return matches.map((match) => {
+    const source = matchSources.find(
+      (item) => item.officialMatch.id === match.id
+    );
+    return {
+      matchId: match.id,
+      matchOrder: match.matchOrder,
+      gpsDate: match.gpsDate,
+      mdTag: match.mdTag,
+      opponent: match.opponent,
+      matchday: match.matchday,
+      competition: match.competition,
+      sourceStatus: source ? source.availability : null,
+    };
+  });
 }
 
 function sourceForConfiguredMatch(
@@ -545,7 +558,10 @@ export function composeTotalLoadResult(input: {
   return {
     week: input.week,
     officialMatch: officialMatchView(input.officialMatches[0] ?? null),
-    officialMatches: officialMatchItems(input.officialMatches),
+    officialMatches: officialMatchItems(
+      input.officialMatches,
+      input.matchSources
+    ),
     weeklyPlanSummary: buildPctSummary({
       td: input.trainingRows.map((r) => r.weeklyPct.tdPct),
       hsr: input.trainingRows.map((r) => r.weeklyPct.hsrPct),

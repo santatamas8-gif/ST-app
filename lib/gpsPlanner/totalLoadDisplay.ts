@@ -66,6 +66,15 @@ export function formatTotalLoadPercent(
   return `${Math.round(value)}%`;
 }
 
+export function formatTotalLoadMatchSourceStatus(
+  status: "available" | "pending" | "query_error" | null | undefined
+): string | null {
+  if (status === "available") return "GPS: Available";
+  if (status === "pending") return "GPS: Match data pending";
+  if (status === "query_error") return "GPS: Data issue / unavailable";
+  return null;
+}
+
 export function formatWeeklyPlanSharedPct(value: DailyPlanSharedPct): string {
   if (value === "Mixed") return "Mixed";
   if (value == null || !Number.isFinite(value)) return "—";

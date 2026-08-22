@@ -1001,9 +1001,8 @@ describe("planner week official matches schema contract", () => {
     expect(wrapper).not.toContain(".single()");
   });
 
-  it("does not wire official-match persistence into Planning, Daily Plan, or Training", async () => {
+  it("does not wire official-match persistence into Daily Plan or Training", async () => {
     const files = [
-      "app/(app)/admin/planner/WeeklyPlannerView.tsx",
       "app/(app)/admin/planner/GpsLoadPlannerView.tsx",
       "app/(app)/admin/planner/daily-plan/page.tsx",
       "lib/gpsPlanner/progress.server.ts",

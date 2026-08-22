@@ -40,13 +40,23 @@ import {
 } from "@/lib/gpsPlanner/weekDays.server";
 
 import {
+  createPlannerWeekOfficialMatch,
   deletePlannerWeekOfficialMatch,
+  deletePlannerWeekOfficialMatchById,
   getPlannerWeekOfficialMatch,
   getPlannerWeekOfficialMatches,
   setPlannerWeekOfficialMatch,
+  updatePlannerWeekOfficialMatchById,
+  type CreatePlannerWeekOfficialMatchInput,
+  type DeletePlannerWeekOfficialMatchByIdInput,
   type PlannerWeekOfficialMatch,
   type SetPlannerWeekOfficialMatchInput,
+  type UpdatePlannerWeekOfficialMatchByIdInput,
 } from "@/lib/gpsPlanner/weekMatches.server";
+import {
+  canRemoveConfiguredMatch,
+  REMOVE_MATCH_1_BLOCKED_MESSAGE,
+} from "@/lib/gpsPlanner/weekMatchForm";
 
 import {
   addPlannerGroupMember,
@@ -203,6 +213,54 @@ export async function getPlannerWeekOfficialMatchAction(
   weekId: string
 ): Promise<PlannerResult<PlannerWeekOfficialMatch | null>> {
   return getPlannerWeekOfficialMatch(weekId);
+}
+
+export async function getPlannerWeekOfficialMatchesAction(
+  weekId: string
+): Promise<PlannerResult<PlannerWeekOfficialMatch[]>> {
+  return getPlannerWeekOfficialMatches(weekId);
+}
+
+export async function createPlannerWeekOfficialMatchAction(
+  input: CreatePlannerWeekOfficialMatchInput
+): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const result = await createPlannerWeekOfficialMatch(input);
+  if (result.ok) revalidatePlanner();
+  return result;
+}
+
+export async function updatePlannerWeekOfficialMatchByIdAction(
+  input: UpdatePlannerWeekOfficialMatchByIdInput
+): Promise<PlannerResult<PlannerWeekOfficialMatch>> {
+  const result = await updatePlannerWeekOfficialMatchById(input);
+  if (result.ok) revalidatePlanner();
+  return result;
+}
+
+export async function deletePlannerWeekOfficialMatchByIdAction(
+  input: DeletePlannerWeekOfficialMatchByIdInput
+): Promise<PlannerResult<{ id: string; weekId: string }>> {
+  const existing = await getPlannerWeekOfficialMatches(input.weekId);
+  if (!existing.ok) return existing;
+  const target = existing.data.find((row) => row.id === input.id);
+  if (!target) {
+    return {
+      ok: false,
+      error: plannerErr(
+        "official_match_not_found",
+        "Official match was not found for this planner week."
+      ),
+    };
+  }
+  if (!canRemoveConfiguredMatch(existing.data, target.matchOrder)) {
+    return {
+      ok: false,
+      error: plannerErr("invalid_input", REMOVE_MATCH_1_BLOCKED_MESSAGE),
+    };
+  }
+  const result = await deletePlannerWeekOfficialMatchById(input);
+  if (result.ok) revalidatePlanner();
+  return result;
 }
 
 async function rejectPluralOfficialMatchMutation(

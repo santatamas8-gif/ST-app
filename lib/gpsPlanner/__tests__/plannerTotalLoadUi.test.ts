@@ -43,32 +43,18 @@ describe("Total Load Review UI", () => {
     expect(review).toContain("Week day");
   });
 
-  it("D-S: Total Load view consumes composer and Phase 1 persistence", async () => {
+  it("D-S: Total Load view consumes composer; Match identity is read-only", async () => {
     const view = await readRel(
       "app/(app)/admin/planner/PlannerTotalLoadView.tsx"
     );
     expect(view).toContain("getPlannerTotalLoadAction");
-    expect(view).toContain("Select the official match to calculate Total Load.");
-    expect(view).toContain("setPlannerWeekOfficialMatchAction");
-    expect(view).toContain("deletePlannerWeekOfficialMatchAction");
-    expect(view).toContain("listPlannerMatchCandidatesAction");
-    expect(view).toContain("function selectCandidate(gpsDate: string)");
-    expect(view).toContain("setDraftGpsDate(gpsDate)");
-    expect(view).not.toMatch(/function selectCandidate[\s\S]{0,200}setPlannerWeekOfficialMatchAction/);
-    expect(view).toContain("Save official match");
-    expect(view).toContain("Change match");
-    expect(view).toContain("Clear match");
-    expect(view).toContain("pluralMatches");
-    expect(view).toContain("This week has two official matches. Match changes are disabled here.");
-    expect(view).toContain("Match GPS is not yet available for a configured match.");
-    expect(view).toContain("setConfirmClear(true)");
-    expect(view).toContain("ConfirmDialog");
-    expect(view).toContain("error={saveError}");
-    expect(view).toMatch(/setConfirmBusy\(false\);\s*if \(!res\.ok\)/);
-    expect(view).not.toMatch(
-      /setConfirmBusy\(false\);\s*setConfirmClear\(false\);\s*if \(!res\.ok\)/
-    );
-    expect(view).toContain("No Team match GPS dates found for this Power BI week.");
+    expect(view).toContain("Configured Matches");
+    expect(view).not.toContain("setPlannerWeekOfficialMatchAction");
+    expect(view).not.toContain("deletePlannerWeekOfficialMatchAction");
+    expect(view).not.toContain("listPlannerMatchCandidatesAction");
+    expect(view).not.toContain("Change match");
+    expect(view).not.toContain("Clear match");
+    expect(view).not.toContain("Save official match");
     expect(view).toContain("No Weekly Targets saved for this week.");
     expect(view).toContain("formatWeeklyPlanSharedPct");
     expect(view).toContain("result.topValues");
@@ -107,6 +93,8 @@ describe("Total Load Review UI", () => {
     expect(display).toContain('"Partial"');
     expect(display).toContain('"Data issue"');
     expect(display).toContain("Training: ${training} (Partial)");
+    expect(display).toContain("GPS: Available");
+    expect(display).toContain("GPS: Match data pending");
   });
 
   it("O/T: Top Values come from composer; no Total Load compliance colors", async () => {
@@ -121,24 +109,6 @@ describe("Total Load Review UI", () => {
     expect(review).toContain("PlannerTotalLoadView");
     expect(review).toContain("WeeklyReviewTable");
     expect(review).toContain("DailyReviewTable");
-  });
-
-  it("A/B: failed clear keeps dialog; successful clear closes it", async () => {
-    const view = await readRel(
-      "app/(app)/admin/planner/PlannerTotalLoadView.tsx"
-    );
-    const fn = view.slice(view.indexOf("async function clearOfficialMatch()"));
-    const failIdx = fn.indexOf("if (!res.ok)");
-    const closeIdx = fn.indexOf("setConfirmClear(false)");
-    expect(failIdx).toBeGreaterThan(0);
-    expect(closeIdx).toBeGreaterThan(failIdx);
-    const failEnd = fn.indexOf("return;", failIdx);
-    const failBlock = fn.slice(failIdx, failEnd + "return;".length);
-    expect(failBlock).toContain("setSaveError");
-    expect(failBlock).not.toContain("setConfirmClear(false)");
-    expect(failBlock).not.toContain("loadWeekData");
-    expect(closeIdx).toBeGreaterThan(failEnd);
-    expect(fn.slice(closeIdx)).toContain("await loadWeekData()");
   });
 
   it("does not add Total Load print or change Daily Plan", async () => {
