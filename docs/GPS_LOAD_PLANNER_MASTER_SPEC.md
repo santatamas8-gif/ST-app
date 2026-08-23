@@ -718,19 +718,37 @@ Do **not** auto-rewrite historical headers if Power BI `Match_Info` later change
 
 ### U3.4 Match source availability and Match Actual
 
-Power BI semantic model is **unchanged**. Live `GPS_Log`. Exact filters:
+Power BI semantic model is **unchanged**. Live `GPS_Log`. ST-AMS reads the semantic model / `GPS_Log` only — **not** Matchday Report pages. Exact filters:
 
 - `Player` IN frozen Planner Power BI names  
 - `Week ID` = that week’s `powerbi_week_id`  
 - `Date` = that Match’s `gps_date`  
 - `MD_Tag` = `"MD"`  
 - `SessionType` = `"Team"`  
-- `Drill` IN `{ "1st Half", "2nd Half" }`  
+- `Drill` IN the **strict allowlist** only:
 
-Exact half strings: `"1st Half"` and `"2nd Half"`. Date distinguishes Match 1 / Match 2.
+```text
+"1st Half"
+"2nd Half"
+"1st Half Extra Time"
+"2nd Half Extra Time"
+```
+
+Exact strings (spelling, spaces, capitalization). Do **not** normalize or rename.
+
+Extra Time segments (`"1st Half Extra Time"`, `"2nd Half Extra Time"`) are **optional**. Their absence must **not** change regulation-only Match behavior: a match with only `"1st Half"` / `"2nd Half"` remains valid and identical to the previous two-half contract.
+
+This allowlist is **generic** for every configured Match in every week. Detection comes only from trusted `GPS_Log` rows for the exact configured Match key (week ID + `gps_date` + the filters above). **No** week-specific rule. **No** date / opponent / competition / match-order hardcode. **No** manual Extra Time YES/NO toggle.
+
+The candidate / source-availability query uses the **same four-string allowlist**. Other candidate/source-gate semantics are unchanged.
+
+Date distinguishes Match 1 / Match 2. Each configured Match is evaluated independently by exact `gps_date`. Segments must **not** leak across configured Match dates.
 
 Do **not** use `SourceFile` as primary identity.  
-Do **not** use `SessionType = "Individual"`, `Drill = "Individual"`, or training drills `"First Half"` / `"Second Half"`.
+Do **not** use `Match_Info` as a Match Actual filter.  
+Do **not** use report pages.  
+Do **not** use `SessionType = "Individual"`, `Drill = "Individual"`, or training drills `"First Half"` / `"Second Half"`.  
+Do **not** use aggregate / total-like Drills (`Full Match`, `Match Total`, `90 Min`, `120 Min`, or any future equivalent). Those remain excluded unless this spec is explicitly changed again.
 
 Maximum Match-path queries per Total Load load:
 
@@ -754,17 +772,20 @@ Reuse: Power BI auth, `executePowerBiDaxQuery`, bounded retry, DAX escaping, raw
 
 Candidate / batch failure → unsafe (`match_query_error` / equivalent). Final Total unavailable.
 
-### U3.5 Match raw-row contract (per player, per half)
+### U3.5 Match raw-row contract (per player, per allowlisted segment)
+
+Cardinality is per **player × configured match × allowlisted segment**.
 
 | Rows | Result |
 |---|---|
-| 0 | half absent |
-| 1 | valid half |
-| >1 | ambiguous / Data issue |
+| 0 | segment absent |
+| 1 valid | use the segment exactly once |
+| 1 malformed | `data_issue` / unsafe (existing contract) |
+| >1 | ambiguous / Data issue (`match_ambiguous`) |
 
 **Never** SUM / MAX / MIN duplicates, choose first row, or hide ambiguity.
 
-If **either** half is `>1`:
+If **any** allowlisted segment is `>1`:
 
 - that Match is unsafe (`match_ambiguous`)  
 - Match Time = `—`  
@@ -777,12 +798,36 @@ If **either** half is `>1`:
 If cardinality is safe:
 
 ```text
-Match Actual = valid 1st Half + valid 2nd Half
+Match Actual = sum of every VALID allowlisted segment PRESENT
+for that player on that exact configured Match date
 ```
 
-Supported: 1st only; 2nd only; both; both absent.
+Eligible segments (allowlist only):
 
-`match_zero` is valid **only after** Match source availability is proven **and** the player has 0 first-half rows **and** 0 second-half rows:
+- `"1st Half"`
+- `"2nd Half"`
+- `"1st Half Extra Time"`
+- `"2nd Half Extra Time"`
+
+`match_ok` does **not** require all four segments. Any combination of present valid segments is supported.
+
+Missing Extra Time segment = **absent**. It is **not** a data error, **not** automatically incomplete, and **not** ambiguous.
+
+Examples (behavior only — not week-specific rules):
+
+- Normal 90-minute match: 1st + 2nd present; both ET absent → regulation Match Actual only.
+- Player does not play Extra Time: regulation segment(s) present; ET absent → use only that player’s present valid regulation segments.
+- Player enters only during Extra Time: regulation may be absent; ET segment(s) valid → use the present valid ET segment(s).
+
+Match Actual must **never** be:
+
+- halves + Full Match
+- 90-minute Total + 120-minute Total
+- regulation Total + ET-inclusive Total
+
+Only the strict four-segment allowlist is eligible.
+
+`match_zero` is valid **only after** Match source availability is proven **and** the player has **0 rows for all four allowlisted segments**:
 
 - Match quality = `match_zero`  
 - Match TD/HSR/Sprint/Acc/Dec = **0**  
@@ -796,7 +841,8 @@ Pending source ≠ `match_zero`.
 ### U3.7 Match Time
 
 Use raw `GPS_Log[Duration]` only.  
-Do **not** use Matchday Report `[Session Duration (min)]`.
+Do **not** use Matchday Report `[Session Duration (min)]`.  
+Per-Match duration = sum of raw `GPS_Log[Duration]` from that player’s **valid present allowlisted segments** on that `gps_date`. Do **not** hard-code 90 or 120 minutes. Do **not** use a derived scheduled Match length.
 
 ```text
 1 Match:  Match Time = Match 1 duration
@@ -816,6 +862,8 @@ Verified examples (reference only; do not hard-code in production): Doru `99:35`
 2 safe Matches: Total Week = Training + Match 1 + Match 2
 Total Week % = Total Week / Frozen 1-Match-Best × 100
 ```
+
+This Total Load formula is **unchanged**. Extra Time does **not** add a third term: present ET segments are already inside that Match’s Actual (regulation + optional ET). Denominator, frozen 1-Match-Best, Top Values eligibility, Complete / Partial, source gate, and Training Actual stay unchanged.
 
 Denominator: **`planner_match_best_snapshots`** for that week + player (frozen **1-Match-Best**).  
 Even during two-match weeks: **no** 2-Match Best, **no** doubled denominator.

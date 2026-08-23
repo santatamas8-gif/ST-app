@@ -34,12 +34,14 @@ Planner domain / business-logic specialist for GPS Load Planner.
   - 2 safe Matches → Total Week = Training + Match 1 + Match 2
   - Metrics: TD / HSR / Sprint / Acc / Dec only. No Tempo
   - Configured date missing from Team MD source → `match_data_pending` (not `match_zero` / DNP / `data_issue`); Final Total unavailable
-  - `match_zero` only after source availability is proven and both halves are absent
+  - Match Actual = sum of every valid present allowlisted segment for that player on that exact `gps_date` (`1st Half`, `2nd Half`, `1st Half Extra Time`, `2nd Half Extra Time`). Missing segment = absent. Missing ET is not an error
+  - Per player × configured match × allowlisted segment: 0 → absent; 1 valid → use once; 1 malformed → `data_issue`; >1 → `match_ambiguous` (never silent duplicate sum)
+  - `match_zero` only after source availability is proven and **all four** supported segments are absent
   - Any pending configured Match, or any unsafe player Match → that player’s Final Total unavailable (no partial safe-match sum as Final Total)
   - Partial Training (`partial_not_found` with valid numeric Training) **keeps and displays** that recorded load; missing Training days are **not** zero; label `Partial`; eligible for Top Values (absolute Total, same as Complete)
   - Unsafe Training or ambiguous Match → Total `—`
   - Total Week % = Total Week / frozen **1-Match-Best** `planner_match_best_snapshots` × 100 (not live Match_Benchmark / History / Weekly Planned; no 2-Match Best / doubled denominator)
-  - Match Time = Match 1 duration, or Match 1 + Match 2; source = raw `GPS_Log[Duration]`
+  - Match Time = Match 1 duration, or Match 1 + Match 2; each Match duration = sum of raw `GPS_Log[Duration]` from that player’s valid present allowlisted segments (no hardcoded 90/120)
 
 ## Hard constraints — no automatic coaching
 
