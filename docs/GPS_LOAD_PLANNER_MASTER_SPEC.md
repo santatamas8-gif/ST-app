@@ -103,6 +103,9 @@ There is **NO** separate `players` table.
 **Do not** create another player table.  
 **No** team / season / player-position model is required for Planner V1.
 
+Persistent Week Squad (§J2) is **not** a team, season, or club roster.  
+It is only week-scoped Planner membership / default working selection for one `planner_weeks` row.
+
 ---
 
 ## D. Power BI architecture
@@ -363,6 +366,332 @@ Example: apply HSR 140% to Starters → each selected player gets 140%; Player C
 
 Do **not** store target ownership by group.
 
+Groups do **not** define saved week squad membership.  
+Do **not** reuse `planner_group_members` as the persisted week squad.  
+See **§J2**.
+
+---
+
+## J2. Persistent Week Squad
+
+**Status:** approved product contract (documentation). Implementation requires a later explicit phase.  
+**Scope:** week-scoped Planner membership / default working squad only.
+
+This is **NOT**:
+
+- a season model
+- a team / club roster
+- a general ST-AMS player-membership system
+- an owner of Weekly Targets, Daily Targets, or Match Best snapshots
+- a replacement for Groups
+
+It is **only**:
+
+```text
+one planner week
+→ persisted default Planning squad
+→ temporary working selection may differ until Save Squad
+```
+
+### J2.1 Saved squad vs working selection
+
+Two separate concepts:
+
+| Concept | Meaning |
+|---|---|
+| `savedSquadPlayerIds` | Persisted membership for the selected planner week |
+| `selectedPlayerIds` | Temporary current UI working selection |
+
+On week load:
+
+```text
+savedSquadPlayerIds = persisted week squad
+selectedPlayerIds   = copy of that saved squad
+```
+
+Checkbox / Select all / Clear / Group “Select members”:
+
+- modify **only** `selectedPlayerIds`
+- do **not** persist automatically
+- do **not** create or delete targets or snapshots
+- do **not** call Power BI
+- do **not** freeze Match Best
+
+Only explicit **Save Squad** changes saved week membership.
+
+### J2.2 Week switch
+
+When the Planning planner week changes:
+
+- load **that** week’s saved squad
+- initialize `selectedPlayerIds` from that saved squad
+- reset unsaved squad-change UI state (dirty count, apply-plan prompt)
+
+Do **not** carry the previous week’s working selection into the new week.
+
+### J2.3 Save Squad
+
+Explicit Save Squad diff:
+
+| Working selection vs saved | Effect |
+|---|---|
+| newly selected | INSERT membership |
+| still selected | no-op |
+| previously saved, now unselected | DELETE membership row **only** |
+
+Save Squad alone:
+
+- persists membership
+- requires **no** Power BI
+- does **not** invent percentages
+- does **not** automatically create Weekly / Daily Targets
+- does **not** freeze Match Best
+- does **not** delete targets or snapshots
+
+### J2.4 Reset to saved squad
+
+Secondary action: **Reset to saved squad**.
+
+- restores current `selectedPlayerIds` from persisted membership
+- writes nothing
+- preserves temporary-subset workflows
+
+### J2.5 Temporary subsets remain supported
+
+Example: saved W6 squad = 20 players. Admin temporarily selects 7, then uses **Apply this day only** or Daily Plan.
+
+That temporary 7-player selection must **not** modify the saved squad.
+
+Saved squad changes only through explicit **Save Squad**.
+
+### J2.6 Membership does not own targets
+
+Saved squad membership is independent from:
+
+- `planner_weekly_targets`
+- `planner_daily_targets`
+- `planner_match_best_snapshots`
+
+Removing a player from the saved squad must **not** automatically delete:
+
+- Weekly Target
+- Daily Targets
+- frozen Match Best snapshot
+- historical Review / Total Load rows derived from those targets
+
+No target or snapshot FK may depend on membership.
+
+### J2.7 Planning vs Review / Daily Plan population (LOCKED)
+
+| Surface | Population |
+|---|---|
+| Planning available player list | all eligible player profiles (`profiles` where `role = 'player'`) |
+| Planning default checkboxes | saved week squad |
+| Weekly Review | players with a saved Weekly Target for that week |
+| Daily Review | same Weekly Target population |
+| Total Load | same Weekly Target population (§U3.1) |
+| Daily Plan | current working `selectedPlayerIds` |
+
+Do **not** filter Review or Total Load by saved squad membership.
+
+Reason: removing someone from the active Planning squad must not make historical planned/actual data appear deleted.
+
+### J2.8 Groups remain selection helpers
+
+Groups remain week-scoped optional **selection helpers** only (§J).
+
+Groups do **not** define:
+
+- saved squad
+- reusable plans
+- Weekly Targets
+- Daily Targets
+- Match Best snapshots
+
+### J2.9 Persistence model
+
+Approved minimal table concept (not created in this documentation phase):
+
+`planner_week_players`
+
+| Rule | Value |
+|---|---|
+| PRIMARY KEY | `(week_id, player_id)` |
+| Meaning | row exists = player is in that week’s saved squad |
+| Week delete | membership rows removed |
+| Membership delete | targets and snapshots **unaffected** |
+| Access | ADMIN ONLY |
+
+Do **not** add:
+
+- `active` boolean
+- sort order
+- target ownership
+- plan ownership
+- historical membership versions
+
+Expected RLS when implemented:
+
+- Admin: SELECT / INSERT / DELETE
+- No UPDATE (membership rows have no mutable state)
+- Staff / Player / anon: none
+- No service-role normal CRUD
+
+### J2.10 Legacy-week backfill
+
+Existing planner weeks must **not** open with an empty saved squad after rollout if Weekly Targets already exist.
+
+Approved backfill source:
+
+```text
+DISTINCT player_id
+FROM planner_weekly_targets
+for each planner week
+```
+
+Do **not** backfill from:
+
+- all profiles
+- groups
+- snapshots-only
+
+Example: a week with 19 Weekly Targets → initial saved squad = those 19 players.  
+A draft week with no Weekly Targets → initial saved squad empty.
+
+### J2.11 New players after Save Squad
+
+Save Squad saves membership **first**.
+
+If genuinely **new** players were added (not already in the previous saved squad, and not returning players who already have this week’s targets), the system **may then offer**:
+
+`Apply existing plan?`
+
+That offer is a **separate explicit action**.
+
+Do **not** automatically create targets during Save Squad.
+
+### J2.12 Returning player
+
+If a player previously had Weekly/Daily Targets in this week, was removed from the saved squad, and is later added back:
+
+- re-add membership **only**
+- do **not** automatically apply another player’s plan
+- do **not** overwrite their existing targets
+
+They may be shown as `Already has targets` (or equivalent).
+
+### J2.13 Complete reusable plan
+
+Groups do **not** define plans.
+
+A complete reusable plan is derived only from persisted percentages of **current saved-squad players**.
+
+A player contributes one reusable plan only if:
+
+1. Weekly Target exists  
+2. Daily Target exists for **every current** Training day (`planner_week_days`)
+
+Signature — compare **exact stored** numerical values (no display rounding, no averages):
+
+```text
+Weekly: TD % · HSR % · Sprint % · Acc % · Dec %
+Daily:  for each current planner_week_day:
+        TD % · HSR % · Sprint % · Acc % · Dec %
+```
+
+Match rows never participate.
+
+### J2.14 Incomplete / no / one / multiple plans
+
+**Incomplete:** Weekly-only, or missing Daily Target on any current Training day → **not** a complete reusable plan. Do not offer it as a complete template. Do not silently copy partial plans.
+
+**No complete plan:** Save Squad succeeds. Do **not** show `Apply existing plan?`. Admin configures Weekly/Daily Targets normally afterward.
+
+**Exactly one complete plan:** after Save Squad, offer:
+
+`Apply existing plan to <new player names>?`
+
+Admin may Apply or Skip / No plan. Explicit approval required.
+
+**Multiple distinct complete plans:** do **not** guess. Offer choices from persisted target signatures. Do not invent Group ownership. No artificial Plan A/B database object is required in V1.
+
+Small understandable representation may include player count, Weekly 5 %, and Daily coverage. Example:
+
+```text
+14 players · Weekly 135 / 140 / 120 / 130 / 130 · Daily 5/5
+```
+
+### J2.15 Multiple new players (V1)
+
+One selected plan (or No plan) for **all** genuinely new players together.
+
+Do **not** build a per-player wizard in V1.
+
+### J2.16 Apply existing plan — percentages only
+
+When Admin **explicitly** applies an existing plan:
+
+- copy **only** persisted percentages
+- never copy the source player’s absolute TD / HSR / Sprint / Acc / Dec
+
+```text
+NEW player Weekly absolute = that player's frozen Match Best × copied Weekly % / 100
+NEW player Daily absolute  = that player's frozen Match Best × copied Daily % / 100
+```
+
+Use existing trusted Weekly/Daily target create paths.
+
+If the new player has no snapshot: player mapping → Power BI Match Best → freeze **that player’s own** Match Best → Weekly Target. Existing Weekly Target create behavior remains authoritative.
+
+Do **not** create a shared group snapshot.  
+Do **not** use another player’s Best.
+
+### J2.17 Apply only to genuinely new target players
+
+Do **not** run existing batch Apply over returning / already-targeted players merely because they were added back to the saved squad.
+
+Existing apply functions can **UPDATE** targets.
+
+Apply Existing Plan must target only players who genuinely require **new** target creation. Returning players keep their own existing targets.
+
+### J2.18 Partial failure
+
+Membership save and target apply are **separate**.
+
+If membership Save succeeds but optional Apply Existing Plan fails (mapping missing, Power BI Match Best missing, Weekly Target create fails, Daily apply partially fails):
+
+- membership remains saved
+- Admin receives clear per-player failure / outcome information
+
+Do **not** roll back valid membership because optional target application failed.  
+No silent failure.
+
+### J2.19 Power BI
+
+| Action | Power BI |
+|---|---|
+| Save Squad | **NO** |
+| Remove player from squad | **NO** |
+| Add membership only | **NO** |
+| Reset to saved squad | **NO** |
+| Apply Existing Plan when the new player lacks a frozen snapshot | existing Weekly Target Match Best path only |
+
+### J2.20 Protected systems
+
+Persistent Week Squad must **not** change:
+
+- Weekly / Daily formulas
+- frozen Match Best semantics
+- Match Actual / Extra Time
+- Two-Match
+- Total Load calculations
+- Weekly Review / Daily Review calculations
+- Daily Plan calculations
+- Remaining
+- Power BI semantic model
+- Groups ownership
+- Admin-only Planner access
+
 ---
 
 ## K. Starter / non-starter logic
@@ -605,14 +934,18 @@ Top-level segmented control (only one visible at a time):
 
 `Planning | Review`
 
-**Planning:** existing Weekly Planner (unchanged production-final behavior). Kept mounted/hidden when Review is active.
+**Planning:** existing Weekly Planner. Kept mounted/hidden when Review is active. Default checkbox population follows Persistent Week Squad (§J2) once implemented; Weekly / Daily / Match formulas are unchanged.
 
 **Review:** secondary segmented control `Weekly | Daily | Total Load`.
 
 **Weekly and Daily** behavior, loaders, calculations, compliance colors, and print remain **Training-only** and **completely unchanged** by Match rows. Total Load is an additional Review tab (**§U3**, production implemented).
 
 - Week selector: any saved `planner_weeks` (including closed/historical)
-- Review population: players with a saved Weekly Target for that week
+- Planning available player list: all eligible player profiles
+- Planning default working selection: saved week squad (§J2)
+- Daily Plan population: current working `selectedPlayerIds` (not Review population)
+- Review population: players with a saved Weekly Target for that week — **not** filtered by saved squad
+- Total Load population: same Weekly Target population (§U3.1) — **not** filtered by saved squad
 - Weekly / Daily Actual: live Power BI Full Training only — **not** persisted
 - Historical Actual identity: frozen snapshot `powerbi_player_name` (never current mapping)
 - Metrics: TD / HSR / Sprint / Acc / Dec only
@@ -650,7 +983,7 @@ Do **not** change Planning, Weekly Review, Daily Review, Daily Plan, Training Ac
 
 ### U3.1 Population and identity
 
-All players with a saved Weekly Target for the selected Planner week — **not** only players in the match GPS file.
+All players with a saved Weekly Target for the selected Planner week — **not** only players in the match GPS file, and **not** filtered by Persistent Week Squad membership (§J2).
 
 Players with no match GPS, part of the week’s training, or both remain visible.
 
@@ -1001,7 +1334,7 @@ Legend: Green — Within planned tolerance; Orange — Below planned load; Red �
 Do **not** implement unless explicitly re-approved:
 
 - season model  
-- team membership model  
+- team membership model (a general team / club / season roster — **not** the same as Persistent Week Squad §J2)  
 - position-specific targets  
 - automatic starter detection  
 - automatic top-up / microdosing / carry-over  
@@ -1032,6 +1365,22 @@ Two-Match Week V2 (0 / 1 / 2 official Matches, combined week display, plural Tot
 | `planner_week_official_matches` | Admin-configured official Matches (0–2 per week; identity/display only — **no GPS Actuals**) |
 
 All planner entities + mappings: **ADMIN ONLY** (RLS + app).
+
+### Approved Persistent Week Squad table (not created yet)
+
+`planner_week_players` is the approved membership table for §J2. It is **not** in production until an explicit implementation phase creates it.
+
+| Rule | Value |
+|---|---|
+| Purpose | Week-scoped saved Planning squad (not a team/season roster) |
+| PRIMARY KEY | `(week_id, player_id)` |
+| Meaning | row exists = player is in that week’s saved squad |
+| FKs (when created) | `week_id` → `planner_weeks(id)` ON DELETE CASCADE; `player_id` → `auth.users(id)` ON DELETE CASCADE |
+| Must **not** FK | `planner_weekly_targets`, `planner_daily_targets`, `planner_match_best_snapshots` |
+| No columns for | `active` flag, sort order, target/plan ownership, membership history |
+| RLS | Admin SELECT / INSERT / DELETE only; no UPDATE; no Staff / Player / anon; no service-role normal CRUD |
+
+Do **not** reuse `planner_group_members` for this purpose.
 
 ### Official Match constraints (current production)
 
@@ -1065,6 +1414,7 @@ Same Planner week + same date cannot be both Training (`planner_week_days`) and 
 - Weekly Target → snapshot composite FK  
 - Daily Target → weekly target composite FK **and** week_day+week composite FK  
 - Groups week-scoped; targets never FK groups  
+- Saved week squad (`planner_week_players`, when created) never owns targets; targets/snapshots never FK membership (§J2)  
 - Snapshot metric / name / source fields immutable  
 - Training day date inside week range  
 - `UNIQUE (week_id, display_order)` on days  
@@ -1074,7 +1424,9 @@ Same Planner week + same date cannot be both Training (`planner_week_days`) and 
 
 ## Y. Deletion safety
 
-Deleting a planner week may cascade: days → snapshots → weekly targets → daily targets → groups/members → official Match rows (`planner_week_official_matches`).
+Deleting a planner week may cascade: days → snapshots → weekly targets → daily targets → groups/members → official Match rows (`planner_week_official_matches`) → saved-squad membership (`planner_week_players`, when created).
+
+Removing a player from the saved week squad must delete **membership only**. It must **not** cascade into snapshots, Weekly Targets, or Daily Targets (§J2).
 
 - Admin only  
 - Explicit application confirmation when implemented  
@@ -1170,10 +1522,12 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 
 ### Not implemented yet
 
+- Persistent Week Squad (§J2): approved contract only; table / actions / UI not created  
 - Carry-over / microdosing / automatic coaching  
 
 ### Next phase (requires explicit approval)
 
+Persistent Week Squad implementation requires a later explicit phase after this spec amendment.  
 Carry-over / microdosing / automatic coaching remain excluded unless explicitly re-approved.
 
 ---
