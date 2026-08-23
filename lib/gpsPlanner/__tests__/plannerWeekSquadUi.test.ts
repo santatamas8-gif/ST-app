@@ -117,7 +117,9 @@ describe("Persistent Week Squad WS-E UI", () => {
     expect(saveFn).not.toContain("getTrainingActualGps");
     expect(saveFn).not.toContain("getMatchActualGps");
     expect(saveFn).not.toContain("executeQuery");
-    expect(saveFn).not.toContain("addedPlayerIds");
+    expect(saveFn).toContain("addedPlayerIds");
+    expect(saveFn).toContain("analyzePlannerWeekPlanInheritanceAction");
+    expect(saveFn).not.toContain("applyPlannerExistingPlanAction");
     expect(view).toContain("disabled={!canSaveSquad}");
     expect(view).toContain("squadLoadState === \"error\"");
     expect(view).toContain("Save Squad is disabled until it");
@@ -151,7 +153,6 @@ describe("Persistent Week Squad WS-E UI", () => {
     expect(view).toContain("applyDailyToSelected(day.id)");
     expect(view).toContain("function openDailyPlan");
     expect(view).not.toContain("playerIds: savedSquadPlayerIds");
-    expect(view).not.toContain("Apply existing plan");
-    expect(view).not.toContain("Apply Existing Plan");
+    expect(view).not.toContain("playerIds: inheritanceOffer");
   });
 });

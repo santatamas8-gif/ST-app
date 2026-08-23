@@ -63,6 +63,8 @@ import {
   listPlannerWeekDaysAction,
   listPlannerWeekPlayersAction,
   listPlannerWeeksAction,
+  analyzePlannerWeekPlanInheritanceAction,
+  applyPlannerExistingPlanAction,
   removePlannerGroupMemberAction,
   savePlannerWeekPlayersAction,
   updatePlannerGroupAction,
@@ -81,6 +83,7 @@ import type {
   PlannerMatchBestSnapshot,
   PlannerUiPlayer,
   PlannerWeekDayRow,
+  PlannerReusablePlan,
   PlannerWeekOfficialMatch,
   PlannerWeekRow,
   PlannerWeeklyProgressResult,
@@ -167,6 +170,14 @@ function errText(code: string, message?: string): string {
 
 function copyPlayerIds(ids: string[]): string[] {
   return ids.slice();
+}
+
+function formatInheritanceWeeklyPct(pct: PercentageMetrics): string {
+  return `TD ${pct.tdPct} · HSR ${pct.hsrPct} · Sprint ${pct.sprintPct} · Acc ${pct.accPct} · Dec ${pct.decPct}`;
+}
+
+function formatInheritancePlanChoice(plan: PlannerReusablePlan): string {
+  return `${plan.playerCount} ${plan.playerCount === 1 ? "player" : "players"} · ${plan.weeklyPct.tdPct} / ${plan.weeklyPct.hsrPct} / ${plan.weeklyPct.sprintPct} / ${plan.weeklyPct.accPct} / ${plan.weeklyPct.decPct}`;
 }
 
 function firstFocusedFromPlayers(
@@ -295,6 +306,17 @@ export function WeeklyPlannerView({
   const [squadError, setSquadError] = useState<string | null>(null);
   const [squadFlash, setSquadFlash] = useState<string | null>(null);
   const [squadSaving, setSquadSaving] = useState(false);
+  const [inheritanceOffer, setInheritanceOffer] = useState<{
+    weekId: string;
+    eligiblePlayerIds: string[];
+    plans: PlannerReusablePlan[];
+    selectedPlanKey: string;
+  } | null>(null);
+  const [inheritanceApplying, setInheritanceApplying] = useState(false);
+  const [inheritanceNotice, setInheritanceNotice] = useState<string | null>(
+    null
+  );
+  const [inheritanceError, setInheritanceError] = useState<string | null>(null);
   const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
   const weekScopedRequestId = useRef(0);
   const lastSquadWeekIdRef = useRef<string | null>(null);
@@ -397,6 +419,10 @@ export function WeeklyPlannerView({
         setSquadLoadState(id ? "loading" : "idle");
         setSquadError(null);
         setSquadFlash(null);
+        setInheritanceOffer(null);
+        setInheritanceApplying(false);
+        setInheritanceNotice(null);
+        setInheritanceError(null);
         setSavedSquadPlayerIds([]);
         setSelectedPlayerIds([]);
         setFocusedPlayerId(null);
@@ -673,6 +699,11 @@ export function WeeklyPlannerView({
     setSquadSaving(true);
     setSquadError(null);
     setSquadFlash(null);
+    setInheritanceOffer(null);
+    setInheritanceNotice(null);
+    setInheritanceError(null);
+    let addedPlayerIds: string[] = [];
+    let saveSucceeded = false;
     try {
       const res = await savePlannerWeekPlayersAction({
         weekId: weekAtSave,
@@ -689,6 +720,8 @@ export function WeeklyPlannerView({
         return;
       }
       const savedIds = res.data.savedPlayerIds;
+      addedPlayerIds = res.data.addedPlayerIds;
+      saveSucceeded = true;
       setSavedSquadPlayerIds(savedIds);
       setSelectedPlayerIds(copyPlayerIds(savedIds));
       lastSquadWeekIdRef.current = weekAtSave;
@@ -701,6 +734,37 @@ export function WeeklyPlannerView({
         setSquadSaving(false);
       }
     }
+    if (
+      !saveSucceeded ||
+      addedPlayerIds.length === 0 ||
+      squadSaveGenRef.current !== saveGen ||
+      weekIdRef.current !== weekAtSave
+    ) {
+      return;
+    }
+    const analysis = await analyzePlannerWeekPlanInheritanceAction({
+      weekId: weekAtSave,
+      addedPlayerIds,
+    });
+    if (
+      squadSaveGenRef.current !== saveGen ||
+      weekIdRef.current !== weekAtSave
+    ) {
+      return;
+    }
+    if (!analysis.ok) return;
+    if (
+      analysis.data.eligibleNewPlayerIds.length === 0 ||
+      analysis.data.reusablePlans.length === 0
+    ) {
+      return;
+    }
+    setInheritanceOffer({
+      weekId: weekAtSave,
+      eligiblePlayerIds: analysis.data.eligibleNewPlayerIds,
+      plans: analysis.data.reusablePlans,
+      selectedPlanKey: analysis.data.reusablePlans[0].planKey,
+    });
   }
 
   function openCreateWeek() {
@@ -715,6 +779,54 @@ export function WeeklyPlannerView({
     });
     setMatchDrafts([]);
     setShowWeekForm(true);
+  }
+
+  function skipInheritanceOffer() {
+    setInheritanceOffer(null);
+    setInheritanceError(null);
+  }
+
+  async function applyExistingPlan() {
+    if (!inheritanceOffer || inheritanceApplying) return;
+    const offer = inheritanceOffer;
+    setInheritanceApplying(true);
+    setInheritanceError(null);
+    try {
+      const res = await applyPlannerExistingPlanAction({
+        weekId: offer.weekId,
+        targetPlayerIds: offer.eligiblePlayerIds,
+        planKey: offer.selectedPlanKey,
+      });
+      if (weekIdRef.current !== offer.weekId) return;
+      if (!res.ok) {
+        setInheritanceError(errText(res.error.code, res.error.message));
+        return;
+      }
+      const applied = res.data.outcomes.filter((row) => row.status === "applied");
+      const failed = res.data.outcomes.filter((row) => row.status === "failed");
+      if (failed.length === 0) {
+        setInheritanceNotice(
+          `Plan applied to ${applied.length} ${
+            applied.length === 1 ? "player" : "players"
+          }`
+        );
+      } else {
+        const failedNames = failed.map((row) => {
+          const name = playerById.get(row.playerId)?.name ?? "Unknown player";
+          return row.message ? `${name}: ${row.message}` : name;
+        });
+        setInheritanceNotice(`${applied.length} applied · ${failed.length} failed`);
+        setInheritanceError(failedNames.join(" · "));
+      }
+      setInheritanceOffer(null);
+      if (focusedPlayerId && offer.eligiblePlayerIds.includes(focusedPlayerId)) {
+        await loadFocusedPlayerData(offer.weekId, focusedPlayerId);
+      }
+    } finally {
+      if (weekIdRef.current === offer.weekId) {
+        setInheritanceApplying(false);
+      }
+    }
   }
 
   function openEditWeek() {
@@ -1951,7 +2063,105 @@ export function WeeklyPlannerView({
               {squadFlash && squadBaselineReady && (
                 <p className="text-emerald-300">{squadFlash}</p>
               )}
+              {inheritanceNotice && (
+                <p className="text-emerald-300">{inheritanceNotice}</p>
+              )}
+              {inheritanceError && (
+                <p className="text-red-300">{inheritanceError}</p>
+              )}
             </div>
+            {inheritanceOffer && (
+              <div className="mb-3 rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
+                <p className="text-sm text-zinc-100">
+                  {inheritanceOffer.eligiblePlayerIds.length === 1
+                    ? "1 new player added"
+                    : `${inheritanceOffer.eligiblePlayerIds.length} new players added`}
+                </p>
+                {inheritanceOffer.plans.length === 1 ? (
+                  <>
+                    <p className="mt-1 text-sm font-medium text-zinc-200">
+                      Apply existing plan?
+                    </p>
+                    <p className="mt-1 break-words text-xs text-zinc-400">
+                      Weekly:{" "}
+                      {formatInheritanceWeeklyPct(
+                        inheritanceOffer.plans[0].weeklyPct
+                      )}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Daily distribution · {inheritanceOffer.plans[0].daily.length}{" "}
+                      {inheritanceOffer.plans[0].daily.length === 1
+                        ? "training day"
+                        : "training days"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-1 text-sm font-medium text-zinc-200">
+                      Choose existing plan
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {inheritanceOffer.plans.map((plan) => (
+                        <label
+                          key={plan.planKey}
+                          className="flex min-w-0 items-start gap-2 text-xs text-zinc-300"
+                        >
+                          <input
+                            type="radio"
+                            name="existing-plan"
+                            className="mt-0.5 size-4 shrink-0"
+                            checked={
+                              inheritanceOffer.selectedPlanKey === plan.planKey
+                            }
+                            onChange={() =>
+                              setInheritanceOffer((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      selectedPlanKey: plan.planKey,
+                                    }
+                                  : current
+                              )
+                            }
+                          />
+                          <span className="min-w-0 break-words">
+                            {formatInheritancePlanChoice(plan)}
+                            <span className="mt-0.5 block text-zinc-500">
+                              Daily distribution · {plan.daily.length}{" "}
+                              {plan.daily.length === 1
+                                ? "training day"
+                                : "training days"}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void applyExistingPlan()}
+                    disabled={inheritanceApplying}
+                    className="min-h-[36px] rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {inheritanceApplying
+                      ? "Applying…"
+                      : inheritanceOffer.plans.length === 1
+                        ? "Apply plan"
+                        : "Apply selected plan"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={skipInheritanceOffer}
+                    disabled={inheritanceApplying}
+                    className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300 disabled:opacity-50"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
             <ul className="grid max-h-[min(70vh,36rem)] grid-cols-1 gap-1 overflow-y-auto rounded-lg border border-zinc-800 p-2 sm:grid-cols-2 xl:grid-cols-3">
               {players.map((p) => {
                 const checked = selectedPlayerIds.includes(p.id);
