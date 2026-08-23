@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
   type ReactNode,
@@ -60,8 +61,10 @@ import {
   listPlannerGroupMembersAction,
   listPlannerGroupsAction,
   listPlannerWeekDaysAction,
+  listPlannerWeekPlayersAction,
   listPlannerWeeksAction,
   removePlannerGroupMemberAction,
+  savePlannerWeekPlayersAction,
   updatePlannerGroupAction,
   updatePlannerWeekAction,
   updatePlannerWeekDayAction,
@@ -162,6 +165,37 @@ function errText(code: string, message?: string): string {
   return plannerErrorMessage(code, message);
 }
 
+function copyPlayerIds(ids: string[]): string[] {
+  return ids.slice();
+}
+
+function firstFocusedFromPlayers(
+  playerList: PlannerUiPlayer[],
+  savedIds: string[]
+): string | null {
+  if (savedIds.length === 0) return null;
+  const saved = new Set(savedIds);
+  return playerList.find((p) => saved.has(p.id))?.id ?? savedIds[0] ?? null;
+}
+
+function squadSelectionDiff(selectedIds: string[], savedIds: string[]) {
+  const saved = new Set(savedIds);
+  const selected = new Set(selectedIds);
+  let addedCount = 0;
+  let removedCount = 0;
+  for (const id of selected) {
+    if (!saved.has(id)) addedCount += 1;
+  }
+  for (const id of saved) {
+    if (!selected.has(id)) removedCount += 1;
+  }
+  return {
+    addedCount,
+    removedCount,
+    changed: addedCount > 0 || removedCount > 0,
+  };
+}
+
 function pctInputsFrom(
   src: PercentageMetrics | null | undefined
 ): Record<MetricKey, string> {
@@ -254,7 +288,21 @@ export function WeeklyPlannerView({
   >({});
 
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [savedSquadPlayerIds, setSavedSquadPlayerIds] = useState<string[]>([]);
+  const [squadLoadState, setSquadLoadState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [squadError, setSquadError] = useState<string | null>(null);
+  const [squadFlash, setSquadFlash] = useState<string | null>(null);
+  const [squadSaving, setSquadSaving] = useState(false);
   const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
+  const weekScopedRequestId = useRef(0);
+  const lastSquadWeekIdRef = useRef<string | null>(null);
+  const squadSaveGenRef = useRef(0);
+  const weekIdRef = useRef(weekId);
+  weekIdRef.current = weekId;
+  const playersRef = useRef(players);
+  playersRef.current = players;
 
   const [weeklyTarget, setWeeklyTarget] =
     useState<PlannerWeeklyTargetView | null>(null);
@@ -336,42 +384,86 @@ export function WeeklyPlannerView({
     if (res.ok) setWeeks(res.data);
   }, []);
 
-  const loadWeekScoped = useCallback(async (id: string) => {
-    if (!id) {
-      setDays([]);
-      setOfficialMatches([]);
-      setGroups([]);
-      setGroupMembers({});
-      return;
-    }
-    const [dRes, gRes, mRes] = await Promise.all([
-      listPlannerWeekDaysAction(id),
-      listPlannerGroupsAction(id),
-      getPlannerWeekOfficialMatchesAction(id),
-    ]);
-    if (dRes.ok) setDays(dRes.data);
-    else setError(errText(dRes.error.code, dRes.error.message));
-    if (mRes.ok) setOfficialMatches(mRes.data);
-    else setOfficialMatches([]);
-    if (gRes.ok) {
-      setGroups(gRes.data);
-      const memberMap: Record<string, PlannerGroupMemberRow[]> = {};
-      await Promise.all(
-        gRes.data.map(async (g) => {
-          const m = await listPlannerGroupMembersAction(g.id);
-          if (m.ok) memberMap[g.id] = m.data;
-        })
-      );
-      setGroupMembers(memberMap);
-      if (gRes.data.length > 0) {
-        setActiveGroupId((prev) =>
-          gRes.data.some((g) => g.id === prev) ? prev : gRes.data[0].id
-        );
-      } else {
-        setActiveGroupId("");
+  const loadWeekScoped = useCallback(
+    async (id: string, opts?: { reloadSquad?: boolean }) => {
+      const requestId = ++weekScopedRequestId.current;
+      const reloadSquad =
+        opts?.reloadSquad === true || lastSquadWeekIdRef.current !== id;
+
+      const resetSquadUnknown = () => {
+        lastSquadWeekIdRef.current = null;
+        squadSaveGenRef.current += 1;
+        setSquadSaving(false);
+        setSquadLoadState(id ? "loading" : "idle");
+        setSquadError(null);
+        setSquadFlash(null);
+        setSavedSquadPlayerIds([]);
+        setSelectedPlayerIds([]);
+        setFocusedPlayerId(null);
+      };
+
+      if (!id) {
+        resetSquadUnknown();
+        setDays([]);
+        setOfficialMatches([]);
+        setGroups([]);
+        setGroupMembers({});
+        return;
       }
-    }
-  }, []);
+
+      if (reloadSquad) resetSquadUnknown();
+
+      const [dRes, gRes, mRes, squadRes] = await Promise.all([
+        listPlannerWeekDaysAction(id),
+        listPlannerGroupsAction(id),
+        getPlannerWeekOfficialMatchesAction(id),
+        reloadSquad
+          ? listPlannerWeekPlayersAction(id)
+          : Promise.resolve(null),
+      ]);
+      if (weekScopedRequestId.current !== requestId) return;
+
+      if (dRes.ok) setDays(dRes.data);
+      else setError(errText(dRes.error.code, dRes.error.message));
+      if (mRes.ok) setOfficialMatches(mRes.data);
+      else setOfficialMatches([]);
+      if (gRes.ok) {
+        setGroups(gRes.data);
+        const memberMap: Record<string, PlannerGroupMemberRow[]> = {};
+        await Promise.all(
+          gRes.data.map(async (g) => {
+            const m = await listPlannerGroupMembersAction(g.id);
+            if (m.ok) memberMap[g.id] = m.data;
+          })
+        );
+        if (weekScopedRequestId.current !== requestId) return;
+        setGroupMembers(memberMap);
+        if (gRes.data.length > 0) {
+          setActiveGroupId((prev) =>
+            gRes.data.some((g) => g.id === prev) ? prev : gRes.data[0].id
+          );
+        } else {
+          setActiveGroupId("");
+        }
+      }
+
+      if (!reloadSquad || !squadRes) return;
+      if (!squadRes.ok) {
+        lastSquadWeekIdRef.current = null;
+        setSquadLoadState("error");
+        setSquadError(errText(squadRes.error.code, squadRes.error.message));
+        return;
+      }
+      const ids = squadRes.data.playerIds;
+      lastSquadWeekIdRef.current = id;
+      setSavedSquadPlayerIds(ids);
+      setSelectedPlayerIds(copyPlayerIds(ids));
+      setSquadLoadState("ready");
+      setSquadError(null);
+      setFocusedPlayerId(firstFocusedFromPlayers(playersRef.current, ids));
+    },
+    []
+  );
 
   useEffect(() => {
     onWeekIdChange?.(weekId);
@@ -514,7 +606,20 @@ export function WeeklyPlannerView({
     loadProgress,
   ]);
 
+  const squadDiff = useMemo(
+    () => squadSelectionDiff(selectedPlayerIds, savedSquadPlayerIds),
+    [selectedPlayerIds, savedSquadPlayerIds]
+  );
+  const selectionLocked = squadSaving || squadLoadState === "loading";
+  const squadBaselineReady = squadLoadState === "ready";
+  const canSaveSquad =
+    Boolean(weekId) &&
+    squadBaselineReady &&
+    !squadSaving &&
+    squadDiff.changed;
+
   function togglePlayer(id: string) {
+    if (selectionLocked) return;
     setSelectedPlayerIds((prev) => {
       const next = prev.includes(id)
         ? prev.filter((x) => x !== id)
@@ -528,10 +633,74 @@ export function WeeklyPlannerView({
   }
 
   function selectGroupMembers(groupId: string) {
+    if (selectionLocked) return;
     const members = groupMembers[groupId] ?? [];
     const ids = members.map((m) => m.playerId);
     setSelectedPlayerIds(ids);
     if (ids.length > 0) setFocusedPlayerId(ids[0]);
+  }
+
+  function selectAllPlayers() {
+    if (selectionLocked) return;
+    setSelectedPlayerIds(players.map((p) => p.id));
+    if (players[0]) setFocusedPlayerId(players[0].id);
+  }
+
+  function clearSelectedPlayers() {
+    if (selectionLocked) return;
+    setSelectedPlayerIds([]);
+    setFocusedPlayerId(null);
+  }
+
+  function resetToSavedSquad() {
+    if (squadLoadState !== "ready" || squadSaving || !squadDiff.changed) return;
+    const ids = copyPlayerIds(savedSquadPlayerIds);
+    setSelectedPlayerIds(ids);
+    if (!focusedPlayerId || !ids.includes(focusedPlayerId)) {
+      setFocusedPlayerId(firstFocusedFromPlayers(players, ids));
+    }
+  }
+
+  function retryLoadSavedSquad() {
+    if (!weekId || squadSaving) return;
+    void loadWeekScoped(weekId, { reloadSquad: true });
+  }
+
+  async function saveWeekSquad() {
+    if (!canSaveSquad) return;
+    const weekAtSave = weekId;
+    const saveGen = squadSaveGenRef.current;
+    setSquadSaving(true);
+    setSquadError(null);
+    setSquadFlash(null);
+    try {
+      const res = await savePlannerWeekPlayersAction({
+        weekId: weekAtSave,
+        selectedPlayerIds,
+      });
+      if (
+        squadSaveGenRef.current !== saveGen ||
+        weekIdRef.current !== weekAtSave
+      ) {
+        return;
+      }
+      if (!res.ok) {
+        setSquadError(errText(res.error.code, res.error.message));
+        return;
+      }
+      const savedIds = res.data.savedPlayerIds;
+      setSavedSquadPlayerIds(savedIds);
+      setSelectedPlayerIds(copyPlayerIds(savedIds));
+      lastSquadWeekIdRef.current = weekAtSave;
+      setSquadFlash(`Squad saved · ${savedIds.length} players`);
+    } finally {
+      if (
+        squadSaveGenRef.current === saveGen &&
+        weekIdRef.current === weekAtSave
+      ) {
+        setSquadSaving(false);
+      }
+    }
   }
 
   function openCreateWeek() {
@@ -1702,31 +1871,86 @@ export function WeeklyPlannerView({
         <p className="mb-3 text-xs text-zinc-500">
           Check players to apply Weekly/Daily percentages in bulk. Focus one
           player to edit details. Groups are optional selection helpers — they
-          do not own targets.
+          do not own targets. Save Squad stores this week’s default checklist.
         </p>
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           <div>
             <div className="mb-2 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedPlayerIds(players.map((p) => p.id));
-                  if (players[0]) setFocusedPlayerId(players[0].id);
-                }}
-                className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300"
+                onClick={selectAllPlayers}
+                disabled={selectionLocked}
+                className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300 disabled:opacity-50"
               >
                 Select all
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedPlayerIds([]);
-                  setFocusedPlayerId(null);
-                }}
-                className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300"
+                onClick={clearSelectedPlayers}
+                disabled={selectionLocked}
+                className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300 disabled:opacity-50"
               >
                 Clear
               </button>
+              <button
+                type="button"
+                onClick={resetToSavedSquad}
+                disabled={
+                  !squadBaselineReady || squadSaving || !squadDiff.changed
+                }
+                className="min-h-[36px] rounded-lg border border-zinc-700 px-3 text-xs text-zinc-300 disabled:opacity-50"
+              >
+                Reset to saved squad
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveWeekSquad()}
+                disabled={!canSaveSquad}
+                className="min-h-[36px] rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {squadSaving ? "Saving squad…" : "Save Squad"}
+              </button>
+            </div>
+            <div className="mb-2 space-y-1 text-xs">
+              {squadLoadState === "loading" ? (
+                <p className="text-zinc-500">Loading saved squad…</p>
+              ) : squadBaselineReady ? (
+                <>
+                  <p className="text-zinc-500">
+                    Saved squad · {savedSquadPlayerIds.length}{" "}
+                    {savedSquadPlayerIds.length === 1 ? "player" : "players"}
+                  </p>
+                  {squadDiff.changed && (
+                    <p className="text-amber-300">
+                      {`${squadDiff.addedCount + squadDiff.removedCount} unsaved changes · +${squadDiff.addedCount} / -${squadDiff.removedCount}`}
+                    </p>
+                  )}
+                </>
+              ) : squadLoadState === "error" ? (
+                <p className="text-red-300">
+                  Could not load saved squad. Save Squad is disabled until it
+                  loads.
+                </p>
+              ) : (
+                <p className="text-zinc-500">No week selected.</p>
+              )}
+              {squadError && (
+                <p className="text-red-300">
+                  {squadError}{" "}
+                  {squadLoadState === "error" && weekId ? (
+                    <button
+                      type="button"
+                      onClick={retryLoadSavedSquad}
+                      className="underline"
+                    >
+                      Retry
+                    </button>
+                  ) : null}
+                </p>
+              )}
+              {squadFlash && squadBaselineReady && (
+                <p className="text-emerald-300">{squadFlash}</p>
+              )}
             </div>
             <ul className="grid max-h-[min(70vh,36rem)] grid-cols-1 gap-1 overflow-y-auto rounded-lg border border-zinc-800 p-2 sm:grid-cols-2 xl:grid-cols-3">
               {players.map((p) => {
@@ -1742,8 +1966,9 @@ export function WeeklyPlannerView({
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={selectionLocked}
                       onChange={() => togglePlayer(p.id)}
-                      className="size-4 rounded border-zinc-600"
+                      className="size-4 rounded border-zinc-600 disabled:opacity-50"
                     />
                     <button
                       type="button"
@@ -1824,7 +2049,8 @@ export function WeeklyPlannerView({
                   <button
                     type="button"
                     onClick={() => selectGroupMembers(activeGroupId)}
-                    className="min-h-[36px] rounded-lg border border-emerald-700/50 px-3 text-xs text-emerald-300"
+                    disabled={selectionLocked}
+                    className="min-h-[36px] rounded-lg border border-emerald-700/50 px-3 text-xs text-emerald-300 disabled:opacity-50"
                   >
                     Select members
                   </button>
