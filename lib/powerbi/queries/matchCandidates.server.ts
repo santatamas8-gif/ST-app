@@ -9,9 +9,8 @@ import { executePowerBiDaxQuery } from "@/lib/powerbi/client.server";
 import { logPowerBiError } from "@/lib/powerbi/errors";
 import type { PowerBiErrorCode } from "@/lib/powerbi/types";
 import {
-  MATCH_ACTUAL_FIRST_HALF,
+  MATCH_ACTUAL_DRILL_ALLOWLIST,
   MATCH_ACTUAL_MD_TAG,
-  MATCH_ACTUAL_SECOND_HALF,
   MATCH_ACTUAL_SESSION_TYPE,
 } from "@/lib/powerbi/queries/matchActualClassify";
 import {
@@ -60,15 +59,16 @@ export function parseCandidateGpsDate(value: unknown): string | null {
 }
 
 /**
- * Distinct Team MD half dates for one Power BI Week ID.
+ * Distinct Team MD allowlisted-segment dates for one Power BI Week ID.
  * Raw Player + Date rows only — counts are aggregated in JS, not DAX.
  */
 export function buildMatchCandidateDatesDax(weekId: string): string {
   const escapedWeekId = escapeDaxString(weekId);
   const mdTag = escapeDaxString(MATCH_ACTUAL_MD_TAG);
   const sessionType = escapeDaxString(MATCH_ACTUAL_SESSION_TYPE);
-  const firstHalf = escapeDaxString(MATCH_ACTUAL_FIRST_HALF);
-  const secondHalf = escapeDaxString(MATCH_ACTUAL_SECOND_HALF);
+  const drillList = MATCH_ACTUAL_DRILL_ALLOWLIST.map(
+    (drill) => `"${escapeDaxString(drill)}"`
+  ).join(", ");
 
   return `EVALUATE
 SELECTCOLUMNS(
@@ -77,7 +77,7 @@ SELECTCOLUMNS(
     GPS_Log[Week ID] = "${escapedWeekId}"
       && GPS_Log[MD_Tag] = "${mdTag}"
       && GPS_Log[SessionType] = "${sessionType}"
-      && GPS_Log[Drill] IN {"${firstHalf}", "${secondHalf}"}
+      && GPS_Log[Drill] IN {${drillList}}
   ),
   "Player", GPS_Log[Player],
   "Date", GPS_Log[Date]

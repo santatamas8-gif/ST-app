@@ -15,9 +15,8 @@ import {
   parseIsoDateParts,
 } from "@/lib/powerbi/queries/rowUtils";
 import {
-  MATCH_ACTUAL_FIRST_HALF,
+  MATCH_ACTUAL_DRILL_ALLOWLIST,
   MATCH_ACTUAL_MD_TAG,
-  MATCH_ACTUAL_SECOND_HALF,
   MATCH_ACTUAL_SESSION_TYPE,
   classifyMatchActualRowsByPlayer,
   type MatchActualPlayerResult,
@@ -51,8 +50,8 @@ function requireNonEmpty(value: string): string | null {
 }
 
 /**
- * Non-aggregating Team match half DAX for many frozen player names.
- * Returns raw GPS_Log rows so the classifier can enforce 0 / 1 / >1 per half.
+ * Non-aggregating Team match segment DAX for many frozen player names.
+ * Returns raw GPS_Log rows so the classifier can enforce 0 / 1 / >1 per allowlisted segment.
  */
 export function buildMatchActualBatchDax(input: {
   weekId: string;
@@ -62,8 +61,9 @@ export function buildMatchActualBatchDax(input: {
   const weekId = escapeDaxString(input.weekId);
   const mdTag = escapeDaxString(MATCH_ACTUAL_MD_TAG);
   const sessionType = escapeDaxString(MATCH_ACTUAL_SESSION_TYPE);
-  const firstHalf = escapeDaxString(MATCH_ACTUAL_FIRST_HALF);
-  const secondHalf = escapeDaxString(MATCH_ACTUAL_SECOND_HALF);
+  const drillList = MATCH_ACTUAL_DRILL_ALLOWLIST.map(
+    (drill) => `"${escapeDaxString(drill)}"`
+  ).join(", ");
   const playerList = input.playerNames
     .map((name) => `"${escapeDaxString(name)}"`)
     .join(", ");
@@ -77,7 +77,7 @@ SELECTCOLUMNS(
       && GPS_Log[Date] = DATE(${input.dateParts.year},${input.dateParts.month},${input.dateParts.day})
       && GPS_Log[MD_Tag] = "${mdTag}"
       && GPS_Log[SessionType] = "${sessionType}"
-      && GPS_Log[Drill] IN {"${firstHalf}", "${secondHalf}"}
+      && GPS_Log[Drill] IN {${drillList}}
   ),
   "Player", GPS_Log[Player],
   "Drill", GPS_Log[Drill],

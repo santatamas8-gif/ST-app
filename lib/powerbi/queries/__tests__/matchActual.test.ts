@@ -14,6 +14,7 @@ import {
   buildMatchActualBatchDax,
   getMatchActualGpsBatch,
 } from "@/lib/powerbi/queries/matchActual.server";
+import { buildMatchCandidateDatesDax } from "@/lib/powerbi/queries/matchCandidates.server";
 
 function okRows(rows: Record<string, unknown>[]) {
   return {
@@ -34,7 +35,12 @@ describe("buildMatchActualBatchDax", () => {
     expect(dax).toContain("GPS_Log[Date] = DATE(2026,8,15)");
     expect(dax).toContain('GPS_Log[MD_Tag] = "MD"');
     expect(dax).toContain('GPS_Log[SessionType] = "Team"');
-    expect(dax).toContain('GPS_Log[Drill] IN {"1st Half", "2nd Half"}');
+    expect(dax).toContain(
+      'GPS_Log[Drill] IN {"1st Half", "2nd Half", "1st Half Extra Time", "2nd Half Extra Time"}'
+    );
+    expect(dax).not.toContain("Full Match");
+    expect(dax).not.toContain("90 Min");
+    expect(dax).not.toContain("120 Min");
     expect(dax).toContain('GPS_Log[Player] IN {"O""Brien", "Raul Cimpean"}');
     expect(dax).toContain('"Player", GPS_Log[Player]');
     expect(dax).toContain('"Drill", GPS_Log[Drill]');
@@ -50,6 +56,19 @@ describe("buildMatchActualBatchDax", () => {
     expect(dax).not.toMatch(/GPS_Log\[Drill\]\s*=\s*"Individual"/);
     expect(dax).not.toContain('"First Half"');
     expect(dax).not.toContain('"Second Half"');
+  });
+
+  it("candidate and Match Actual DAX use the same four-segment allowlist", () => {
+    const actual = buildMatchActualBatchDax({
+      weekId: "W5",
+      playerNames: ["Doru Andrei"],
+      dateParts: { year: 2026, month: 8, day: 15 },
+    });
+    const candidate = buildMatchCandidateDatesDax("W5");
+    const allowlist =
+      '{"1st Half", "2nd Half", "1st Half Extra Time", "2nd Half Extra Time"}';
+    expect(actual).toContain(`GPS_Log[Drill] IN ${allowlist}`);
+    expect(candidate).toContain(`GPS_Log[Drill] IN ${allowlist}`);
   });
 });
 

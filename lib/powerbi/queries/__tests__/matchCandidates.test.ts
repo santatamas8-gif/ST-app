@@ -25,12 +25,17 @@ function okRows(rows: Record<string, unknown>[]) {
 }
 
 describe("buildMatchCandidateDatesDax", () => {
-  it("A-E: exact Week ID, MD, Team, halves only; no SourceFile identity", () => {
+  it("A-E: exact Week ID, MD, Team, allowlisted segments only; no SourceFile identity", () => {
     const dax = buildMatchCandidateDatesDax("W5");
     expect(dax).toContain('GPS_Log[Week ID] = "W5"');
     expect(dax).toContain('GPS_Log[MD_Tag] = "MD"');
     expect(dax).toContain('GPS_Log[SessionType] = "Team"');
-    expect(dax).toContain('GPS_Log[Drill] IN {"1st Half", "2nd Half"}');
+    expect(dax).toContain(
+      'GPS_Log[Drill] IN {"1st Half", "2nd Half", "1st Half Extra Time", "2nd Half Extra Time"}'
+    );
+    expect(dax).not.toContain("Full Match");
+    expect(dax).not.toContain("90 Min");
+    expect(dax).not.toContain("120 Min");
     expect(dax).toContain('"Player", GPS_Log[Player]');
     expect(dax).toContain('"Date", GPS_Log[Date]');
     expect(dax).not.toContain("SourceFile");
