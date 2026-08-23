@@ -76,6 +76,14 @@ import {
 } from "@/lib/gpsPlanner/groups.server";
 
 import {
+  listPlannerWeekPlayers,
+  savePlannerWeekPlayers,
+  type PlannerSaveWeekPlayersResult,
+  type PlannerWeekPlayersView,
+  type SavePlannerWeekPlayersInput,
+} from "@/lib/gpsPlanner/weekPlayers.server";
+
+import {
   createPlannerWeeklyTarget,
   deletePlannerWeeklyTarget,
   getPlannerMatchBestSnapshot,
@@ -314,6 +322,22 @@ export async function listPlannerMatchCandidatesAction(
   weekId: string
 ): Promise<PlannerResult<PlannerMatchCandidate[]>> {
   return listPlannerMatchCandidates(weekId);
+}
+
+// ── Persistent Week Squad (list + atomic Save RPC) ─────────────────────────
+
+export async function listPlannerWeekPlayersAction(
+  weekId: string
+): Promise<PlannerResult<PlannerWeekPlayersView>> {
+  return listPlannerWeekPlayers(weekId);
+}
+
+export async function savePlannerWeekPlayersAction(
+  input: SavePlannerWeekPlayersInput
+): Promise<PlannerResult<PlannerSaveWeekPlayersResult>> {
+  const result = await savePlannerWeekPlayers(input);
+  if (result.ok) revalidatePlanner();
+  return result;
 }
 
 // ── Groups + members ────────────────────────────────────────────────────────

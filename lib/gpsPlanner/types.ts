@@ -207,6 +207,24 @@ export type PlannerUiPlayer = {
   avatarUrl: string | null;
 };
 
+/** Persisted week-scoped saved squad (§J2). Order is not stored. */
+export type PlannerWeekPlayersView = {
+  playerIds: string[];
+};
+
+/** Atomic Save Squad result from planner_save_week_players. */
+export type PlannerSaveWeekPlayersResult = {
+  savedPlayerIds: string[];
+  addedPlayerIds: string[];
+  removedPlayerIds: string[];
+  changed: boolean;
+};
+
+export type SavePlannerWeekPlayersInput = {
+  weekId: string;
+  selectedPlayerIds: string[];
+};
+
 export type ApplyWeeklyTargetOutcome = {
   playerId: string;
   status: "created" | "updated" | "failed";
