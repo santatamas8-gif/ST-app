@@ -21,7 +21,8 @@ type MatchFeedbackScaleProps = {
   colorScale: "demand" | "performance";
 };
 
-const SCALE_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const LEFT_COLUMN = [1, 2, 3, 4, 5] as const;
+const RIGHT_COLUMN = [6, 7, 8, 9, 10] as const;
 
 /** Match-only 1–10 picker: every value and meaning visible (not shared ScaleInput). */
 export function MatchFeedbackScale({
@@ -37,35 +38,38 @@ export function MatchFeedbackScale({
   const badgeSelected =
     colorScale === "demand" ? DEMAND_BADGE_SELECTED : PERFORMANCE_BADGE_SELECTED;
 
+  function renderOption(n: number) {
+    const selected = value === n;
+    const meaning = valueLabels[n] ?? "";
+    return (
+      <button
+        key={n}
+        type="button"
+        role="option"
+        aria-selected={selected}
+        onClick={() => onChange(n)}
+        className={`flex min-h-[48px] w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 ${
+          selected ? selectedMap[n] : idleMap[n]
+        }`}
+      >
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
+            selected ? badgeSelected[n] : badgeIdle[n]
+          }`}
+        >
+          {n}
+        </span>
+        <span className="min-w-0 text-sm font-medium leading-snug">{meaning}</span>
+      </button>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <h2 className={MF_QUESTION_TITLE}>{label}</h2>
-      <div className="grid grid-cols-1 gap-2" role="listbox" aria-label={label}>
-        {SCALE_VALUES.map((n) => {
-          const selected = value === n;
-          const meaning = valueLabels[n] ?? "";
-          return (
-            <button
-              key={n}
-              type="button"
-              role="option"
-              aria-selected={selected}
-              onClick={() => onChange(n)}
-              className={`flex min-h-[48px] items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 ${
-                selected ? selectedMap[n] : idleMap[n]
-              }`}
-            >
-              <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
-                  selected ? badgeSelected[n] : badgeIdle[n]
-                }`}
-              >
-                {n}
-              </span>
-              <span className="min-w-0 text-sm font-medium leading-snug">{meaning}</span>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3" role="listbox" aria-label={label}>
+        <div className="flex flex-col gap-2">{LEFT_COLUMN.map(renderOption)}</div>
+        <div className="flex flex-col gap-2">{RIGHT_COLUMN.map(renderOption)}</div>
       </div>
     </div>
   );

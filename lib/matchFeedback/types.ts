@@ -51,3 +51,8 @@ export type MatchFeedbackSubmitRequest = {
   physicalDropoff: PhysicalDropoff;
   mentalDemand: number;
 };
+
+export type MatchFeedbackAddParticipantsRequest = {
+  matchId: string;
+  playerIds: string[];
+};

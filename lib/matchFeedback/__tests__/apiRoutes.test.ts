@@ -15,6 +15,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import { POST as createMatch } from "@/app/api/kiosk-match/create/route";
+import { POST as addParticipants } from "@/app/api/kiosk-match/add-participants/route";
 import { POST as deleteMatch } from "@/app/api/kiosk-match/delete/route";
 import { POST as submitMatch } from "@/app/api/kiosk-match/submit/route";
 
@@ -122,6 +123,48 @@ describe("POST /api/kiosk-match/create auth", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.matchId).toBe(MATCH_ID);
+  });
+});
+
+describe("POST /api/kiosk-match/add-participants auth", () => {
+  beforeEach(() => {
+    getAppUser.mockReset();
+    fromMock.mockReset();
+  });
+
+  it("rejects unauthenticated add with 401", async () => {
+    getAppUser.mockResolvedValue(null);
+    const res = await addParticipants(jsonRequest({ matchId: MATCH_ID, playerIds: [PLAYER_B] }));
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects staff add with 403", async () => {
+    getAppUser.mockResolvedValue(STAFF);
+    const res = await addParticipants(jsonRequest({ matchId: MATCH_ID, playerIds: [PLAYER_B] }));
+    expect(res.status).toBe(403);
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("allows admin to add players not already on the match", async () => {
+    getAppUser.mockResolvedValue(ADMIN);
+    fromMock.mockImplementation((table: string) => {
+      if (table === "match_feedback_matches") {
+        return chain({ data: { id: MATCH_ID }, error: null }, "maybeSingle");
+      }
+      if (table === "profiles") {
+        return chain({ data: [{ id: PLAYER_B, role: "player" }], error: null }, "then");
+      }
+      if (table === "match_feedback_participants") {
+        return chain({ data: [], error: null }, "then");
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const res = await addParticipants(jsonRequest({ matchId: MATCH_ID, playerIds: [PLAYER_B] }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.addedPlayerIds).toEqual([PLAYER_B]);
   });
 });
 

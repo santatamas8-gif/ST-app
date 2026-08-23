@@ -96,3 +96,45 @@ export function validateCreateMatchPlayers(
   }
   return { ok: true };
 }
+
+export type AddParticipantsValidationResult =
+  | { ok: true; data: { matchId: string; playerIds: string[] } }
+  | { ok: false; error: string };
+
+/** Pure request shape for adding players to an existing match. */
+export function validateAddMatchParticipantsRequest(
+  body: unknown
+): AddParticipantsValidationResult {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false, error: "Invalid request body." };
+  }
+
+  const record = body as Record<string, unknown>;
+  const matchId = record.matchId ?? record.match_id;
+  if (typeof matchId !== "string" || !UUID_RE.test(matchId)) {
+    return { ok: false, error: "Valid matchId is required." };
+  }
+
+  const playerIdsRaw = record.playerIds ?? record.player_ids;
+  if (!Array.isArray(playerIdsRaw)) {
+    return { ok: false, error: "Select at least one player." };
+  }
+  if (playerIdsRaw.length === 0) {
+    return { ok: false, error: "Select at least one player." };
+  }
+
+  const playerIds: string[] = [];
+  const seen = new Set<string>();
+  for (const id of playerIdsRaw) {
+    if (typeof id !== "string" || !UUID_RE.test(id)) {
+      return { ok: false, error: "Invalid player ID." };
+    }
+    if (seen.has(id)) {
+      return { ok: false, error: "Duplicate player IDs are not allowed." };
+    }
+    seen.add(id);
+    playerIds.push(id);
+  }
+
+  return { ok: true, data: { matchId, playerIds } };
+}

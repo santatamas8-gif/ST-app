@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   canAccessMatchFeedback,
+  canAddMatchFeedbackParticipants,
   canCreateMatchFeedback,
   canDeleteMatchFeedback,
   canSubmitMatchFeedbackResponse,
 } from "@/lib/matchFeedback/auth";
 import { matchFeedbackParticipantCounts } from "@/lib/matchFeedback/counters";
 import {
+  validateAddMatchParticipantsRequest,
   validateCreateMatchPlayers,
   validateCreateMatchRequest,
 } from "@/lib/matchFeedback/createValidation";
@@ -27,6 +29,13 @@ describe("matchFeedback auth (service-role write gate)", () => {
     expect(canCreateMatchFeedback("staff")).toBe(false);
     expect(canCreateMatchFeedback("player")).toBe(false);
     expect(canCreateMatchFeedback(null)).toBe(false);
+  });
+
+  it("allows only admin to add participants after create", () => {
+    expect(canAddMatchFeedbackParticipants("admin")).toBe(true);
+    expect(canAddMatchFeedbackParticipants("staff")).toBe(false);
+    expect(canAddMatchFeedbackParticipants("player")).toBe(false);
+    expect(canAddMatchFeedbackParticipants(null)).toBe(false);
   });
 
   it("allows only admin to delete matches", () => {
@@ -71,6 +80,33 @@ describe("validateCreateMatchRequest", () => {
         opponent: "X",
         matchDate: "2026-08-11",
         matchday: 1,
+        playerIds: [PLAYER_A, PLAYER_A],
+      }).ok
+    ).toBe(false);
+  });
+});
+
+describe("validateAddMatchParticipantsRequest", () => {
+  it("accepts a valid add-participants payload", () => {
+    const result = validateAddMatchParticipantsRequest({
+      matchId: MATCH_ID,
+      playerIds: [PLAYER_A, PLAYER_B],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.matchId).toBe(MATCH_ID);
+      expect(result.data.playerIds).toEqual([PLAYER_A, PLAYER_B]);
+    }
+  });
+
+  it("rejects missing matchId, empty/duplicate players", () => {
+    expect(validateAddMatchParticipantsRequest({ matchId: "bad", playerIds: [PLAYER_A] }).ok).toBe(
+      false
+    );
+    expect(validateAddMatchParticipantsRequest({ matchId: MATCH_ID, playerIds: [] }).ok).toBe(false);
+    expect(
+      validateAddMatchParticipantsRequest({
+        matchId: MATCH_ID,
         playerIds: [PLAYER_A, PLAYER_A],
       }).ok
     ).toBe(false);

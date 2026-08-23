@@ -141,7 +141,7 @@ export function KioskMatchQuestionnaire({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4 px-1 sm:px-2">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"

@@ -41,6 +41,31 @@ export async function deleteMatchFeedbackMatch(
   }
 }
 
+export async function addMatchFeedbackParticipants(
+  matchId: string,
+  playerIds: string[]
+): Promise<
+  { ok: true; addedPlayerIds: string[] } | { ok: false; message: string; status?: number }
+> {
+  try {
+    const res = await fetch("/api/kiosk-match/add-participants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, playerIds }),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      addedPlayerIds?: string[];
+    };
+    if (!res.ok) {
+      return { ok: false, message: json.error ?? "Failed to add players.", status: res.status };
+    }
+    return { ok: true, addedPlayerIds: json.addedPlayerIds ?? playerIds };
+  } catch {
+    return { ok: false, message: "Network error adding players." };
+  }
+}
+
 export async function submitMatchFeedbackResponse(
   body: MatchFeedbackSubmitRequest
 ): Promise<

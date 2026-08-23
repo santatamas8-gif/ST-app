@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trophy, Users } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trophy, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { addMatchFeedbackParticipants } from "@/lib/matchFeedback/apiClient";
 import { matchFeedbackParticipantCounts } from "@/lib/matchFeedback/counters";
 import { formatMatchFeedbackDate } from "@/lib/matchFeedback/format";
 import type { MatchFeedbackListItem } from "@/lib/matchFeedback/types";
@@ -111,6 +112,10 @@ export function KioskMatchView({
   const [selectedPlayer, setSelectedPlayer] = useState<KioskPlayer | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [showAddPlayers, setShowAddPlayers] = useState(false);
+  const [addSelectedIds, setAddSelectedIds] = useState<string[]>([]);
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const counts = useMemo(
     () =>
@@ -120,6 +125,18 @@ export function KioskMatchView({
       ),
     [participants, responsesByPlayerId]
   );
+
+  const availableToAdd = useMemo(() => {
+    const onMatch = new Set(participants.map((p) => p.id));
+    return players.filter((p) => !onMatch.has(p.id));
+  }, [players, participants]);
+
+  const resetAddPlayersUi = useCallback(() => {
+    setShowAddPlayers(false);
+    setAddSelectedIds([]);
+    setAddBusy(false);
+    setAddError(null);
+  }, []);
 
   const openMatch = useCallback(async (matchId: string) => {
     setDetailLoading(true);
@@ -138,8 +155,9 @@ export function KioskMatchView({
     setParticipants(result.data.participants);
     setResponsesByPlayerId(result.data.responsesByPlayerId);
     setSelectedPlayer(null);
+    resetAddPlayersUi();
     setStep("match");
-  }, []);
+  }, [resetAddPlayersUi]);
 
   const handleCreated = useCallback(
     async (matchId: string) => {
@@ -158,13 +176,48 @@ export function KioskMatchView({
         setActiveMatch(m);
         setParticipants(result.data.participants);
         setResponsesByPlayerId(result.data.responsesByPlayerId);
+        resetAddPlayersUi();
         setStep("match");
       } else {
         setStep("list");
       }
     },
-    []
+    [resetAddPlayersUi]
   );
+
+  const toggleAddPlayer = useCallback((id: string) => {
+    setAddSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleAddPlayers = useCallback(async () => {
+    if (!activeMatch || addSelectedIds.length === 0 || addBusy) return;
+    setAddBusy(true);
+    setAddError(null);
+    const result = await addMatchFeedbackParticipants(activeMatch.id, addSelectedIds);
+    setAddBusy(false);
+    if (!result.ok) {
+      setAddError(result.message);
+      return;
+    }
+    const addedSet = new Set(result.addedPlayerIds);
+    const newlyAdded = players
+      .filter((p) => addedSet.has(p.id))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    setParticipants((prev) => {
+      const merged = [...prev, ...newlyAdded.filter((p) => !prev.some((x) => x.id === p.id))];
+      return merged.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    });
+    setMatches((prev) =>
+      prev.map((m) =>
+        m.id === activeMatch.id
+          ? { ...m, participant_count: m.participant_count + result.addedPlayerIds.length }
+          : m
+      )
+    );
+    resetAddPlayersUi();
+  }, [activeMatch, addSelectedIds, addBusy, players, resetAddPlayersUi]);
 
   if (loadError) {
     return (
@@ -217,6 +270,10 @@ export function KioskMatchView({
   }
 
   if (step === "match" && activeMatch) {
+    const canAdd = canCreate && availableToAdd.length > 0;
+    const allAddSelected =
+      addSelectedIds.length === availableToAdd.length && availableToAdd.length > 0;
+
     return (
       <div className="space-y-5">
         <button
@@ -225,6 +282,7 @@ export function KioskMatchView({
             setActiveMatch(null);
             setParticipants([]);
             setResponsesByPlayerId({});
+            resetAddPlayersUi();
             setStep("list");
           }}
           className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white"
@@ -234,20 +292,108 @@ export function KioskMatchView({
         </button>
 
         <div className="rounded-xl border border-zinc-800/90 bg-zinc-900/50 p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
-            <div>
-              <h2 className="text-lg font-semibold text-white">vs {activeMatch.opponent}</h2>
-              <p className="mt-1 text-sm text-zinc-400">
-                {formatMatchFeedbackDate(activeMatch.match_date)}
-                <span className="mx-2 text-zinc-600">·</span>
-                Matchday {activeMatch.matchday}
-              </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+              <div>
+                <h2 className="text-lg font-semibold text-white">vs {activeMatch.opponent}</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {formatMatchFeedbackDate(activeMatch.match_date)}
+                  <span className="mx-2 text-zinc-600">·</span>
+                  Matchday {activeMatch.matchday}
+                </p>
+              </div>
             </div>
+            {canAdd ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddPlayers((v) => !v);
+                  setAddError(null);
+                  if (showAddPlayers) setAddSelectedIds([]);
+                }}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-emerald-700/60 hover:bg-zinc-900"
+              >
+                <UserPlus className="h-4 w-4 text-emerald-400" aria-hidden />
+                {showAddPlayers ? "Hide add players" : "Add players"}
+              </button>
+            ) : null}
           </div>
         </div>
 
         <KioskSummaryBar total={counts.total} completed={counts.completed} missing={counts.missing} />
+
+        {showAddPlayers && canAdd ? (
+          <div className="rounded-xl border border-zinc-800/90 bg-zinc-900/40 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-zinc-200">
+                Add players
+                <span className="ml-2 font-normal text-zinc-500">
+                  ({addSelectedIds.length} / {availableToAdd.length} selected)
+                </span>
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={allAddSelected}
+                  onClick={() => setAddSelectedIds(availableToAdd.map((p) => p.id))}
+                  className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  disabled={addSelectedIds.length === 0}
+                  onClick={() => setAddSelectedIds([])}
+                  className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <ul className="grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
+              {availableToAdd.map((player) => {
+                const checked = addSelectedIds.includes(player.id);
+                return (
+                  <li key={player.id}>
+                    <label className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-zinc-800/60">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAddPlayer(player.id)}
+                        className="h-4 w-4 rounded border-zinc-600 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-semibold text-zinc-200"
+                        aria-hidden
+                      >
+                        {player.name.trim().charAt(0).toUpperCase() || "?"}
+                      </span>
+                      <span className="truncate text-sm text-white">{player.name}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            {addError ? (
+              <p
+                className="mt-3 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-300"
+                role="alert"
+              >
+                {addError}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={addSelectedIds.length === 0 || addBusy}
+              onClick={() => void handleAddPlayers()}
+              className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-8"
+            >
+              {addBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+              Add to match
+            </button>
+          </div>
+        ) : null}
 
         {participants.length === 0 ? (
           <p className="text-sm text-zinc-500">No players selected for this match.</p>
