@@ -1728,14 +1728,14 @@ export function WeeklyPlannerView({
                 Clear
               </button>
             </div>
-            <ul className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-zinc-800 p-2">
+            <ul className="grid max-h-[min(70vh,36rem)] grid-cols-1 gap-1 overflow-y-auto rounded-lg border border-zinc-800 p-2 sm:grid-cols-2 xl:grid-cols-3">
               {players.map((p) => {
                 const checked = selectedPlayerIds.includes(p.id);
                 const focused = focusedPlayerId === p.id;
                 return (
                   <li
                     key={p.id}
-                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${
+                    className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 ${
                       focused ? "bg-emerald-950/40 ring-1 ring-emerald-700/40" : ""
                     }`}
                   >
