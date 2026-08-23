@@ -84,6 +84,15 @@ import {
 } from "@/lib/gpsPlanner/weekPlayers.server";
 
 import {
+  analyzePlannerWeekPlanInheritance,
+  applyPlannerExistingPlan,
+  type AnalyzePlannerWeekPlanInheritanceInput,
+  type ApplyPlannerExistingPlanInput,
+  type ApplyPlannerExistingPlanResult,
+  type PlannerWeekPlanInheritanceAnalysis,
+} from "@/lib/gpsPlanner/weekPlanInheritance.server";
+
+import {
   createPlannerWeeklyTarget,
   deletePlannerWeeklyTarget,
   getPlannerMatchBestSnapshot,
@@ -337,6 +346,27 @@ export async function savePlannerWeekPlayersAction(
 ): Promise<PlannerResult<PlannerSaveWeekPlayersResult>> {
   const result = await savePlannerWeekPlayers(input);
   if (result.ok) revalidatePlanner();
+  return result;
+}
+
+export async function analyzePlannerWeekPlanInheritanceAction(
+  input: AnalyzePlannerWeekPlanInheritanceInput
+): Promise<PlannerResult<PlannerWeekPlanInheritanceAnalysis>> {
+  return analyzePlannerWeekPlanInheritance(input);
+}
+
+export async function applyPlannerExistingPlanAction(
+  input: ApplyPlannerExistingPlanInput
+): Promise<PlannerResult<ApplyPlannerExistingPlanResult>> {
+  const result = await applyPlannerExistingPlan(input);
+  if (
+    result.ok &&
+    result.data.outcomes.some(
+      (outcome) => outcome.status === "applied" || outcome.weeklyCreated
+    )
+  ) {
+    revalidatePlanner();
+  }
   return result;
 }
 

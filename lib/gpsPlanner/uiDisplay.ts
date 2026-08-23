@@ -154,6 +154,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     "A match with this order already exists for this planner week.",
   official_match_duplicate_date:
     "A match with this GPS date already exists for this planner week.",
+  stale_plan:
+    "The selected plan is no longer available or has changed. Reload and choose again.",
 };
 
 export function plannerErrorMessage(code: string, fallback?: string): string {

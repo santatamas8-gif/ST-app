@@ -225,6 +225,58 @@ export type SavePlannerWeekPlayersInput = {
   selectedPlayerIds: string[];
 };
 
+/** One Training-day percentage row of a complete reusable plan (§J2.13). */
+export type PlannerReusablePlanDaily = {
+  weekDayId: string;
+  mdTag: string;
+  date: string;
+  pct: PercentageMetrics;
+};
+
+/** Distinct complete reusable plan clustered from persisted percentages. */
+export type PlannerReusablePlan = {
+  planKey: string;
+  playerCount: number;
+  weeklyPct: PercentageMetrics;
+  daily: PlannerReusablePlanDaily[];
+};
+
+export type AnalyzePlannerWeekPlanInheritanceInput = {
+  weekId: string;
+  addedPlayerIds: string[];
+};
+
+export type PlannerWeekPlanInheritanceAnalysis = {
+  eligibleNewPlayerIds: string[];
+  returningPlayerIds: string[];
+  reusablePlans: PlannerReusablePlan[];
+};
+
+export type ApplyPlannerExistingPlanInput = {
+  weekId: string;
+  targetPlayerIds: string[];
+  planKey: string;
+};
+
+export type ApplyExistingPlanDailyOutcome = {
+  weekDayId: string;
+  status: "created" | "failed";
+  message?: string;
+};
+
+export type ApplyExistingPlanPlayerOutcome = {
+  playerId: string;
+  status: "applied" | "already_has_targets" | "failed";
+  message?: string;
+  weeklyCreated: boolean;
+  daily: ApplyExistingPlanDailyOutcome[];
+};
+
+export type ApplyPlannerExistingPlanResult = {
+  planKey: string;
+  outcomes: ApplyExistingPlanPlayerOutcome[];
+};
+
 export type ApplyWeeklyTargetOutcome = {
   playerId: string;
   status: "created" | "updated" | "failed";

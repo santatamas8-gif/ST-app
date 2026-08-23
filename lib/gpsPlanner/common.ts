@@ -43,7 +43,8 @@ export type PlannerErrorCode =
   | "official_match_already_exists"
   | "official_match_ambiguous"
   | "official_match_duplicate_order"
-  | "official_match_duplicate_date";
+  | "official_match_duplicate_date"
+  | "stale_plan";
 
 export type PlannerSafeError = {
   code: PlannerErrorCode;
