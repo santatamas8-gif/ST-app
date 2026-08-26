@@ -856,7 +856,12 @@ describe("Daily Plan print content / design contract", () => {
     expect(source).toContain("daily-plan-print-pct-pair");
     expect(source).toContain("PRINT_BURGUNDY");
     expect(source).toContain("Power BI calculations");
+    expect(source).toContain("by Santa Tamas");
     expect(source).toContain("daily-plan-print-attribution");
+    expect(source).toContain("daily-plan-print-attribution-brand");
+    expect(source).toContain("daily-plan-print-attribution-by");
+    expect(source).toContain("position: fixed");
+    expect(source).toContain("bottom: 6mm");
     expect(source).toContain("formatPlanDate");
     expect(source).toContain("formatMatchdayMeta");
     expect(source).toContain('return `MD${t.slice(2)}`');

@@ -86,7 +86,7 @@ describe("Total Load Review UI", () => {
     expect(view).not.toContain("bg-amber-500");
     expect(view).not.toContain("Tempo");
     expect(view).not.toContain("To Target");
-    expect(view).not.toContain("window.print");
+    expect(view).toContain("window.print");
     expect(view).not.toContain("getMatchActualGpsBatch");
     expect(view).not.toContain("composeTotalLoadResult");
     const display = await readRel("lib/gpsPlanner/totalLoadDisplay.ts");
@@ -106,12 +106,11 @@ describe("Total Load Review UI", () => {
     const review = await readRel(
       "app/(app)/admin/planner/PlannerReviewView.tsx"
     );
-    expect(review).toContain("PlannerTotalLoadView");
-    expect(review).toContain("WeeklyReviewTable");
-    expect(review).toContain("DailyReviewTable");
+    expect(view).toContain("weekLabel");
+    expect(review).toContain("weekLabel={formatTotalLoadWeekSelectLabel(selectedWeek)}");
   });
 
-  it("does not add Total Load print or change Daily Plan", async () => {
+  it("adds Total Load print without changing Daily Plan or formulas", async () => {
     const dailyPlan = await readRel(
       "app/(app)/admin/planner/daily-plan/page.tsx"
     );
@@ -120,6 +119,25 @@ describe("Total Load Review UI", () => {
     const view = await readRel(
       "app/(app)/admin/planner/PlannerTotalLoadView.tsx"
     );
-    expect(view).toContain("no-print");
+    expect(view).toContain("window.print");
+    expect(view).toContain("review-print-root");
+    expect(view).toContain("review-print-title");
+    expect(view).toContain("Total Load");
+    expect(view).toContain("Power BI calculations");
+    expect(view).toContain("by Santa Tamas");
+    expect(view).toContain("total-load-print-num");
+    expect(view).toContain("total-load-print-pct");
+    expect(view).toContain("font-style: italic");
+    expect(view).toContain("total-load-print-avatar");
+    expect(view).not.toContain("total-load-print-hide-avatar");
+    expect(view).toContain("no-print space-y-2");
+    expect(view).toContain("Configured Matches");
+    expect(view).toContain("WeeklyPlanStrip");
+    expect(view).not.toContain("getMatchActualGpsBatch");
+    expect(view).not.toContain("composeTotalLoadResult");
+    const dailyPrint = await readRel(
+      "app/(app)/admin/planner/daily-plan/DailyPlanPrintView.tsx"
+    );
+    expect(dailyPrint).not.toContain("PlannerTotalLoadView");
   });
 });

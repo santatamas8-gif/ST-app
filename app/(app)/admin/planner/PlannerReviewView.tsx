@@ -681,6 +681,7 @@ export function PlannerReviewView({
               week={selectedWeek}
               players={players}
               weekControl={totalLoadWeekControl}
+              weekLabel={formatTotalLoadWeekSelectLabel(selectedWeek)}
             />
           )
         ) : loadingMeta || loadingData || pending ? (

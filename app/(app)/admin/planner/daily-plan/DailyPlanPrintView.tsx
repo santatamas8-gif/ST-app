@@ -116,7 +116,6 @@ export function DailyPlanPrintView({
               {formatMatchdayMeta(data.mdTag)} · {formatPlanDate(data.date)}
             </p>
           </div>
-          <p className="daily-plan-print-attribution">Power BI calculations</p>
         </header>
 
         {/* Player table LEFT; 3 summary boxes RIGHT (Weekly%|Daily% pair, Team Average under). */}
@@ -225,6 +224,12 @@ export function DailyPlanPrintView({
             </section>
           </aside>
         </div>
+        <p className="daily-plan-print-attribution">
+          <em className="daily-plan-print-attribution-brand">
+            Power BI calculations
+          </em>{" "}
+          <em className="daily-plan-print-attribution-by">by Santa Tamas</em>
+        </p>
       </div>
 
       <style jsx global>{`
@@ -246,6 +251,7 @@ export function DailyPlanPrintView({
         }
 
         .daily-plan-print-root {
+          position: relative;
           width: 297mm;
           max-width: calc(100vw - 24px);
           margin: 0 auto 32px;
@@ -287,7 +293,7 @@ export function DailyPlanPrintView({
 
         .daily-plan-print-header-center {
           text-align: center;
-          padding: 0 110px;
+          padding: 0 72px;
         }
 
         .daily-plan-print-title {
@@ -306,15 +312,31 @@ export function DailyPlanPrintView({
         }
 
         .daily-plan-print-attribution {
-          position: absolute;
-          right: 0;
-          top: 0;
-          margin: 0;
+          margin: 8px 0 0;
+          text-align: right;
           font-size: 8px;
           font-style: italic;
-          color: #a1a1aa;
           font-weight: 400;
+          font-family: Georgia, "Times New Roman", Times, serif;
           white-space: nowrap;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .daily-plan-print-attribution em,
+        .daily-plan-print-attribution-brand,
+        .daily-plan-print-attribution-by {
+          font-style: italic;
+          font-weight: 400;
+          font-family: Georgia, "Times New Roman", Times, serif;
+        }
+
+        .daily-plan-print-attribution-brand {
+          color: ${PRINT_BURGUNDY};
+        }
+
+        .daily-plan-print-attribution-by {
+          color: #71717a;
         }
 
         .daily-plan-print-body {
@@ -539,8 +561,10 @@ export function DailyPlanPrintView({
           }
 
           .daily-plan-print-root {
-            position: static;
+            position: relative;
             width: 100%;
+            min-height: 0 !important;
+            height: auto !important;
             max-width: none;
             margin: 0;
             padding: 0;
@@ -561,7 +585,23 @@ export function DailyPlanPrintView({
           }
 
           .daily-plan-print-attribution {
-            color: #a1a1aa !important;
+            position: fixed !important;
+            right: 8mm !important;
+            bottom: 6mm !important;
+            top: auto !important;
+            left: auto !important;
+            margin: 0 !important;
+            z-index: 2;
+          }
+
+          .daily-plan-print-attribution-brand {
+            color: ${PRINT_BURGUNDY} !important;
+            font-style: italic !important;
+          }
+
+          .daily-plan-print-attribution-by {
+            color: #71717a !important;
+            font-style: italic !important;
           }
 
           .daily-plan-print-table-wrap {

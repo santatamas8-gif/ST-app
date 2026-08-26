@@ -34,6 +34,7 @@ type Props = {
   week: PlannerWeekRow;
   players: PlannerUiPlayer[];
   weekControl?: ReactNode;
+  weekLabel?: string;
 };
 
 type MetricCol = {
@@ -121,13 +122,13 @@ function TopValueCard({
       {value ? (
         <>
           <p
-            className={`mt-0.5 truncate text-xs font-medium ${
+            className={`total-load-print-top-name mt-0.5 truncate text-xs font-medium ${
               selected ? "text-zinc-100" : "text-zinc-200"
             }`}
           >
             {value.playerDisplayName}
           </p>
-          <p className="mt-1 truncate text-lg font-semibold tabular-nums leading-none text-white">
+          <p className="total-load-print-top-value mt-1 truncate text-lg font-semibold tabular-nums leading-none text-white">
             {formatPlannerDisplayAbsoluteOrDash(value.value)}
           </p>
         </>
@@ -155,14 +156,14 @@ function PlayerCell({
         <img
           src={avatarUrl}
           alt=""
-          className="size-8 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"
+          className="total-load-print-avatar size-8 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"
         />
       ) : (
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200">
+        <span className="total-load-print-avatar flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200">
           {initial}
         </span>
       )}
-      <span className="ml-2 truncate text-[15px] font-medium text-zinc-900">
+      <span className="total-load-print-player-name ml-2 truncate text-[15px] font-medium text-zinc-900">
         {name}
       </span>
     </div>
@@ -188,7 +189,12 @@ function ConfiguredMatchStatus({ match }: { match: TotalLoadOfficialMatchItem })
   );
 }
 
-export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
+export function PlannerTotalLoadView({
+  week,
+  players,
+  weekControl,
+  weekLabel,
+}: Props) {
   const [result, setResult] = useState<TotalLoadResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -260,11 +266,22 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
     showTotals &&
     result.rows.some((row) => row.quality === "match_data_pending");
 
+  const canPrint = showTotals && !emptyTargets;
+
   return (
-    <div className="no-print space-y-3">
-      <div className="space-y-2">
+    <div className="space-y-3">
+      <div className="no-print space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">{weekControl}</div>
+          {canPrint ? (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            >
+              Print
+            </button>
+          ) : null}
         </div>
         {!loading && result ? (
           <p className="text-[11px] leading-relaxed text-zinc-500">
@@ -275,17 +292,17 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Loading Total Load…</p>
+        <p className="no-print text-sm text-zinc-500">Loading Total Load…</p>
       ) : null}
 
       {error ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="no-print rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {error}
         </p>
       ) : null}
 
       {!loading ? (
-        <div className="space-y-2">
+        <div className="no-print space-y-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
             Configured Matches
           </p>
@@ -305,27 +322,29 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
       ) : null}
 
       {matchPending ? (
-        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+        <p className="no-print rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
           Match GPS is not yet available for a configured match. Total Week is
           unavailable.
         </p>
       ) : null}
 
       {matchUnavailable ? (
-        <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+        <p className="no-print rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
           Match GPS is unavailable for this week.
         </p>
       ) : null}
 
       {!loading && emptyTargets ? (
-        <p className="text-sm text-zinc-500">
+        <p className="no-print text-sm text-zinc-500">
           No Weekly Targets saved for this week.
         </p>
       ) : null}
 
       {showTotals && !emptyTargets ? (
-        <>
-          <div className="overflow-x-auto rounded-xl border border-[#245c45] bg-[#1b4332] p-1">
+        <div className="review-print-root total-load-print-root space-y-3">
+          <h2 className="review-print-title">Total Load</h2>
+          <p className="review-print-meta">{weekLabel ?? ""}</p>
+          <div className="total-load-print-top overflow-x-auto rounded-xl border border-[#245c45] bg-[#1b4332] p-1">
             <div className="grid w-full grid-cols-5 gap-1">
               {TOP_CARDS.map((card) => (
                 <TopValueCard
@@ -339,8 +358,8 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
-            <table className="min-w-[920px] w-full border-collapse text-[15px]">
+          <div className="total-load-print-table-wrap overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+            <table className="total-load-print-table min-w-[920px] w-full border-collapse text-[15px]">
               <thead>
                 <tr className="bg-[#1b4332] text-xs uppercase tracking-wide text-white">
                   <th className="sticky left-0 z-10 bg-[#1b4332] px-3 py-3 text-left font-medium">
@@ -369,7 +388,10 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
                             </span>
                           ) : null}
                           {sortField === m.field ? (
-                            <span className="text-[10px] text-zinc-300" aria-hidden>
+                            <span
+                              className="no-print text-[10px] text-zinc-300"
+                              aria-hidden
+                            >
                               {sortDir === "desc" ? "▼" : "▲"}
                             </span>
                           ) : null}
@@ -425,13 +447,13 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
                           <Fragment key={m.key}>
                             <td
                               title={title}
-                              className="border-l border-zinc-200/80 px-3 py-2.5 text-center font-semibold tabular-nums"
+                              className="total-load-print-num border-l border-zinc-200/80 px-3 py-2.5 text-center font-semibold tabular-nums"
                             >
                               {formatPlannerDisplayAbsoluteOrDash(total)}
                             </td>
                             <td
                               title={title}
-                              className="px-2 py-2.5 text-center text-sm tabular-nums text-zinc-500"
+                              className="total-load-print-pct px-2 py-2.5 text-center text-sm tabular-nums text-zinc-500"
                             >
                               {formatTotalLoadPercent(pct)}
                             </td>
@@ -447,7 +469,7 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
                         ) : (
                           <>
                             {matchMinutes}
-                            <span className="ml-0.5 text-[11px] font-normal text-zinc-400">
+                            <span className="total-load-print-min ml-0.5 text-[11px] font-normal text-zinc-400">
                               min
                             </span>
                           </>
@@ -459,8 +481,161 @@ export function PlannerTotalLoadView({ week, players, weekControl }: Props) {
               </tbody>
             </table>
           </div>
-        </>
+          <p className="total-load-print-attribution">
+            <em className="total-load-print-attribution-brand">
+              Power BI calculations
+            </em>{" "}
+            <em className="total-load-print-attribution-by">
+              by Santa Tamas
+            </em>
+          </p>
+        </div>
       ) : null}
+      <style jsx global>{`
+        .total-load-print-attribution {
+          display: none;
+        }
+
+        @media print {
+          .total-load-print-root > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 4px !important;
+          }
+
+          .total-load-print-root .review-print-title {
+            margin: 0 0 2px !important;
+            font-size: 13px !important;
+          }
+
+          .total-load-print-root .review-print-meta {
+            margin: 0 0 4px !important;
+            font-size: 9px !important;
+          }
+
+          .total-load-print-top {
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #1b4332 !important;
+            border-color: #245c45 !important;
+            padding: 2px !important;
+            margin-bottom: 4px !important;
+          }
+
+          .total-load-print-top button {
+            break-inside: avoid;
+            padding: 2px 4px !important;
+          }
+
+          .total-load-print-top p {
+            margin: 0 !important;
+            line-height: 1.15 !important;
+          }
+
+          .total-load-print-top-name {
+            font-size: 7px !important;
+            margin-top: 1px !important;
+          }
+
+          .total-load-print-top-value {
+            font-size: 11px !important;
+            margin-top: 2px !important;
+          }
+
+          .total-load-print-table-wrap {
+            overflow: visible !important;
+            border: 1px solid #e4e4e7 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+
+          .total-load-print-table {
+            min-width: 0 !important;
+            width: 100% !important;
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+          }
+
+          .total-load-print-table th,
+          .total-load-print-table td,
+          .total-load-print-table th *,
+          .total-load-print-table td * {
+            position: static !important;
+            font-size: 12px !important;
+            line-height: 1.35 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .total-load-print-table th,
+          .total-load-print-table td {
+            padding: 5px 6px !important;
+          }
+
+          .total-load-print-table thead th {
+            background: #1b4332 !important;
+            color: #fff !important;
+          }
+
+          .total-load-print-table thead button {
+            min-height: 0 !important;
+            padding: 0 !important;
+            color: #fff !important;
+          }
+
+          .total-load-print-num {
+            font-weight: 600 !important;
+            font-size: 12px !important;
+          }
+
+          .total-load-print-pct,
+          .total-load-print-min {
+            font-size: 12px !important;
+            font-weight: 400 !important;
+          }
+
+          .total-load-print-avatar {
+            display: inline-flex !important;
+            width: 20px !important;
+            height: 20px !important;
+            font-size: 10px !important;
+          }
+
+          .total-load-print-player-name {
+            margin-left: 6px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+          }
+
+          .total-load-print-attribution {
+            display: block !important;
+            margin: 6px 0 0 !important;
+            text-align: right;
+            font-size: 8px !important;
+            font-style: italic !important;
+            font-weight: 400 !important;
+            font-family: Georgia, "Times New Roman", Times, serif !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .total-load-print-attribution em,
+          .total-load-print-attribution-brand,
+          .total-load-print-attribution-by {
+            font-style: italic !important;
+            font-weight: 400 !important;
+            font-size: 8px !important;
+            font-family: Georgia, "Times New Roman", Times, serif !important;
+          }
+
+          .total-load-print-attribution-brand {
+            color: #1b4332 !important;
+          }
+
+          .total-load-print-attribution-by {
+            color: #71717a !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
