@@ -146,9 +146,13 @@ export async function reclaimAdminRole(): Promise<{ error?: string }> {
   if (appUser.role === "admin") {
     return {};
   }
-  const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role: "admin" }).eq("id", appUser.id);
-  if (error) return { error: error.message };
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("profiles").update({ role: "admin" }).eq("id", appUser.id);
+    if (error) return { error: error.message };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to restore admin role." };
+  }
   revalidatePath("/admin/users");
   revalidatePath("/users");
   revalidatePath("/reclaim-admin");

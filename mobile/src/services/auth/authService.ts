@@ -24,6 +24,25 @@ export async function getSession(): Promise<Session | null> {
   return session;
 }
 
+async function insertPlayerProfileIfMissing(
+  userId: string,
+  email: string
+): Promise<AppUser["role"]> {
+  const supabase = createClient();
+  const { error } = await supabase.from(ROLES_TABLE).insert({
+    id: userId,
+    role: "player",
+    email,
+  });
+  if (!error) return "player";
+  const { data } = await supabase
+    .from(ROLES_TABLE)
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.role as AppUser["role"] | undefined) ?? "player";
+}
+
 export async function signIn(
   email: string,
   password: string
@@ -44,12 +63,10 @@ export async function signIn(
       .select("role")
       .eq("id", authUser.id)
       .maybeSingle();
-    if (!profileError && profile?.role) role = profile.role as AppUser["role"];
-    if (profileError || !profile) {
-      await supabase.from(ROLES_TABLE).upsert(
-        { id: authUser.id, role: "player", email: authUser.email ?? "" },
-        { onConflict: "id" }
-      );
+    if (profile?.role) {
+      role = profile.role as AppUser["role"];
+    } else if (!profileError && !profile) {
+      role = await insertPlayerProfileIfMissing(authUser.id, authUser.email ?? "");
     }
   } catch {
     role = "player";
@@ -80,19 +97,16 @@ export async function getAppUser(): Promise<AppUser | null> {
     .from(ROLES_TABLE)
     .select("role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  const role = profile?.role ?? "player";
-  if (profileError && !profile) {
-    await supabase.from(ROLES_TABLE).upsert(
-      { id: user.id, role: "player", email: user.email ?? "" },
-      { onConflict: "id" }
-    );
+  let role: AppUser["role"] = (profile?.role as AppUser["role"] | undefined) ?? "player";
+  if (!profileError && !profile) {
+    role = await insertPlayerProfileIfMissing(user.id, user.email ?? "");
   }
 
   return {
     id: user.id,
     email: user.email ?? "",
-    role: (role as AppUser["role"]) ?? "player",
+    role,
   };
 }
