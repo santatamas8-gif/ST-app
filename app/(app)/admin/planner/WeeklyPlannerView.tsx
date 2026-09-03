@@ -2929,7 +2929,7 @@ export function WeeklyPlannerView({
                             <th className="py-2 pr-2 text-left">
                               Actual{" "}
                               <span className="font-normal text-zinc-500">
-                                (Full Training)
+                                (Full Training; Individual from 2026-09-01)
                               </span>
                             </th>
                             <th className="py-2 text-left">
@@ -3083,7 +3083,7 @@ function CompletenessBanner({
     cls = "border-zinc-700 bg-zinc-950/50 text-zinc-300";
   } else if (allNotFound) {
     text =
-      "No Full Training Actual found for any included day (shown as —; not treated as 0).";
+      "No training Actual found for any included day (shown as —; not treated as 0).";
     cls = "border-zinc-700 bg-zinc-950/50 text-zinc-300";
   } else if (actualCompleteness === "complete") {
     text = `Actual complete through date (${foundDays}/${includedDays} days found).`;

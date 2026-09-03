@@ -109,8 +109,11 @@ describe("plannerErrorMessage", () => {
     expect(plannerErrorMessage("match_best_not_found")).toBe(
       "Match Best not found in Power BI"
     );
-    expect(plannerErrorMessage("weekly_target_not_found")).toBe(
-      "Weekly Target not found"
+    expect(plannerErrorMessage("actual_not_found")).toBe(
+      "No training Actual found in Power BI for this day."
+    );
+    expect(plannerErrorMessage("actual_ambiguous")).toBe(
+      "Multiple training Actual rows found — not summed."
     );
     expect(plannerErrorMessage("unknown_code", "Custom")).toBe("Custom");
     expect(plannerErrorMessage("totally_unknown")).toMatch(/planner/i);

@@ -479,7 +479,8 @@ describe("Phase 3 isolation", () => {
       path.join(process.cwd(), "lib/powerbi/queries/matchActual.server.ts"),
       "utf8"
     );
-    expect(training).toContain('FULL_TRAINING_DRILL = "Full Training"');
+    expect(training).toContain("FULL_TRAINING_DRILL");
+    expect(training).toContain("INDIVIDUAL_TRAINING_START_DATE");
     expect(training).not.toContain("getPlannerTotalLoad");
     expect(match).toContain("getMatchActualGpsBatch");
     expect(match).not.toContain("getPlannerTotalLoad");

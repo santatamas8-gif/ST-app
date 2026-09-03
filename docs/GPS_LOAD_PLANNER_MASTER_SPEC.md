@@ -168,21 +168,32 @@ STATSports / Sonra
 - `Player`
 - `Week ID`
 - `MD_Tag`
-- `Drill` = exactly `"Full Training"`
-- `Date` when available / needed for disambiguation
+- `Date` — the planner day’s explicit ISO `YYYY-MM-DD` (not server “today”)
+- `Drill` — dated contract (`INDIVIDUAL_TRAINING_START_DATE = "2026-09-01"`):
+  - `date < 2026-09-01` → exactly `"Full Training"`
+  - `date >= 2026-09-01` → exactly `"Full Training"` **or** `"Individual"` (`GPS_Log[Drill] IN {"Full Training", "Individual"}`)
+
+ST-AMS queries `GPS_Log` directly. Do **NOT** use `Training_Drill_Switch`, `SourceFile`, `Top Up`, `SessionType = "Individual"`, or case/alias variants (`"individual"`, trailing spaces).
 
 Primary production filtering uses these **dedicated columns**.  
 Do **NOT** use `SourceFile` parsing as the primary production strategy.
 
-**Row behavior:**
+**Row behavior (per player × planner day, exact drill strings):**
 
-| Rows | Result |
-|---|---|
-| 0 | `not_found` |
-| 1 | success |
-| >1 | `ambiguous` |
+| Full Training rows | Individual rows | Result |
+| ---: | ---: | --- |
+| 0 | 0 | `not_found` |
+| 1 | 0 | success using Full Training |
+| 0 | 1 | success using Individual (only when `date >= 2026-09-01`; earlier dates never query Individual) |
+| 1 | 1 | `ambiguous` |
+| >1 | any | `ambiguous` |
+| any | >1 | `ambiguous` |
 
-**NEVER** silently `SUM` / `MAX` / `MIN` duplicate Full Training rows.
+**NEVER** silently `SUM` / `MAX` / `MIN` duplicate rows of the same drill.
+
+**NEVER** sum Full Training + Individual. **NEVER** apply precedence between them.
+
+Missing data is `not_found` / `—`, never zero-filled.
 
 ---
 
@@ -867,7 +878,7 @@ Do **not** auto-redistribute, auto-correct, or hard-enforce equality in the DB.
 
 - Remains live in Power BI  
 - **No** Supabase GPS Actual mirror table  
-- Daily Actual = Power BI Full Training via `getTrainingActualGps` (Planning / Daily Analysis)  
+- Daily Actual = Power BI Training Actual via `getTrainingActualGps` (Planning / Daily Analysis) using the dated Full Training / Individual drill contract (§E)
 - Weekly Actual = sum of elapsed Daily Actuals  
 - Do **not** include the game in weekly training Actual  
 
@@ -875,7 +886,7 @@ Total Load Match Actual is a **separate** live Power BI query (see **§U3**).
 It must **not** be merged into Weekly/Daily Training Actual or into `getTrainingActualGps`.  
 Do **not** persist GPS Actual metrics.
 
-**Weekly Review loading (implementation detail):** day-batched Full Training queries  
+**Weekly Review loading (implementation detail):** day-batched Training Actual queries
 (`getTrainingActualGpsBatchForDay` / `getPlannerWeeklyReviewProgress`) — one Execute Queries  
 call per included Week Day for all frozen player names — for reliability/performance.  
 Per-player **0 / 1 / >1** raw-row quality semantics are preserved (no SUM/MAX aggregation that  
@@ -946,7 +957,7 @@ Top-level segmented control (only one visible at a time):
 - Daily Plan population: current working `selectedPlayerIds` (not Review population)
 - Review population: players with a saved Weekly Target for that week — **not** filtered by saved squad
 - Total Load population: same Weekly Target population (§U3.1) — **not** filtered by saved squad
-- Weekly / Daily Actual: live Power BI Full Training only — **not** persisted
+- Weekly / Daily Actual: live Power BI Training Actual only (dated Full Training / Individual contract, §E) — **not** persisted
 - Historical Actual identity: frozen snapshot `powerbi_player_name` (never current mapping)
 - Metrics: TD / HSR / Sprint / Acc / Dec only
 - Sign: Planned − Actual (Weekly: To Target; Daily: Difference)
@@ -979,7 +990,7 @@ Total Weekly Load
 Metrics only: TD, HSR (`Z5`), Sprint (`Z6`), Acc, Dec.  
 **Z4 / Tempo is OUT of Total Load.**
 
-Do **not** change Planning, Weekly Review, Daily Review, Daily Plan, Training Actual queries, Matchday Report, `Match_Benchmark`, or `Match_Benchmark_History`.
+Do **not** change Planning formulas, Daily Plan, Matchday Report, `Match_Benchmark`, or `Match_Benchmark_History`. Training Actual follows the dated Full Training / Individual contract in **§E**.
 
 ### U3.1 Population and identity
 
@@ -991,10 +1002,10 @@ Historical identity: frozen `planner_match_best_snapshots.powerbi_player_name`.
 
 ### U3.2 Training Actual
 
-Reuse existing Weekly Review Full Training source (`GPS_Log`, `Drill = "Full Training"`).
+Reuse existing Weekly Review Training Actual source (`GPS_Log`, dated drill contract §E).
 
 - Training remains **completely separate** from Match Actual.  
-- Do **not** change `getTrainingActualGps` / `getTrainingActualGpsBatchForDay` or Weekly Review batching.  
+- Do **not** weaken Match Actual filters. Training Actual drill follows §E (Individual from planner-day `2026-09-01`; never sum; never precedence).
 - Total Load uses **all persisted `planner_week_days`** for that week (not the Weekly Review `throughDate` picker).  
 - Existing Weekly Review completeness / data-quality contract is the Training source of truth.  
 - Missing Training day **≠** Training zero. Never invent Training zeros.
@@ -1011,9 +1022,9 @@ Reuse existing Weekly Review Full Training source (`GPS_Log`, `Drill = "Full Tra
 - do **not** hide this recorded load  
 - do **not** replace it with `—`
 
-`Partial` means: Total is calculated from GPS load actually recorded for the player, but not every Planner Week Day has a Full Training row.
+`Partial` means: Total is calculated from GPS load actually recorded for the player, but not every Planner Week Day has a trusted Training Actual row.
 
-Example: player recorded Full Training only on two week days (MD-4 = 4,500 m, MD-3 = 6,000 m) and has no Full Training row on the remaining Planner days. Recorded Training Load = 10,500 m. If Match Load = 5,000 m, Total Weekly Load = **15,500 m** and **must be shown** (labelled Partial; eligible for Top Values). Missing Training days stay omitted, not zeroed.
+Example: player recorded Training Actual only on two week days (MD-4 = 4,500 m, MD-3 = 6,000 m) and has no Training Actual row on the remaining Planner days. Recorded Training Load = 10,500 m. If Match Load = 5,000 m, Total Weekly Load = **15,500 m** and **must be shown** (labelled Partial; eligible for Top Values). Missing Training days stay omitted, not zeroed.
 
 **Unsafe Training** (ambiguous raw data, query error, invalid/incomplete payload, or any existing state where the numeric value cannot be trusted):
 
@@ -1091,7 +1102,7 @@ Maximum Match-path queries per Total Load load:
 0–2 Match Actual batch queries (only for dates proven in the Team MD candidate set)
 ```
 
-No player-by-player query loop. Parallel Match Actual module — **do not weaken** the Full Training query.
+No player-by-player query loop. Parallel Match Actual module — **do not weaken** the Match allowlist. Training Actual follows **§E**.
 
 Reuse: Power BI auth, `executePowerBiDaxQuery`, bounded retry, DAX escaping, raw-row safety, existing `getMatchCandidateDates` + `getMatchActualGpsBatch`.
 

@@ -167,15 +167,26 @@ describe("getMatchActualGpsBatch", () => {
 });
 
 describe("Training Actual isolation", () => {
-  it("Q: Full Training query is unchanged and is not the Match path", async () => {
+  it("Q: Training Actual is not the Match path; Match DAX still excludes Individual", async () => {
     const src = await readFile(
       path.join(process.cwd(), "lib/powerbi/queries/trainingActual.server.ts"),
       "utf8"
     );
-    expect(src).toContain('FULL_TRAINING_DRILL = "Full Training"');
-    expect(src).toContain('GPS_Log[Drill] = "${drill}"');
+    const match = await readFile(
+      path.join(process.cwd(), "lib/powerbi/queries/matchActual.server.ts"),
+      "utf8"
+    );
+    expect(src).toContain("FULL_TRAINING_DRILL");
+    expect(src).toContain("INDIVIDUAL_TRAINING_START_DATE");
+    expect(src).toContain('GPS_Log[Drill] IN {"${fullTraining}", "${individual}"}');
     expect(src).not.toContain("1st Half");
     expect(src).not.toContain("2nd Half");
     expect(src).not.toContain("matchActual");
+    expect(match).toContain(
+      'GPS_Log[Drill] IN {${drillList}}'
+    );
+    expect(match).not.toContain("INDIVIDUAL_TRAINING");
+    expect(match).not.toContain('"Full Training"');
+    expect(match).not.toContain('"Individual"');
   });
 });

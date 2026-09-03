@@ -372,6 +372,16 @@ describe("classifyMatchActualRowsByPlayer", () => {
         },
         {
           Player: "Wrong Drill",
+          Drill: "Individual",
+          TD: 8000,
+          Z5: 1,
+          Z6: 1,
+          Acc: 1,
+          Dec: 1,
+          Duration: "1899-12-30T01:00:00",
+        },
+        {
+          Player: "Wrong Drill",
           Drill: "First Half",
           TD: 100,
           Z5: 1,

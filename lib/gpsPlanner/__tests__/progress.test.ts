@@ -308,6 +308,31 @@ describe("daily analysis", () => {
     expect(result.data.actualStatus).toBe("actual_ambiguous");
     expect(result.data.difference).toBeNull();
   });
+
+  it("keeps actual_incomplete when a metric is null", async () => {
+    setupAnalysis({
+      hasDaily: true,
+      actual: {
+        ok: true,
+        data: {
+          totalDistance: 400,
+          hsr: null,
+          sprint: 138,
+          accelerations: 10,
+          decelerations: 8,
+        },
+      },
+    });
+    const result = await getPlannerDailyAnalysis({
+      weekDayId: DAY_ID,
+      playerId: PLAYER_ID,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.actualStatus).toBe("actual_incomplete");
+    expect(result.data.actual).toBeNull();
+    expect(result.data.difference).toBeNull();
+  });
 });
 
 describe("weekly progress", () => {
@@ -581,5 +606,129 @@ describe("weekly progress", () => {
     expect(result.data.weeklyActual).toBeNull();
     expect(result.data.weeklyToTarget).toBeNull();
     expect(getTrainingActualGps).not.toHaveBeenCalled();
+  });
+
+  it("sums found Individual-era days from the cutoff and excludes later days via throughDate", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_weeks")
+        return chain(
+          { data: { id: WEEK_ID, powerbi_week_id: "W9" }, error: null },
+          { maybeSingle: true }
+        );
+      if (table === "planner_match_best_snapshots")
+        return chain(
+          {
+            data: {
+              week_id: WEEK_ID,
+              player_id: PLAYER_ID,
+              td_best: 800,
+              hsr_best: 800,
+              sprint_best: 100,
+              acc_best: 40,
+              dec_best: 35,
+              powerbi_player_name: "Frozen Name",
+              source_method: "single-match best",
+            },
+            error: null,
+          },
+          { maybeSingle: true }
+        );
+      if (table === "planner_weekly_targets")
+        return chain(
+          {
+            data: {
+              week_id: WEEK_ID,
+              player_id: PLAYER_ID,
+              td_pct: 140,
+              hsr_pct: 140,
+              sprint_pct: 100,
+              acc_pct: 100,
+              dec_pct: 100,
+            },
+            error: null,
+          },
+          { maybeSingle: true }
+        );
+      if (table === "planner_week_days")
+        return chain({
+          data: [
+            {
+              id: DAY_ID,
+              week_id: WEEK_ID,
+              date: "2026-08-31",
+              md_tag: "MD-3",
+            },
+            {
+              id: DAY_ID_2,
+              week_id: WEEK_ID,
+              date: "2026-09-01",
+              md_tag: "MD-2",
+            },
+            {
+              id: DAY_ID_3,
+              week_id: WEEK_ID,
+              date: "2026-09-02",
+              md_tag: "MD-1",
+            },
+          ],
+          error: null,
+        });
+      if (table === "planner_daily_targets")
+        return chain({ data: [], error: null });
+      if (table === "profiles")
+        return chain(
+          { data: { full_name: "Player One", email: null }, error: null },
+          { maybeSingle: true }
+        );
+      throw new Error(table);
+    });
+
+    getTrainingActualGps
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          totalDistance: 5000,
+          hsr: 100,
+          sprint: 10,
+          accelerations: 8,
+          decelerations: 7,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          totalDistance: 900,
+          hsr: 20,
+          sprint: 2,
+          accelerations: 3,
+          decelerations: 2,
+        },
+      });
+
+    const result = await getPlannerWeeklyProgress({
+      weekId: WEEK_ID,
+      playerId: PLAYER_ID,
+      throughDate: "2026-09-01",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.includedDays).toBe(2);
+    expect(getTrainingActualGps).toHaveBeenCalledTimes(2);
+    expect(getTrainingActualGps).toHaveBeenNthCalledWith(1, {
+      playerName: "Frozen Name",
+      weekId: "W9",
+      mdTag: "MD-3",
+      date: "2026-08-31",
+    });
+    expect(getTrainingActualGps).toHaveBeenNthCalledWith(2, {
+      playerName: "Frozen Name",
+      weekId: "W9",
+      mdTag: "MD-2",
+      date: "2026-09-01",
+    });
+    expect(result.data.days.some((d) => d.date === "2026-09-02")).toBe(false);
+    expect(result.data.weeklyActual?.totalDistance).toBe(5900);
+    expect(result.data.weeklyActual?.hsr).toBe(120);
+    expect(getPlayerMapping).not.toHaveBeenCalled();
   });
 });

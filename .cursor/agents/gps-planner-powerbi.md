@@ -21,11 +21,11 @@ Power BI / DAX / semantic-model integration specialist for GPS Load Planner.
 
 - Existing server-only connector under `lib/powerbi/`
 - Verified production query modules:
-  - `getTrainingActualGps` (Full Training Actual)
+  - `getTrainingActualGps` (Training Actual: Full Training; Individual from planner-day `2026-09-01`)
   - `getMatchBestGps` (single-match best from **`Match_Benchmark` only** — this is the frozen 1-Match-Best method, not week Match count)
   - `getMatchCandidateDates` (Team MD source-availability dates for a Power BI week)
   - `getMatchActualGpsBatch` (Team match GPS Actual for one `gps_date`; strict allowlisted segments)
-- Total Load Match path (master spec **§U3**, **production implemented**): reuse the existing candidate query + 0–2 Match Actual batches. Do **not** change the semantic model. Do **not** weaken Full Training queries. Date distinguishes Match 1 / Match 2.
+- Total Load Match path (master spec **§U3**, **production implemented**): reuse the existing candidate query + 0–2 Match Actual batches. Do **not** change the semantic model. Do **not** weaken Match queries or the dated Training Actual drill contract. Date distinguishes Match 1 / Match 2.
 - Exact field mappings (`GPS_Log`, `Match_Benchmark` with `Max TD` / `Max Z5` / `Max Z6` / `Max Acc` / `Max Dec`)
 - Error handling: `not_found`, `ambiguous`, connector failures — never silent SUM/MAX/MIN. Match Actual: per player × configured match × allowlisted segment 0 / 1 / >1; never SUM duplicate segment rows.
 - Historical weeks: use **frozen** Power BI player name from snapshot, not live mapping rematch for identity rewrite
@@ -46,7 +46,7 @@ Operational History workflow (append-only new full rows; never overwrite old His
 - Do **not** change `getMatchBestGps` / Match_Benchmark `Max *` mappings because History exists.
 - Do **not** use `Match_Benchmark_History` or History `Best_*` columns in ST-AMS queries.
 - Do **not** use `SourceFile` as the primary production filter.
-- Drill for Training Actual must be exactly `"Full Training"`.
+- Training Actual drill (planner-day ISO date, not server today): `date < 2026-09-01` → exactly `"Full Training"`; `date >= 2026-09-01` → exactly `"Full Training"` or `"Individual"`. Never sum the two drills. Never precedence. Same player/day with both, or duplicate rows within either drill → `ambiguous`. Do **not** use `Training_Drill_Switch`, `Top Up`, `SessionType = "Individual"`, or case/alias variants.
 - Match Actual and the candidate/source gate use the **same** strict `GPS_Log[Drill]` allowlist: `"1st Half"`, `"2nd Half"`, `"1st Half Extra Time"`, `"2nd Half Extra Time"`, plus `MD_Tag = "MD"` and `SessionType = "Team"`. Extra Time rows are optional; a regulation-only match stays valid when ET is absent. Never `SourceFile` as primary identity. Never Individual / training `"First Half"` / `"Second Half"`. Never Full Match / 90 / 120 or any other aggregate Drill. Match Time uses raw `GPS_Log[Duration]` of valid present allowlisted segments, not Matchday Report session-duration measures and not hardcoded 90/120.
 - Maximum Total Load Match path: 1 candidate/source query + 0–2 Match Actual batches. No player-by-player query loop.
 - Configured Match date missing from the Team MD candidate set is **source pending**, not `match_zero`.
