@@ -40,7 +40,11 @@ describe("Create/Edit Week Match management UI", () => {
       "app/(app)/admin/planner/WeeklyPlannerView.tsx"
     );
     expect(view).toContain("createPlannerWeekDayAction");
-    expect(view).toContain("TRAINING_MATCH_DATE_COLLISION_MESSAGE");
+    expect(view).toContain("validateWeekMatchDrafts(matchDrafts)");
+    expect(view).not.toContain("TRAINING_MATCH_DATE_COLLISION_MESSAGE");
+    expect(view).not.toContain(
+      "A Training day and a Match cannot share the same date."
+    );
     expect(view).not.toContain("day_type");
   });
 });

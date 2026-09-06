@@ -8,7 +8,6 @@ import {
   emptyMatchDraft,
   optionalMatchText,
   REMOVE_MATCH_1_BLOCKED_MESSAGE,
-  TRAINING_MATCH_DATE_COLLISION_MESSAGE,
   validateWeekMatchDrafts,
   type WeekMatchDraft,
 } from "@/lib/gpsPlanner/weekMatchForm";
@@ -42,48 +41,40 @@ function draft(
 
 describe("validateWeekMatchDrafts", () => {
   it("1: 0 Matches is valid", () => {
-    expect(validateWeekMatchDrafts([], [])).toBeNull();
-    expect(validateWeekMatchDrafts([], ["2026-08-18"])).toBeNull();
+    expect(validateWeekMatchDrafts([])).toBeNull();
   });
 
   it("2: 1 Match with date + mdTag is valid", () => {
-    expect(validateWeekMatchDrafts([draft(1)], [])).toBeNull();
+    expect(validateWeekMatchDrafts([draft(1)])).toBeNull();
   });
 
   it("3: 2 Matches with distinct dates and identical MD tags are valid", () => {
     expect(
-      validateWeekMatchDrafts([draft(1), draft(2, { mdTag: "MD" })], [
-        "2026-08-18",
-        "2026-08-20",
-        "2026-08-22",
-      ])
+      validateWeekMatchDrafts([draft(1), draft(2, { mdTag: "MD" })])
     ).toBeNull();
   });
 
   it("4: duplicate Match dates are rejected", () => {
-    const error = validateWeekMatchDrafts(
-      [draft(1, { gpsDate: "2026-08-19" }), draft(2, { gpsDate: "2026-08-19" })],
-      []
-    );
+    const error = validateWeekMatchDrafts([
+      draft(1, { gpsDate: "2026-08-19" }),
+      draft(2, { gpsDate: "2026-08-19" }),
+    ]);
     expect(error?.code).toBe("official_match_duplicate_date");
   });
 
-  it("5: Training/Match same-date is rejected before DB write", () => {
-    const error = validateWeekMatchDrafts(
-      [draft(1, { gpsDate: "2026-08-20" })],
-      ["2026-08-18", "2026-08-20"]
-    );
-    expect(error?.code).toBe("invalid_input");
-    expect(error?.message).toBe(TRAINING_MATCH_DATE_COLLISION_MESSAGE);
+  it("5: Training/Match same-date is allowed", () => {
+    expect(
+      validateWeekMatchDrafts([draft(1, { gpsDate: "2026-09-10" })])
+    ).toBeNull();
   });
 
   it("6: blank mdTag is rejected", () => {
-    const error = validateWeekMatchDrafts([draft(1, { mdTag: "   " })], []);
+    const error = validateWeekMatchDrafts([draft(1, { mdTag: "   " })]);
     expect(error?.code).toBe("invalid_md_tag");
   });
 
   it("blank Match date is rejected", () => {
-    const error = validateWeekMatchDrafts([draft(1, { gpsDate: "" })], []);
+    const error = validateWeekMatchDrafts([draft(1, { gpsDate: "" })]);
     expect(error?.code).toBe("invalid_date");
   });
 });
@@ -123,7 +114,7 @@ describe("edit / add / delete Match drafts", () => {
     expect(canRemoveConfiguredMatch([draft(1, { id: MATCH_1.id })], 1)).toBe(
       true
     );
-    expect(validateWeekMatchDrafts([], ["2026-08-11"])).toBeNull();
+    expect(validateWeekMatchDrafts([])).toBeNull();
   });
 });
 

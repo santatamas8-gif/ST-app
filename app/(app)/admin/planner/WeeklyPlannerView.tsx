@@ -98,7 +98,6 @@ import {
   emptyMatchDraft,
   optionalMatchText,
   REMOVE_MATCH_1_BLOCKED_MESSAGE,
-  TRAINING_MATCH_DATE_COLLISION_MESSAGE,
   validateWeekMatchDrafts,
   type WeekMatchDraft,
 } from "@/lib/gpsPlanner/weekMatchForm";
@@ -933,8 +932,7 @@ export function WeeklyPlannerView({
   function saveWeekForm() {
     setError(null);
     setFlash(null);
-    const trainingDates = editingWeek ? days.map((day) => day.date) : [];
-    const matchError = validateWeekMatchDrafts(matchDrafts, trainingDates);
+    const matchError = validateWeekMatchDrafts(matchDrafts);
     if (matchError) {
       setError(errText(matchError.code, matchError.message));
       return;
@@ -1021,13 +1019,6 @@ export function WeeklyPlannerView({
     if (!weekId) return;
     const displayOrder = Number(dayForm.displayOrder);
     setError(null);
-    if (
-      officialMatches.some((match) => match.gpsDate === dayForm.date) ||
-      matchDrafts.some((draft) => draft.gpsDate === dayForm.date)
-    ) {
-      setError(TRAINING_MATCH_DATE_COLLISION_MESSAGE);
-      return;
-    }
     startTransition(async () => {
       const res = await createPlannerWeekDayAction({
         weekId,
@@ -1065,15 +1056,6 @@ export function WeeklyPlannerView({
   }
 
   function saveDay(day: PlannerWeekDayRow, patch: Partial<PlannerWeekDayRow>) {
-    const nextDate = patch.date ?? day.date;
-    if (
-      nextDate !== day.date &&
-      officialMatches.some((match) => match.gpsDate === nextDate)
-    ) {
-      setError(TRAINING_MATCH_DATE_COLLISION_MESSAGE);
-      setDayFormEpoch((n) => n + 1);
-      return;
-    }
     startTransition(async () => {
       const res = await updatePlannerWeekDayAction({
         dayId: day.id,

@@ -10,9 +10,6 @@ import {
 } from "@/lib/gpsPlanner/common";
 import type { PlannerWeekOfficialMatch } from "@/lib/gpsPlanner/types";
 
-export const TRAINING_MATCH_DATE_COLLISION_MESSAGE =
-  "A Training day and a Match cannot share the same date.";
-
 export const REMOVE_MATCH_1_BLOCKED_MESSAGE = "Remove Match 2 first.";
 
 export type WeekMatchDraft = {
@@ -56,13 +53,6 @@ export function optionalMatchText(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function trainingDatesCollideWithMatch(
-  matchDate: string,
-  trainingDates: string[]
-): boolean {
-  return trainingDates.includes(matchDate);
-}
-
 export function canRemoveConfiguredMatch(
   drafts: Array<{ matchOrder: 1 | 2 }>,
   removingOrder: 1 | 2
@@ -74,8 +64,7 @@ export function canRemoveConfiguredMatch(
 }
 
 export function validateWeekMatchDrafts(
-  drafts: WeekMatchDraft[],
-  trainingDates: string[]
+  drafts: WeekMatchDraft[]
 ): PlannerSafeError | null {
   if (drafts.length > 2) {
     return plannerErr("invalid_input", "A planner week can have at most two matches.");
@@ -118,9 +107,6 @@ export function validateWeekMatchDrafts(
       );
     }
     dates.push(gpsDate);
-    if (trainingDatesCollideWithMatch(gpsDate, trainingDates)) {
-      return plannerErr("invalid_input", TRAINING_MATCH_DATE_COLLISION_MESSAGE);
-    }
   }
 
   return null;

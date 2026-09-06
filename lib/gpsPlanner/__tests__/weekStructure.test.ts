@@ -121,6 +121,43 @@ describe("buildCombinedWeekStructure", () => {
     );
   });
 
+  it("same calendar date keeps Training and Match as separate items", () => {
+    const items = buildCombinedWeekStructure(
+      [
+        {
+          id: "d10",
+          date: "2026-09-10",
+          mdTag: "MD-4",
+          displayOrder: 1,
+        },
+      ],
+      [
+        {
+          id: "m10",
+          gpsDate: "2026-09-10",
+          mdTag: "MD",
+          matchOrder: 1,
+        },
+      ]
+    );
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => `${i.date}:${formatCombinedWeekKind(i)}`)).toEqual([
+      "2026-09-10:Training",
+      "2026-09-10:Match 1",
+    ]);
+    expect(items[0]).toMatchObject({
+      type: "training",
+      mdTag: "MD-4",
+      trainingDayId: "d10",
+    });
+    expect(items[1]).toMatchObject({
+      type: "match",
+      mdTag: "MD",
+      matchId: "m10",
+      matchOrder: 1,
+    });
+  });
+
   it("does not invent MD context tags", () => {
     const items = buildCombinedWeekStructure([T11], [M1_W5]);
     expect(items.map((i) => i.mdTag)).toEqual(["MD-4", "MD"]);

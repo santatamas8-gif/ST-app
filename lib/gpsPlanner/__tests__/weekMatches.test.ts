@@ -980,6 +980,54 @@ describe("planner week official matches schema contract", () => {
     }
   });
 
+  it("Phase SDM-C 049: drops only the 045 cross-type collision triggers", async () => {
+    const sql = await readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/049_planner_allow_same_day_training_match.sql"
+      ),
+      "utf8"
+    );
+
+    expect(sql).toContain(
+      "DROP TRIGGER IF EXISTS planner_week_official_matches_reject_training_date"
+    );
+    expect(sql).toContain(
+      "DROP TRIGGER IF EXISTS planner_week_days_reject_match_date"
+    );
+    expect(sql).toContain(
+      "DROP FUNCTION IF EXISTS public.planner_week_official_matches_reject_training_date()"
+    );
+    expect(sql).toContain(
+      "DROP FUNCTION IF EXISTS public.planner_week_days_reject_match_date()"
+    );
+    expect(sql).toContain("COMMENT ON TABLE public.planner_week_official_matches");
+    expect(sql).toContain(
+      "Same Planner week/date MAY contain one Training day and one Official Match"
+    );
+    expect(sql).toContain("Training days remain unique by (week_id, date)");
+    expect(sql).toContain(
+      "Official Matches remain unique by (week_id, gps_date)"
+    );
+    expect(sql).not.toContain("Same week/date cannot also be a Training day");
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_days_week_id_date_key/i
+    );
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_week_id_gps_date_key/i
+    );
+    expect(sql).not.toMatch(
+      /DROP CONSTRAINT\s+planner_week_official_matches_week_id_match_order_key/i
+    );
+    expect(sql).not.toContain("ALTER TABLE");
+    expect(sql).not.toContain("CREATE TABLE");
+    expect(sql).not.toContain("CREATE POLICY");
+    expect(sql).not.toContain("DROP POLICY");
+    expect(sql).not.toContain("CREATE TRIGGER");
+    expect(sql).not.toMatch(/UPDATE\s+public\.planner_week/i);
+    expect(sql).not.toMatch(/INSERT\s+INTO\s+public\.planner_week/i);
+  });
+
   it("Phase B plural reader maps match_order/md_tag; singular GET does not use maybeSingle", async () => {
     const src = await readFile(
       path.join(process.cwd(), "lib/gpsPlanner/weekMatches.server.ts"),
