@@ -815,7 +815,11 @@ The Planning week-days UI merges Training + Match rows **chronologically for dis
 
 Stored mdTag is unchanged. Match cards show Match 1 / Match 2 context. Match rows have no TD/HSR/Sprint/Acc/Dec inputs, no planned absolutes, no Daily Target mutation, and no Daily Plan action.
 
-Same Planner week + same date **cannot** be both Training and Match. Protected by application validation and DB triggers (migration `045`). Match `gps_date` **may** fall outside `planner_weeks.start_date`..`end_date` (verified: W5 Training `2026-08-11`→`2026-08-14`, Match `2026-08-15`).
+Same Planner week + same calendar date **may** be both one Training day and one Official Match. This is allowed because Training Actual and Match Actual use disjoint source filters (`MD_Tag` + Training Drill contract vs `MD_Tag = "MD"` + `SessionType = "Team"` + Match drill allowlist). Same-date example: `2026-09-10` Training `MD-4` (`Full Training` or `Individual`) and Match `MD` (`1st Half` / `2nd Half` / optional Extra Time).
+
+Still **not** allowed: two Training days on the same week/date (`UNIQUE (week_id, date)`), or two Official Matches on the same week/date (`UNIQUE (week_id, gps_date)`). Only the old cross-type collision rule is removed.
+
+Match `gps_date` **may** fall outside `planner_weeks.start_date`..`end_date` (verified: W5 Training `2026-08-11`→`2026-08-14`, Match `2026-08-15`).
 
 Singular V1 compatibility APIs remain internally. New Create/Edit Week UI uses row-safe multi-match APIs. Legacy functions are **not** the current multi-match UI workflow. Do not delete them as a cleanup.
 
@@ -1416,9 +1420,21 @@ The old `UNIQUE (week_id)` one-row-per-week constraint was **removed by migratio
 | `044_planner_week_official_matches_v2_prep.sql` | Multi-match schema preparation (`match_order`, `md_tag`; still one row per week) |
 | `045_planner_week_official_matches_v2_enable.sql` | Enabled max 2 Match rows; dropped `UNIQUE (week_id)`; added Training/Match same-date collision triggers |
 
-### Collision protection
+### Date uniqueness (current approved rule)
 
-Same Planner week + same date cannot be both Training (`planner_week_days`) and Match (`planner_week_official_matches`). Protected by application validation **and** DB triggers from `045`.
+Same-date Training + Match is **ALLOWED** in the same Planner week:
+
+- one Training day (`planner_week_days`) **and** one Official Match (`planner_week_official_matches`) may share the same calendar date
+- Daily Targets remain Training-day only; Match has no Daily Target
+- Weekly Target remains training-only
+- Total Load still adds Training Actual + configured Match Actual once each through their own queries
+
+Same-type date uniqueness is **unchanged**:
+
+- two Training days on the same week/date = **NOT** allowed (`UNIQUE (week_id, date)`)
+- two Official Matches on the same week/date = **NOT** allowed (`UNIQUE (week_id, gps_date)`)
+
+The former cross-type collision rule (application validation + `045` triggers forbidding Training date == Match date) is **no longer the approved business rule**. Those leftover runtime/DB checks are superseded by this unlock and must not be treated as current spec.
 
 ### Key integrity
 
