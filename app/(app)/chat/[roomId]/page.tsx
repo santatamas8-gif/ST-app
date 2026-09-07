@@ -77,7 +77,7 @@ export default async function ChatRoomPage({
           borderColor: "var(--card-border)",
         }}
       >
-        <div className="flex min-h-0 flex-1 flex-col w-full min-w-0 lg:max-w-[960px] lg:mx-auto">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:mx-auto lg:max-w-[1120px]">
           <ChatHeader
             roomName={room.name}
             membersCount={membersList.length}

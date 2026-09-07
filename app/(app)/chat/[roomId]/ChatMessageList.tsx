@@ -142,7 +142,7 @@ export function ChatMessageList({
         className="chat-message-scroll flex-1 overflow-y-auto overflow-x-hidden"
       >
         {/* Inner container = centered content column with max-width; mobile: comfortable padding and bottom space above composer + safe area */}
-        <div className="mx-auto w-full min-w-0 max-w-[880px] px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-24 pt-3 lg:px-3 lg:pb-24 lg:pl-3 lg:pr-3 lg:pt-4">
+        <div className="mx-auto w-full min-w-0 max-w-[1040px] px-3 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-24 pt-3 sm:px-4 lg:px-4 lg:pb-24 lg:pt-4">
           {visibleMessages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <MessageCircle

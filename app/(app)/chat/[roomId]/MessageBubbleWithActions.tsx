@@ -237,7 +237,11 @@ export function MessageBubbleWithActions({
           )}
         </div>
       )}
-      <div className={`flex min-w-0 max-w-[92%] flex-col sm:max-w-[min(85%,22rem)] lg:max-w-[min(85%,20rem)] ${isOwn ? "ml-auto items-end" : "items-start"}`}>
+      <div
+        className={`flex w-fit min-w-0 max-w-[95%] flex-col sm:max-w-[min(88%,34rem)] lg:max-w-[min(72%,42rem)] ${
+          isOwn ? "ml-auto items-end" : "items-start"
+        }`}
+      >
         <div
           ref={wrapperRef}
           className={`flex w-full min-w-0 items-end gap-1 ${isOwn ? "flex-row-reverse" : ""}`}
@@ -288,7 +292,9 @@ export function MessageBubbleWithActions({
             </div>
           )}
           {message.body ? (
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{message.body}</p>
+            <p className="whitespace-pre-wrap break-words text-[13px] leading-snug [overflow-wrap:anywhere] sm:text-sm sm:leading-relaxed">
+              {message.body}
+            </p>
           ) : null}
           {message.body && extractFirstUrl(message.body) && (
             <LinkPreview url={extractFirstUrl(message.body)!} isOwn={isOwn} />
