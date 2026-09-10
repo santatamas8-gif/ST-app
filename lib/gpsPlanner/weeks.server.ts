@@ -2,7 +2,7 @@ import "server-only";
 
 /**
  * ADMIN-ONLY Planner Week domain (Phase A).
- * No Power BI calls. No target/snapshot logic. No UI.
+ * Saving status as active/closed insert-only freezes missing week-squad snapshots.
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +23,10 @@ import {
   type PlannerWeekType,
 } from "@/lib/gpsPlanner/common";
 import type { PlannerWeekRow } from "@/lib/gpsPlanner/types";
+import {
+  syncWeekSquadSnapshotsAfterStatusSave,
+  weekStatusFreezesSquadSnapshots,
+} from "@/lib/gpsPlanner/weekSquadSnapshots.server";
 
 export type { PlannerWeekRow };
 
@@ -315,6 +319,17 @@ export async function updatePlannerWeek(
     return {
       ok: false,
       error: plannerErr("week_not_found", "Planner week was not found."),
+    };
+  }
+  if (weekStatusFreezesSquadSnapshots(validated.status)) {
+    const snapshotWarning = await syncWeekSquadSnapshotsAfterStatusSave(
+      input.weekId,
+      validated.status
+    );
+    const week = mapWeek(data as WeekDbRow);
+    return {
+      ok: true,
+      data: snapshotWarning ? { ...week, snapshotWarning } : week,
     };
   }
   return { ok: true, data: mapWeek(data as WeekDbRow) };

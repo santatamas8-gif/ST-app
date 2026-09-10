@@ -725,6 +725,9 @@ export function WeeklyPlannerView({
       setSelectedPlayerIds(copyPlayerIds(savedIds));
       lastSquadWeekIdRef.current = weekAtSave;
       setSquadFlash(`Squad saved · ${savedIds.length} players`);
+      if (res.data.snapshotWarning) {
+        setSquadError(res.data.snapshotWarning);
+      }
     } finally {
       if (
         squadSaveGenRef.current === saveGen &&
@@ -956,11 +959,19 @@ export function WeeklyPlannerView({
         }
         const matchSaveError = await persistMatchDrafts(selectedWeek.id);
         if (matchSaveError) {
-          setError(`Week updated, but ${matchSaveError}`);
+          setError(
+            res.data.snapshotWarning
+              ? `${res.data.snapshotWarning} Week updated, but ${matchSaveError}`
+              : `Week updated, but ${matchSaveError}`
+          );
           await loadWeekScoped(selectedWeek.id);
           return;
         }
-        setFlash("Week updated.");
+        if (res.data.snapshotWarning) {
+          setError(res.data.snapshotWarning);
+        } else {
+          setFlash("Week updated.");
+        }
       } else {
         const res = await createPlannerWeekAction({
           powerBiWeekId: weekForm.powerBiWeekId,

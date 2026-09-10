@@ -2,9 +2,9 @@ import "server-only";
 
 /**
  * ADMIN-ONLY Persistent Week Squad (§J2).
- * List: planner_week_players only.
- * Save: planner_save_week_players RPC only.
- * No Weekly Targets, Groups, snapshots, or Power BI.
+ * List: planner_week_players only (read-only; never freezes snapshots).
+ * Save: planner_save_week_players RPC, then insert-only snapshot sync when
+ * the week is already active or closed.
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +22,7 @@ import type {
   PlannerWeekPlayersView,
   SavePlannerWeekPlayersInput,
 } from "@/lib/gpsPlanner/types";
+import { syncWeekSquadMatchBestSnapshotsIfActivated, buildSnapshotSaveWarning } from "@/lib/gpsPlanner/weekSquadSnapshots.server";
 
 export type {
   PlannerSaveWeekPlayersResult,
@@ -233,5 +234,25 @@ export async function savePlannerWeekPlayers(
     };
   }
 
-  return parseSaveWeekPlayersResult(data);
+  const parsed = parseSaveWeekPlayersResult(data);
+  if (!parsed.ok) return parsed;
+
+  const snapshotSync = await syncWeekSquadMatchBestSnapshotsIfActivated(
+    input.weekId
+  );
+  if (!snapshotSync.ok) {
+    logPlannerError("savePlannerWeekPlayers.snapshotSync", snapshotSync.error, {
+      weekId: input.weekId,
+    });
+  }
+  const snapshotWarning = await buildSnapshotSaveWarning(
+    snapshotSync,
+    "squad"
+  );
+  return {
+    ok: true,
+    data: snapshotWarning
+      ? { ...parsed.data, snapshotWarning }
+      : parsed.data,
+  };
 }

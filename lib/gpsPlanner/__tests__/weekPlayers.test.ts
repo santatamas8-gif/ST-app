@@ -123,6 +123,31 @@ vi.mock("@/lib/gpsPlanner/playerMappings.server", () => ({
   updatePlayerMapping: vi.fn(),
 }));
 
+const { syncWeekSquadMatchBestSnapshotsIfActivated, buildSnapshotSaveWarning } =
+  vi.hoisted(() => ({
+    syncWeekSquadMatchBestSnapshotsIfActivated: vi.fn(async () => ({
+      ok: true as const,
+      data: {
+        weekId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "draft" as const,
+        ran: false,
+        attemptedPlayerIds: [] as string[],
+        createdPlayerIds: [] as string[],
+        skippedExistingPlayerIds: [] as string[],
+        skippedUnmappedPlayerIds: [] as string[],
+        issues: [] as { playerId: string; code: string; message: string }[],
+      },
+    })),
+    buildSnapshotSaveWarning: vi.fn(async () => undefined as string | undefined),
+  }));
+vi.mock("@/lib/gpsPlanner/weekSquadSnapshots.server", () => ({
+  syncWeekSquadMatchBestSnapshotsIfActivated,
+  buildSnapshotSaveWarning,
+  ensureWeekSquadMatchBestSnapshots: vi.fn(),
+  weekStatusFreezesSquadSnapshots: (status: string) =>
+    status === "active" || status === "closed",
+}));
+
 import {
   listPlannerWeekPlayers,
   savePlannerWeekPlayers,
@@ -298,6 +323,8 @@ describe("savePlannerWeekPlayers", () => {
     getAppUser.mockReset();
     fromMock.mockReset();
     rpcMock.mockReset();
+    syncWeekSquadMatchBestSnapshotsIfActivated.mockClear();
+    buildSnapshotSaveWarning.mockReset();
     getAppUser.mockResolvedValue(ADMIN);
   });
 
@@ -310,7 +337,7 @@ describe("savePlannerWeekPlayers", () => {
       error: { code: "unauthorized" },
     });
     expect(rpcMock).not.toHaveBeenCalled();
-    expect(fromMock).not.toHaveBeenCalled();
+    expect(syncWeekSquadMatchBestSnapshotsIfActivated).not.toHaveBeenCalled();
   });
 
   it("rejects staff save", async () => {
@@ -400,6 +427,9 @@ describe("savePlannerWeekPlayers", () => {
       p_player_ids: [P1, P2],
     });
     expect(fromMock).not.toHaveBeenCalled();
+    expect(syncWeekSquadMatchBestSnapshotsIfActivated).toHaveBeenCalledWith(
+      WEEK_ID
+    );
   });
 
   it("deduplicates selected player ids before RPC", async () => {
@@ -549,6 +579,34 @@ describe("savePlannerWeekPlayers", () => {
     const rpcName = rpcMock.mock.calls[0]?.[0];
     expect(rpcName).toBe("planner_save_week_players");
     expect(rpcName).not.toMatch(/weekly_target|daily_target|snapshot|group/i);
+    expect(syncWeekSquadMatchBestSnapshotsIfActivated).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not attach a snapshot warning for unmapped-only squad sync", async () => {
+    rpcMock.mockResolvedValue({ data: SAVE_CHANGED, error: null });
+    buildSnapshotSaveWarning.mockResolvedValue(undefined);
+    await expect(
+      savePlannerWeekPlayers({
+        weekId: WEEK_ID,
+        selectedPlayerIds: [P1, P2],
+      })
+    ).resolves.toEqual({ ok: true, data: SAVE_CHANGED });
+  });
+
+  it("attaches a mapped-player snapshot warning without failing Save Squad", async () => {
+    rpcMock.mockResolvedValue({ data: SAVE_CHANGED, error: null });
+    const warning =
+      "Squad saved, but Match Best snapshots are incomplete for mapped players: Player One. Fix the Match Best data, then save the squad again.";
+    buildSnapshotSaveWarning.mockResolvedValue(warning);
+    await expect(
+      savePlannerWeekPlayers({
+        weekId: WEEK_ID,
+        selectedPlayerIds: [P1, P2],
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: { ...SAVE_CHANGED, snapshotWarning: warning },
+    });
   });
 });
 
@@ -557,6 +615,8 @@ describe("savePlannerWeekPlayersAction", () => {
     getAppUser.mockReset();
     fromMock.mockReset();
     rpcMock.mockReset();
+    syncWeekSquadMatchBestSnapshotsIfActivated.mockClear();
+    buildSnapshotSaveWarning.mockReset();
     getAppUser.mockResolvedValue(ADMIN);
   });
 

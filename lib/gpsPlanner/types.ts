@@ -14,6 +14,11 @@ import type {
   PlannerWeekType,
 } from "@/lib/gpsPlanner/common";
 
+/** Optional Admin warning attached to a successful week/squad save. */
+export type PlannerSnapshotWarning = {
+  snapshotWarning?: string;
+};
+
 export type PlannerWeekRow = {
   id: string;
   powerbiWeekId: string;
@@ -25,6 +30,8 @@ export type PlannerWeekRow = {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present only on week-save responses when mapped snapshot issues occurred. */
+  snapshotWarning?: string;
 };
 
 export type PlannerWeekDayRow = {
@@ -218,6 +225,7 @@ export type PlannerSaveWeekPlayersResult = {
   addedPlayerIds: string[];
   removedPlayerIds: string[];
   changed: boolean;
+  snapshotWarning?: string;
 };
 
 export type SavePlannerWeekPlayersInput = {

@@ -229,7 +229,7 @@ describe("getTrainingActualGps", () => {
     });
   });
 
-  it("returns ambiguous when Full Training and Individual both exist", async () => {
+  it("returns the metric-wise sum when one Full Training and one Individual exist", async () => {
     executePowerBiDaxQuery.mockResolvedValue(
       okRows([
         { Drill: "Full Training", TD: 100, Z5: 1, Z6: 1, Acc: 1, Dec: 1 },
@@ -244,10 +244,32 @@ describe("getTrainingActualGps", () => {
       date: "2026-09-01",
     });
 
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        totalDistance: 300,
+        hsr: 3,
+        sprint: 3,
+        accelerations: 3,
+        decelerations: 3,
+      },
+    });
+  });
+
+  it("excludes Individual before the cutoff even if a leaked row is returned", async () => {
+    executePowerBiDaxQuery.mockResolvedValue(
+      okRows([{ Drill: "Individual", TD: 200, Z5: 2, Z6: 2, Acc: 2, Dec: 2 }])
+    );
+
+    const result = await getTrainingActualGps({
+      weekId: "W8",
+      mdTag: "MD-3",
+      playerName: "Carl Davordzie",
+      date: "2026-08-31",
+    });
+
     expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.code).toBe("ambiguous");
-    }
+    if (!result.ok) expect(result.error.code).toBe("not_found");
   });
 
   it("returns ambiguous when multiple Full Training rows match", async () => {
@@ -366,7 +388,7 @@ describe("getTrainingActualGpsBatchForDay", () => {
     expect(result.byPlayerName.get("Player C")).toEqual({ status: "ambiguous" });
   });
 
-  it("post-cutoff classifies mixed drills independently and both-drills as ambiguous", async () => {
+  it("post-cutoff classifies mixed drills independently and sums one Full Training + one Individual", async () => {
     executePowerBiDaxQuery.mockResolvedValue(
       okRows([
         {
@@ -421,7 +443,16 @@ describe("getTrainingActualGpsBatchForDay", () => {
     expect(dax).toContain('GPS_Log[Drill] IN {"Full Training", "Individual"}');
     expect(result.byPlayerName.get("Team")?.status).toBe("found");
     expect(result.byPlayerName.get("Rehab")?.status).toBe("found");
-    expect(result.byPlayerName.get("Both")).toEqual({ status: "ambiguous" });
+    expect(result.byPlayerName.get("Both")).toEqual({
+      status: "found",
+      metrics: {
+        totalDistance: 5800,
+        hsr: 2,
+        sprint: 2,
+        accelerations: 2,
+        decelerations: 2,
+      },
+    });
     expect(result.byPlayerName.get("Missing")).toEqual({ status: "not_found" });
   });
 

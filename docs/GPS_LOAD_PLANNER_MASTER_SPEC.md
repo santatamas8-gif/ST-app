@@ -185,13 +185,13 @@ Do **NOT** use `SourceFile` parsing as the primary production strategy.
 | 0 | 0 | `not_found` |
 | 1 | 0 | success using Full Training |
 | 0 | 1 | success using Individual (only when `date >= 2026-09-01`; earlier dates never query Individual) |
-| 1 | 1 | `ambiguous` |
+| 1 | 1 | success using the metric-wise sum of the two distinct loads (only when `date >= 2026-09-01`) |
 | >1 | any | `ambiguous` |
 | any | >1 | `ambiguous` |
 
-**NEVER** silently `SUM` / `MAX` / `MIN` duplicate rows of the same drill.
+**NEVER** silently `SUM` / `MAX` / `MIN` / `DISTINCT` duplicate rows of the same drill.
 
-**NEVER** sum Full Training + Individual. **NEVER** apply precedence between them.
+From `2026-09-01`, one exact `"Full Training"` row and one exact `"Individual"` row are two real loads and **are** added metric-wise (TD+TD, Z5+Z5, Z6+Z6, Acc+Acc, Dec+Dec). Incomplete/null metrics on either side stay incomplete — never a fake valid total. **NEVER** apply precedence between them. Two Full Training or two Individual rows remain `ambiguous`.
 
 Missing data is `not_found` / `—`, never zero-filled.
 
@@ -453,11 +453,11 @@ Explicit Save Squad diff:
 Save Squad alone:
 
 - persists membership
-- requires **no** Power BI
 - does **not** invent percentages
 - does **not** automatically create Weekly / Daily Targets
-- does **not** freeze Match Best
 - does **not** delete targets or snapshots
+- if the week status is `draft`: requires **no** Power BI and does **not** freeze Match Best
+- if the week status is `active` or `closed`: insert-only freeze of missing Match Best snapshots for **current** squad members (`ensureWeekSquadMatchBestSnapshots`); existing snapshots are never updated or deleted
 
 ### J2.4 Reset to saved squad
 
@@ -720,7 +720,15 @@ Post-match recovery/top-up may be decided **manually** later; not automated in V
 
 Each player/week has **ONE** frozen Match Best snapshot.
 
-When a player receives their **first** Weekly Target in a planner week:
+Snapshot creation is **not** exclusive to Weekly Target save.
+
+**Week-squad freeze (insert-only):** when Admin saves the planner week as `active` or `closed` (`updatePlannerWeek`), or later saves the week squad while that week is already `active`/`closed` (`savePlannerWeekPlayers`), ST-AMS freeze-attempts Match Best for every current `planner_week_players` member who does not yet have a snapshot.
+
+- No exact `provider = 'powerbi'` mapping: skip silently. No snapshot, no Admin warning, no `issues` row. Retry on a later Active/Closed or Save Squad after mapping exists.
+- Mapped player Match Best `not_found` / `ambiguous` / incomplete metrics, snapshot insert failure, or Power BI/Supabase technical failure: record a structured issue and return an Admin warning on the successful save response. Unmapped names never appear in that warning.
+- Existing snapshots are never updated or deleted. Removed squad members keep their historical snapshot. Old weeks are **not** backfilled. Read-only page load does **not** freeze. This path never creates Weekly or Daily Targets.
+
+When a player receives their **first** Weekly Target in a planner week and a snapshot already exists, the target uses that frozen row. If none exists (e.g. draft week):
 
 1. Resolve ST-AMS UUID  
 2. Resolve exact Power BI mapping  
@@ -767,6 +775,15 @@ Purpose: ST-AMS UUID → exact external Power BI player identity.
 **Access:** ADMIN ONLY (SELECT / INSERT / UPDATE / DELETE). Staff and Player: none.
 
 Conceptual fields: `id`, `player_id`, `provider`, `external_player_name`, audit timestamps / users.
+
+**Later Power BI page identity (ST-AMS export + GPS_Log; not implemented in Power BI in this phase):**
+
+- A player with **no** exact Power BI mapping does **not** appear on the page.
+- A player **without** a Weekly Target **does** appear if they have mapping plus the required snapshot/GPS data.
+- Power BI must **not** use fuzzy name matching.
+- Join identity is exact frozen `powerbi_player_name`.
+- A week with no GPS data stays empty (not 0%, not an error).
+- A mapped player with GPS data but a missing/invalid snapshot on that week is a real data-quality error.
 
 ---
 
@@ -1009,7 +1026,7 @@ Historical identity: frozen `planner_match_best_snapshots.powerbi_player_name`.
 Reuse existing Weekly Review Training Actual source (`GPS_Log`, dated drill contract §E).
 
 - Training remains **completely separate** from Match Actual.  
-- Do **not** weaken Match Actual filters. Training Actual drill follows §E (Individual from planner-day `2026-09-01`; never sum; never precedence).
+- Do **not** weaken Match Actual filters. Training Actual drill follows §E (Individual from planner-day `2026-09-01`; one Full Training + one Individual are summed; duplicate same-drill rows stay `ambiguous`; never precedence).
 - Total Load uses **all persisted `planner_week_days`** for that week (not the Weekly Review `throughDate` picker).  
 - Existing Weekly Review completeness / data-quality contract is the Training source of truth.  
 - Missing Training day **≠** Training zero. Never invent Training zeros.

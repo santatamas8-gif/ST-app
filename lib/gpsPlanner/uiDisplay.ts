@@ -63,7 +63,27 @@ export const WEEK_STATUS_HELP: Record<
 };
 
 export const WEEK_STATUS_ORG_NOTE =
-  "Status is an organizational label only — it does not lock editing or change calculations.";
+  "Status does not lock editing. Saving a week as Active or Closed freezes missing Match Best snapshots for the current week squad.";
+
+export function formatMappedSnapshotIssueWarning(
+  scope: "week" | "squad",
+  playerNames: string[]
+): string {
+  const names = playerNames.filter((name) => name.trim().length > 0).join(", ");
+  if (scope === "squad") {
+    return `Squad saved, but Match Best snapshots are incomplete for mapped players: ${names}. Fix the Match Best data, then save the squad again.`;
+  }
+  return `Week saved, but Match Best snapshots are incomplete for mapped players: ${names}. Fix the Match Best data, then save the week or squad again.`;
+}
+
+export function formatMappedSnapshotTechnicalWarning(
+  scope: "week" | "squad"
+): string {
+  if (scope === "squad") {
+    return "Squad saved, but Match Best snapshots could not be completed. Try saving the squad again.";
+  }
+  return "Week saved, but Match Best snapshots could not be completed. Try saving the week or squad again.";
+}
 
 /** Humanize progress day Actual status enums for Admin coaches. */
 export function formatProgressDayStatus(status: DayActualStatus): string {

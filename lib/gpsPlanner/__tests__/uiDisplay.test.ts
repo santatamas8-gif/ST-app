@@ -6,6 +6,8 @@ import {
   allocationStatusLabel,
   defaultThroughDate,
   formatBulkApplyOutcomeStatus,
+  formatMappedSnapshotIssueWarning,
+  formatMappedSnapshotTechnicalWarning,
   formatMetricUnit,
   formatPlannerDisplayAbsolute,
   formatProgressDayStatus,
@@ -54,6 +56,27 @@ describe("week status helpers", () => {
     expect(WEEK_STATUS_HELP.active.meaning).toMatch(/Current week/i);
     expect(WEEK_STATUS_HELP.closed.meaning).toMatch(/historical/i);
     expect(WEEK_STATUS_ORG_NOTE).toMatch(/does not lock editing/i);
+  });
+});
+
+describe("mapped snapshot save warnings", () => {
+  it("formats week and squad copy without unmapped-player wording", () => {
+    expect(
+      formatMappedSnapshotIssueWarning("week", ["Ann", "Bob"])
+    ).toBe(
+      "Week saved, but Match Best snapshots are incomplete for mapped players: Ann, Bob. Fix the Match Best data, then save the week or squad again."
+    );
+    expect(
+      formatMappedSnapshotIssueWarning("squad", ["Ann"])
+    ).toBe(
+      "Squad saved, but Match Best snapshots are incomplete for mapped players: Ann. Fix the Match Best data, then save the squad again."
+    );
+    expect(formatMappedSnapshotTechnicalWarning("week")).not.toMatch(
+      /permission|sql|token/i
+    );
+    expect(formatMappedSnapshotTechnicalWarning("squad")).toContain(
+      "Squad saved, but Match Best snapshots could not be completed"
+    );
   });
 });
 

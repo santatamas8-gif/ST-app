@@ -83,4 +83,24 @@ describe("aggregateWeeklyActualFromDays", () => {
     expect(result.weeklyActual).toBeNull();
     expect(result.weeklyToTarget).toBeNull();
   });
+
+  it("uses a found day's Full Training + Individual summed Actual in weekly Actual", () => {
+    const days = [
+      {
+        status: "actual_found" as const,
+        actual: {
+          totalDistance: 5800,
+          hsr: 15,
+          sprint: 3,
+          accelerations: 5,
+          decelerations: 7,
+        },
+      },
+      { status: "actual_not_found" as const, actual: null },
+    ];
+    const result = aggregateWeeklyActualFromDays(days, planned);
+    expect(result.weeklyActual?.totalDistance).toBe(5800);
+    expect(result.weeklyActual?.hsr).toBe(15);
+    expect(result.actualCompleteness).toBe("partial_not_found");
+  });
 });

@@ -106,6 +106,8 @@ describe("Persistent Week Squad WS-E UI", () => {
     expect(saveFn).toContain("setSavedSquadPlayerIds(savedIds)");
     expect(saveFn).toContain("setSelectedPlayerIds(copyPlayerIds(savedIds))");
     expect(saveFn).toContain("Squad saved ·");
+    expect(saveFn).toContain("res.data.snapshotWarning");
+    expect(saveFn).toContain("setSquadError(res.data.snapshotWarning)");
     expect(saveFn).toContain("if (!res.ok)");
     expect(saveFn).not.toContain("setSelectedPlayerIds([])");
     expect(saveFn).not.toContain("createPlannerWeeklyTarget");

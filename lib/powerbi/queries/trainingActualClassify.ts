@@ -54,34 +54,71 @@ function drillOf(row: Record<string, unknown>): string | null {
   return typeof raw === "string" ? raw : null;
 }
 
+function sumNullableMetric(a: number | null, b: number | null): number | null {
+  if (a === null || b === null) return null;
+  const sum = a + b;
+  return Number.isFinite(sum) ? sum : null;
+}
+
+/**
+ * Metric-wise sum of two distinct training loads.
+ * A null/invalid addend stays null — never a fake valid total.
+ */
+export function sumTrainingActualMetrics(
+  a: TrainingActualGpsMetrics,
+  b: TrainingActualGpsMetrics
+): TrainingActualGpsMetrics {
+  return {
+    totalDistance: sumNullableMetric(a.totalDistance, b.totalDistance),
+    hsr: sumNullableMetric(a.hsr, b.hsr),
+    sprint: sumNullableMetric(a.sprint, b.sprint),
+    accelerations: sumNullableMetric(a.accelerations, b.accelerations),
+    decelerations: sumNullableMetric(a.decelerations, b.decelerations),
+  };
+}
+
 /**
  * Classify raw (non-aggregated) training rows for ONE player.
- * Exact drills only. Never sum. Never precedence.
+ * Exact drills only. Never DISTINCT-all-rows. Never precedence.
+ * Duplicate rows of the same drill stay ambiguous (never summed).
+ *
+ * From 2026-09-01, one Full Training and one Individual are two distinct
+ * loads and are summed metric-wise. Before that date Individual is ignored.
  *
  * | Full Training | Individual | Result |
  * | 0 | 0 | not_found |
  * | 1 | 0 | found (Full Training) |
- * | 0 | 1 | found (Individual) |
- * | 1 | 1 | ambiguous |
+ * | 0 | 1 | found (Individual) — only when date >= 2026-09-01 |
+ * | 1 | 1 | found (sum) — only when date >= 2026-09-01 |
  * | >1 | any | ambiguous |
  * | any | >1 | ambiguous |
  */
 export function classifyOnePlayerTrainingActualRows(
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  isoDate?: string | null
 ): TrainingActualPlayerDayStatus {
+  const allowIndividual = allowsIndividualTrainingDate(isoDate);
   const fullTraining: Record<string, unknown>[] = [];
   const individual: Record<string, unknown>[] = [];
   for (const row of rows) {
     const drill = drillOf(row);
     if (drill === FULL_TRAINING_DRILL) fullTraining.push(row);
-    else if (drill === INDIVIDUAL_TRAINING_DRILL) individual.push(row);
+    else if (allowIndividual && drill === INDIVIDUAL_TRAINING_DRILL) {
+      individual.push(row);
+    }
   }
 
   if (fullTraining.length > 1 || individual.length > 1) {
     return { status: "ambiguous" };
   }
   if (fullTraining.length === 1 && individual.length === 1) {
-    return { status: "ambiguous" };
+    return {
+      status: "found",
+      metrics: sumTrainingActualMetrics(
+        mapTrainingActualRow(fullTraining[0]),
+        mapTrainingActualRow(individual[0])
+      ),
+    };
   }
   if (fullTraining.length === 1) {
     return { status: "found", metrics: mapTrainingActualRow(fullTraining[0]) };
@@ -98,7 +135,8 @@ export function classifyOnePlayerTrainingActualRows(
  */
 export function classifyTrainingActualRowsByPlayer(
   requestedPlayerNames: string[],
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  isoDate?: string | null
 ): Map<string, TrainingActualPlayerDayStatus> {
   const grouped = new Map<string, Record<string, unknown>[]>();
   for (const row of rows) {
@@ -111,7 +149,10 @@ export function classifyTrainingActualRowsByPlayer(
 
   const out = new Map<string, TrainingActualPlayerDayStatus>();
   for (const name of requestedPlayerNames) {
-    out.set(name, classifyOnePlayerTrainingActualRows(grouped.get(name) ?? []));
+    out.set(
+      name,
+      classifyOnePlayerTrainingActualRows(grouped.get(name) ?? [], isoDate)
+    );
   }
   return out;
 }

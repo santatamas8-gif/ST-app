@@ -175,7 +175,8 @@ SELECTCOLUMNS(
 
 /**
  * Training actual GPS values for one player / week / MD (optional date).
- * Does not aggregate when multiple allowed-drill rows match — returns `ambiguous`.
+ * Duplicate rows of the same drill stay `ambiguous`. From 2026-09-01, one
+ * Full Training and one Individual are summed metric-wise as two distinct loads.
  */
 export async function getTrainingActualGps(
   input: GetTrainingActualGpsInput
@@ -217,7 +218,7 @@ export async function getTrainingActualGps(
   }
 
   const rows = firstResultRows(result.results);
-  const classified = classifyOnePlayerTrainingActualRows(rows);
+  const classified = classifyOnePlayerTrainingActualRows(rows, isoDate);
   if (classified.status === "not_found") {
     const error: TrainingActualGpsSafeError = {
       code: "not_found",
@@ -244,7 +245,7 @@ export async function getTrainingActualGps(
 /**
  * Training Actual for many frozen player names on ONE week day.
  * One Execute Queries call. Raw rows only — no SUM/MAX aggregation.
- * Per-player 0/1/>1 classification is independent (per exact drill).
+ * Per-player classification is independent (exact drills; 1+1 summed from cutoff).
  */
 export async function getTrainingActualGpsBatchForDay(
   input: GetTrainingActualGpsBatchForDayInput
@@ -289,6 +290,10 @@ export async function getTrainingActualGpsBatchForDay(
   const rows = firstResultRows(result.results);
   return {
     ok: true,
-    byPlayerName: classifyTrainingActualRowsByPlayer(playerNames, rows),
+    byPlayerName: classifyTrainingActualRowsByPlayer(
+      playerNames,
+      rows,
+      String(input.date).trim().slice(0, 10)
+    ),
   };
 }

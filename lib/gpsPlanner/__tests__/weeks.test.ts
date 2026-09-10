@@ -13,6 +13,17 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: (...args: unknown[]) => fromMock(...args) }),
 }));
 
+const { syncWeekSquadSnapshotsAfterStatusSave } = vi.hoisted(() => ({
+  syncWeekSquadSnapshotsAfterStatusSave: vi.fn(
+    async (): Promise<string | undefined> => undefined
+  ),
+}));
+vi.mock("@/lib/gpsPlanner/weekSquadSnapshots.server", () => ({
+  syncWeekSquadSnapshotsAfterStatusSave,
+  weekStatusFreezesSquadSnapshots: (status: string) =>
+    status === "active" || status === "closed",
+}));
+
 import {
   createPlannerWeek,
   deletePlannerWeek,
@@ -78,6 +89,7 @@ describe("planner weeks CRUD", () => {
   beforeEach(() => {
     getAppUser.mockReset();
     fromMock.mockReset();
+    syncWeekSquadSnapshotsAfterStatusSave.mockClear();
     getAppUser.mockResolvedValue(ADMIN);
   });
 
@@ -213,6 +225,124 @@ describe("planner weeks CRUD", () => {
       ok: false,
       error: { code: "week_range_conflict" },
     });
+    expect(syncWeekSquadSnapshotsAfterStatusSave).not.toHaveBeenCalled();
+  });
+
+  it("does not freeze snapshots when a week is saved as draft", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_week_days") {
+        return chain({ data: [], error: null });
+      }
+      return chain(
+        {
+          data: {
+            id: WEEK_ID,
+            powerbi_week_id: "W6",
+            start_date: "2026-03-09",
+            end_date: "2026-03-15",
+            week_type: "maintaining",
+            overload_focus: [],
+            status: "draft",
+            created_by: ADMIN.id,
+            created_at: "a",
+            updated_at: "a",
+          },
+          error: null,
+        },
+        { maybeSingle: true }
+      );
+    });
+    await expect(
+      updatePlannerWeek({
+        weekId: WEEK_ID,
+        powerBiWeekId: "W6",
+        startDate: "2026-03-09",
+        endDate: "2026-03-15",
+        weekType: "maintaining",
+        status: "draft",
+      })
+    ).resolves.toMatchObject({ ok: true });
+    expect(syncWeekSquadSnapshotsAfterStatusSave).not.toHaveBeenCalled();
+  });
+
+  it("freezes missing week-squad snapshots when a week is saved as active", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_week_days") {
+        return chain({ data: [], error: null });
+      }
+      return chain(
+        {
+          data: {
+            id: WEEK_ID,
+            powerbi_week_id: "W6",
+            start_date: "2026-03-09",
+            end_date: "2026-03-15",
+            week_type: "maintaining",
+            overload_focus: [],
+            status: "active",
+            created_by: ADMIN.id,
+            created_at: "a",
+            updated_at: "a",
+          },
+          error: null,
+        },
+        { maybeSingle: true }
+      );
+    });
+    await expect(
+      updatePlannerWeek({
+        weekId: WEEK_ID,
+        powerBiWeekId: "W6",
+        startDate: "2026-03-09",
+        endDate: "2026-03-15",
+        weekType: "maintaining",
+        status: "active",
+      })
+    ).resolves.toMatchObject({ ok: true });
+    expect(syncWeekSquadSnapshotsAfterStatusSave).toHaveBeenCalledWith(
+      WEEK_ID,
+      "active"
+    );
+  });
+
+  it("attaches mapped snapshot warning on successful active week save", async () => {
+    const warning =
+      "Week saved, but Match Best snapshots are incomplete for mapped players: Player One. Fix the Match Best data, then save the week or squad again.";
+    syncWeekSquadSnapshotsAfterStatusSave.mockResolvedValueOnce(warning);
+    fromMock.mockImplementation((table: string) => {
+      if (table === "planner_week_days") {
+        return chain({ data: [], error: null });
+      }
+      return chain(
+        {
+          data: {
+            id: WEEK_ID,
+            powerbi_week_id: "W6",
+            start_date: "2026-03-09",
+            end_date: "2026-03-15",
+            week_type: "maintaining",
+            overload_focus: [],
+            status: "active",
+            created_by: ADMIN.id,
+            created_at: "a",
+            updated_at: "a",
+          },
+          error: null,
+        },
+        { maybeSingle: true }
+      );
+    });
+    const result = await updatePlannerWeek({
+      weekId: WEEK_ID,
+      powerBiWeekId: "W6",
+      startDate: "2026-03-09",
+      endDate: "2026-03-15",
+      weekType: "maintaining",
+      status: "active",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.snapshotWarning).toBe(warning);
   });
 
   it("requires explicit confirm for delete", async () => {
