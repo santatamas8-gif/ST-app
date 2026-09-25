@@ -115,6 +115,16 @@ function formatDayOption(day: PlannerWeekDayRow): string {
   return `${day.mdTag} · ${day.date}`;
 }
 
+function dailyRowHasNoActualThroughout(
+  actual: AbsoluteMetrics | null
+): boolean {
+  if (!actual) return true;
+  return METRICS.every((m) => {
+    const value = actual[m.field];
+    return value == null || !Number.isFinite(value);
+  });
+}
+
 function formatTotalLoadWeekSelectLabel(week: PlannerWeekRow): string {
   const range = formatCompactDateRange(week.startDate, week.endDate).replace(
     /–/g,
@@ -169,11 +179,13 @@ function ReviewComplianceLegend({
   items,
   thresholds,
   footnote,
+  printable = false,
 }: {
   title: string;
   items: { tone: ReviewComplianceTone; label: string }[];
   thresholds?: string[];
   footnote: string;
+  printable?: boolean;
 }) {
   const swatch = (tone: ReviewComplianceTone) => {
     switch (tone) {
@@ -187,7 +199,11 @@ function ReviewComplianceLegend({
   };
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-3 no-print">
+    <div
+      className={`rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-3 ${
+        printable ? "review-print-legend" : "no-print"
+      }`}
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-300">
         {title}
       </p>
@@ -243,7 +259,7 @@ function ReviewTableHead({
             {m.label}
           </th>
         ))}
-        <th className="border-l border-white/15 px-3 py-2.5 font-medium">
+        <th className="review-print-quality border-l border-white/15 px-3 py-2.5 font-medium">
           Quality
         </th>
       </tr>
@@ -263,7 +279,7 @@ function ReviewTableHead({
             </th>
           ))
         )}
-        <th className="border-l border-zinc-200/80 bg-[#f3e9eb] px-3 py-1.5" />
+        <th className="review-print-quality border-l border-zinc-200/80 bg-[#f3e9eb] px-3 py-1.5" />
       </tr>
     </thead>
   );
@@ -468,12 +484,11 @@ export function PlannerReviewView({
       )
     : "";
 
+  const reviewReady = !loadingMeta && !loadingData && !pending;
   const canPrintWeekly =
-    tab === "weekly" &&
-    !loadingMeta &&
-    !loadingData &&
-    !pending &&
-    weeklyRows.length > 0;
+    tab === "weekly" && reviewReady && weeklyRows.length > 0;
+  const canPrintDaily = tab === "daily" && reviewReady && dailyRows.length > 0;
+  const canPrint = canPrintWeekly || canPrintDaily;
 
   function applyWeekChange(nextWeekId: string) {
     const nextWeek = weeks.find((w) => w.id === nextWeekId);
@@ -575,7 +590,7 @@ export function PlannerReviewView({
           </button>
         </div>
 
-        {canPrintWeekly ? (
+        {canPrint ? (
           <button
             type="button"
             onClick={() => window.print()}
@@ -703,6 +718,7 @@ export function PlannerReviewView({
             rows={dailyRows}
             nameById={nameById}
             avatarById={avatarById}
+            weekLabel={weekPrintLabel}
             dayLabel={selectedDay ? formatDayOption(selectedDay) : ""}
           />
         )}
@@ -812,10 +828,75 @@ export function PlannerReviewView({
             background: #fde8e8 !important;
             color: #3f3f46 !important;
           }
+
+          .daily-review-print-root .review-print-quality {
+            display: none !important;
+          }
+
+          .daily-review-print-root .review-print-hide-empty {
+            display: none !important;
+          }
+
+          .review-print-legend {
+            display: block !important;
+            margin-top: 8px !important;
+            border: 1px solid #e4e4e7 !important;
+            background: #fff !important;
+            color: #3f3f46 !important;
+            padding: 6px 8px !important;
+          }
+
+          .review-print-legend p,
+          .review-print-legend li,
+          .review-print-legend span {
+            color: #3f3f46 !important;
+          }
+
+          .review-print-legend .bg-emerald-500 {
+            background: #10b981 !important;
+          }
+
+          .review-print-legend .bg-amber-500 {
+            background: #f59e0b !important;
+          }
+
+          .review-print-legend .bg-red-500 {
+            background: #ef4444 !important;
+          }
+
+          .review-print-attribution {
+            display: block !important;
+            margin: 8px 0 0 !important;
+            text-align: right;
+            font-size: 8px !important;
+            font-style: italic !important;
+            font-weight: 400 !important;
+            font-family: Georgia, "Times New Roman", Times, serif !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .review-print-attribution em,
+          .review-print-attribution-brand,
+          .review-print-attribution-by {
+            font-style: italic !important;
+            font-weight: 400 !important;
+            font-size: 8px !important;
+            font-family: Georgia, "Times New Roman", Times, serif !important;
+          }
+
+          .review-print-attribution-brand {
+            color: #1b4332 !important;
+          }
+
+          .review-print-attribution-by {
+            color: #71717a !important;
+          }
         }
 
         .review-print-title,
-        .review-print-meta {
+        .review-print-meta,
+        .review-print-attribution {
           display: none;
         }
       `}</style>
@@ -901,7 +982,7 @@ function WeeklyReviewTable({
                       })}
                     />
                   ))}
-                  <td className="border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
+                  <td className="review-print-quality border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
                     {formatWeeklyReviewActualQuality({
                       actualCompleteness: row.actualCompleteness,
                       includedDays: row.includedDays,
@@ -929,24 +1010,31 @@ function DailyReviewTable({
   rows,
   nameById,
   avatarById,
+  weekLabel,
   dayLabel,
 }: {
   rows: (PlannerDailyAnalysisResult | { playerId: string; error: string })[];
   nameById: Map<string, string>;
   avatarById: Map<string, string | null>;
+  weekLabel: string;
   dayLabel: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-zinc-400">No daily review rows.</p>;
+    return <p className="text-sm text-zinc-400 no-print">No daily review rows.</p>;
   }
   const metricColSpan = METRICS.length * 3;
   return (
-    <div className="space-y-2">
+    <div className="review-print-root daily-review-print-root space-y-2">
+      <h2 className="review-print-title">Daily Review</h2>
+      <p className="review-print-meta">
+        {weekLabel}
+        {dayLabel ? ` · ${dayLabel}` : ""}
+      </p>
       {dayLabel ? (
-        <p className="text-xs text-zinc-500">{dayLabel}</p>
+        <p className="text-xs text-zinc-500 no-print">{dayLabel}</p>
       ) : null}
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
-        <table className="min-w-[1100px] w-full border-collapse text-left text-sm">
+      <div className="review-print-table-wrap overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <table className="review-print-table min-w-[1100px] w-full border-collapse text-left text-sm">
           <ReviewTableHead subCols={DAILY_SUB_COLS} />
           <tbody>
             {rows.map((row, index) => {
@@ -975,7 +1063,11 @@ function DailyReviewTable({
               return (
                 <tr
                   key={row.playerId}
-                  className={`border-b border-zinc-300 ${stripe}`}
+                  className={`border-b border-zinc-300 ${stripe}${
+                    dailyRowHasNoActualThroughout(row.actual)
+                      ? " review-print-hide-empty"
+                      : ""
+                  }`}
                 >
                   <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
                     <ReviewPlayerCell
@@ -995,7 +1087,7 @@ function DailyReviewTable({
                       })}
                     />
                   ))}
-                  <td className="border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
+                  <td className="review-print-quality border-l border-zinc-100 px-3 py-2 text-xs text-zinc-500">
                     {formatDailyReviewActualQuality(row.actualStatus)}
                   </td>
                 </tr>
@@ -1009,7 +1101,14 @@ function DailyReviewTable({
         items={DAILY_COMPLIANCE_LEGEND.items}
         thresholds={DAILY_COMPLIANCE_LEGEND.thresholds}
         footnote={DAILY_COMPLIANCE_LEGEND.footnote}
+        printable
       />
+      <p className="review-print-attribution">
+        <em className="review-print-attribution-brand">
+          Power BI calculations
+        </em>{" "}
+        <em className="review-print-attribution-by">by Santa Tamas</em>
+      </p>
     </div>
   );
 }

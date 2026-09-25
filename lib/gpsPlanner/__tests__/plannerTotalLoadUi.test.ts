@@ -41,6 +41,17 @@ describe("Total Load Review UI", () => {
     expect(review).toContain("dailyComplianceTone");
     expect(review).toContain("getPlannerDailyReviewAnalysisAction");
     expect(review).toContain("Week day");
+    expect(review).toContain("canPrintDaily");
+    expect(review).toContain('tab === "daily"');
+    expect(review).toContain(">Daily Review</h2>");
+    expect(review).toContain("daily-review-print-root");
+    expect(review).toContain("review-print-legend");
+    expect(review).toContain("review-print-attribution");
+    expect(review).toContain("by Santa Tamas");
+    expect(review).toContain(".daily-review-print-root .review-print-quality");
+    expect(review).toContain("dailyRowHasNoActualThroughout");
+    expect(review).toContain("review-print-hide-empty");
+    expect(review).not.toContain("getDailyPlanForPrint");
   });
 
   it("D-S: Total Load view consumes composer; Match identity is read-only", async () => {
