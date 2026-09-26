@@ -145,6 +145,29 @@ export function totalLoadCellPercent(
   return row.total.percentages?.[field] ?? null;
 }
 
+const TOTAL_LOAD_METRIC_FIELDS: TotalLoadMetricField[] = [
+  "totalDistance",
+  "hsr",
+  "sprint",
+  "accelerations",
+  "decelerations",
+];
+
+/** Print-only empty row: every displayed Total / % would be "—". Match Time "—" alone does not hide. */
+export function totalLoadRowHasNoDataThroughout(row: TotalLoadPlayerRow): boolean {
+  if (
+    row.quality === "unsafe" ||
+    row.quality === "match_data_pending" ||
+    row.quality === "match_not_selected"
+  ) {
+    return true;
+  }
+  return TOTAL_LOAD_METRIC_FIELDS.every((field) => {
+    const value = totalLoadCellValue(row, field);
+    return value == null || !Number.isFinite(value);
+  });
+}
+
 export type TotalLoadMetricField =
   keyof NonNullable<TotalLoadPlayerRow["total"]["metrics"]>;
 
@@ -210,6 +233,10 @@ export function formatTotalLoadMetricBreakdown(input: {
   const total = formatPlannerDisplayAbsoluteOrDash(input.totalValue);
   const trainingLabel =
     input.quality === "partial" ? `Training: ${training} (Partial)` : `Training: ${training}`;
+
+  if (input.matchQuality === "match_not_selected") {
+    return `${trainingLabel}\nMatch: —\nTraining only (not Total Week): ${total}`;
+  }
 
   return `${trainingLabel}\nMatch: ${match}\nTotal: ${total}`;
 }

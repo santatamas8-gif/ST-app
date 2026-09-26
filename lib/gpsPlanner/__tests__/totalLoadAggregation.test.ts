@@ -359,7 +359,7 @@ describe("composeTotalLoadResult", () => {
     expect(result.rows[0].match.durationSeconds).toBeNull();
   });
 
-  it("I: no match selected → Total unavailable, not match_zero", () => {
+  it("I: no match selected → training-only standing, not match_zero or Final Total", () => {
     const row = training({
       playerId: "p1",
       name: "N",
@@ -368,11 +368,30 @@ describe("composeTotalLoadResult", () => {
       actual: abs(14000),
     });
     const result = compose([row], null);
+    expect(result.rows[0].quality).toBe("complete");
+    expect(result.rows[0].match.quality).toBe("match_not_selected");
+    expect(result.rows[0].match.metrics).toBeNull();
+    expect(result.rows[0].match.durationSeconds).toBeNull();
+    expect(result.rows[0].total.metrics).toEqual(abs(14000));
+    expect(result.rows[0].total.percentages?.totalDistance).toBe(70);
+    expect(result.rows[0].training.metrics?.totalDistance).toBe(14000);
+    expect(result.officialMatch.selected).toBe(false);
+    expect(result.topValues.totalDistance?.value).toBe(14000);
+  });
+
+  it("I2: no match and no trusted Training → still match_not_selected", () => {
+    const row = training({
+      playerId: "p1",
+      name: "Empty",
+      pbi: "Empty",
+      completeness: "incomplete",
+      actual: abs(5000),
+    });
+    const result = compose([row], null);
     expect(result.rows[0].quality).toBe("match_not_selected");
     expect(result.rows[0].match.quality).toBe("match_not_selected");
     expect(result.rows[0].total.metrics).toBeNull();
-    expect(result.rows[0].training.metrics?.totalDistance).toBe(14000);
-    expect(result.officialMatch.selected).toBe(false);
+    expect(result.topValues.totalDistance).toBeNull();
   });
 
   it("J: missing requested Match result key → unsafe, NOT zero", () => {
@@ -596,19 +615,40 @@ describe("composeTotalLoadResult", () => {
 });
 
 describe("computeTotalLoadTopValues", () => {
-  it("unsafe / match_not_selected are excluded", () => {
+  it("unsafe / match_not_selected without trusted Training are excluded", () => {
     const rows = compose(
       [
         training({
           playerId: "p1",
           name: "No Match",
           pbi: "No Match",
-          completeness: "complete",
+          completeness: "incomplete",
           actual: abs(99999),
         }),
       ],
       null
     ).rows;
+    expect(rows[0].quality).toBe("match_not_selected");
     expect(computeTotalLoadTopValues(rows).totalDistance).toBeNull();
+  });
+
+  it("training-only Complete rows are eligible for Top Values", () => {
+    const rows = compose(
+      [
+        training({
+          playerId: "p1",
+          name: "Training Only",
+          pbi: "Training Only",
+          completeness: "complete",
+          actual: abs(14000),
+        }),
+      ],
+      null
+    ).rows;
+    expect(computeTotalLoadTopValues(rows).totalDistance).toEqual({
+      playerId: "p1",
+      playerDisplayName: "Training Only",
+      value: 14000,
+    });
   });
 });

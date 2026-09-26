@@ -1079,7 +1079,7 @@ Both matches may use `md_tag = MD`. Date distinguishes Match 1 / Match 2. No aut
 Do **not** require `gps_date` inside the Planner week date range.  
 Do **not** auto-rewrite historical headers if Power BI `Match_Info` later changes.
 
-**0 configured Matches:** quality `match_not_selected`. Final Total Week / % unavailable. Training may still exist as a component but must **not** be labelled Total Week. This is **not** `match_zero`.
+**0 configured Matches:** training-only standing. Match quality stays `match_not_selected`. Show recorded Training Actual and Training / frozen 1-Match-Best % when Training is Complete or Partial with a trusted numeric. Do **not** label this as Final Total Week. Match Actual / Match Time stay `—` (omitted, **not** zero). This is **not** `match_zero`. Adding a configured Match immediately switches the week to match-week rules (Final Total waits for Match GPS; pending ≠ 0). Removing the last Match returns to training-only standing.
 
 ### U3.4 Match source availability and Match Actual
 
@@ -1222,13 +1222,17 @@ Verified examples (reference only; do not hard-code in production): Doru `99:35`
 ### U3.8 Total Week and %
 
 ```text
-0 Matches:     Final Total unavailable (`match_not_selected`)
-1 safe Match:  Total Week = Training + Match 1
+0 Matches:      Training-only standing = recorded Training
+                % = Training / Frozen 1-Match-Best × 100
+                not labelled Final Total Week; Match term omitted (not zero)
+1 safe Match:   Total Week = Training + Match 1
 2 safe Matches: Total Week = Training + Match 1 + Match 2
 Total Week % = Total Week / Frozen 1-Match-Best × 100
 ```
 
-This Total Load formula is **unchanged**. Extra Time does **not** add a third term: present ET segments are already inside that Match’s Actual (regulation + optional ET). Denominator, frozen 1-Match-Best, Top Values eligibility, Complete / Partial, source gate, and Training Actual stay unchanged.
+The 1- and 2-Match Total Load formula is **unchanged**. Extra Time does **not** add a third term: present ET segments are already inside that Match’s Actual (regulation + optional ET). Denominator, frozen 1-Match-Best, Top Values eligibility, Complete / Partial, source gate, and Training Actual stay unchanged.
+
+Adding a configured Match immediately applies match-week rules. If Match GPS is pending: Final Total unavailable (`match_data_pending`); pending ≠ 0. Do not keep showing training-only numbers as Final Total after a Match is configured.
 
 Denominator: **`planner_match_best_snapshots`** for that week + player (frozen **1-Match-Best**).  
 Even during two-match weeks: **no** 2-Match Best, **no** doubled denominator.
@@ -1249,9 +1253,10 @@ If any configured Match is pending, or any of that player’s Matches is unsafe:
 | **Partial** | `partial_not_found` with valid numeric Training | all configured Matches `match_ok` or `match_zero` | **numeric, labelled Partial** | **eligible** |
 | **Pending** | any | any configured Match `match_data_pending` | `—` | no |
 | **Unsafe** | ambiguous / error / untrusted | **or** any Match ambiguous / query error / data issue | `—` | no |
-| **Match not selected** | any | 0 configured Matches | Total `—` (do not label Training as Total Week) | no |
+| **Training only** | complete or Partial with numeric | 0 configured Matches | numeric Training / % (not labelled Final Total Week) | **eligible** |
+| **Match not selected** | no trusted Training | 0 configured Matches | `—` | no |
 
-Partial rows **display** recorded Total and **are eligible** for Top Values (same absolute ranking as Complete). Missing Training days still cannot prove non-participation vs missing GPS; Most cards must match the highest displayed Total. Pending / unsafe / match-not-selected remain excluded.
+Partial rows **display** recorded Total and **are eligible** for Top Values (same absolute ranking as Complete). Training-only Complete / Partial rows with numeric Training are eligible the same way. Missing Training days still cannot prove non-participation vs missing GPS; Most cards must match the highest displayed Total. Pending / unsafe / match-not-selected (no trusted Training) remain excluded.
 
 ### U3.10 No Total Load compliance colors
 
@@ -1268,7 +1273,7 @@ Main table: Player; Match Time; TD Total; TD %; HSR Total; HSR %; Sprint Total; 
 
 Training / Match breakdown: tooltip / compact detail on Total. No extra wide columns. Do not label a pending two-match week as final `Training + Match 1`.
 
-Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute Total Week**, not %. Eligible quality `Complete` **and** `Partial` when numeric Total exists. Exclude pending, unsafe, unavailable, match not selected. `match_zero` remains eligible if Training is complete or Partial with numeric Total. Tie: higher absolute first; exact tie → player display name ascending.
+Top Values This Week: Most TD / HSR / Sprint / Acc / Dec. Rank **absolute displayed Total**, not %. Eligible quality `Complete` **and** `Partial` when numeric Total exists, including training-only weeks. Exclude pending, unsafe, unavailable, and match-not-selected with no trusted Training. `match_zero` remains eligible if Training is complete or Partial with numeric Total. Tie: higher absolute first; exact tie → player display name ascending.
 
 Do **not** revert Top Values to Complete-only.
 
@@ -1547,7 +1552,7 @@ Existing Wellness / RPE / Strength / Recovery / Schedule functionality must rema
 - Daily Plan is **read-only** (no DB writes); source = existing Daily Target absolutes via frozen Match Best × Daily %
 - Daily Plan content: Week / MD Tag / Player / absolute TD·HSR·Sprint·Acc·Dec + secondary shared-% / team-average projections — **no** Actual, Difference, Match Best values, To Target, Remaining, mapping, Wellness/RPE
 - Phase F Planning | Review on `/admin/planner`: Planning = existing Weekly Planner; Review = Weekly/Daily Planned vs Actual via existing progress/analysis domain (frozen historical Power BI identity; Actual not persisted)
-- Total Load Review **PRODUCTION IMPLEMENTED** (§U2 / §U3): recorded Training + 0–2 Matches; Create/Edit Week owns Match identity; Partial Training numeric load preserved; no Total Load colors; Top Values = Complete **and** Partial with numeric Total
+- Total Load Review **PRODUCTION IMPLEMENTED** (§U2 / §U3): recorded Training + 0–2 Matches; 0-Match weeks show training-only standing (not Final Total); adding a Match switches to match-week Final rules; Create/Edit Week owns Match identity; Partial Training numeric load preserved; no Total Load colors; Top Values = Complete **and** Partial with numeric Total
 - Weekly Review Actual loading: day-batched Power BI Execute Queries (≈1 call per included Week Day) with bounded transient retry; preserves per-player 0/1/>1 row-quality and completeness/To Target contracts
 - Daily Review Actual loading: day-batched Power BI Execute Queries (≈1 call for the selected Week Day via `getPlannerDailyReviewAnalysis` / `getTrainingActualGpsBatchForDay`); preserves per-player 0/1/>1, Planned/Difference, and Daily compliance contracts
 - Migrations `043` / `044` / `045` applied to production (official Match persistence → prep → max 2 rows + collision triggers)

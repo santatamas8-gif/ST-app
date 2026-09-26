@@ -24,6 +24,7 @@ import {
   sortTotalLoadRowsByTotal,
   totalLoadCellPercent,
   totalLoadCellValue,
+  totalLoadRowHasNoDataThroughout,
 } from "@/lib/gpsPlanner/totalLoadDisplay";
 import {
   formatPlannerDisplayAbsoluteOrDash,
@@ -257,7 +258,12 @@ export function PlannerTotalLoadView({
 
   const officialMatches = result?.officialMatches ?? [];
   const matchSelected = officialMatches.length > 0;
-  const showTotals = matchSelected && !loading && result != null;
+  const hasTrainingOnlyTotals =
+    !matchSelected &&
+    result != null &&
+    result.rows.some((row) => row.total.metrics != null);
+  const showTotals =
+    !loading && result != null && (matchSelected || hasTrainingOnlyTotals);
   const emptyTargets = result != null && result.rows.length === 0;
   const matchUnavailable =
     showTotals &&
@@ -308,8 +314,9 @@ export function PlannerTotalLoadView({
           </p>
           {officialMatches.length === 0 ? (
             <p className="rounded-lg border border-zinc-200 bg-white px-4 py-4 text-sm text-zinc-600 shadow-sm">
-              No configured matches. Add them in Create/Edit Week. Total Load is
-              unavailable until a Match is configured.
+              No configured matches. Add them in Create/Edit Week. Showing
+              training load only — not Final Total Week. Adding a Match switches
+              this week to a match week; Final Total then waits for Match GPS.
             </p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
@@ -341,9 +348,18 @@ export function PlannerTotalLoadView({
       ) : null}
 
       {showTotals && !emptyTargets ? (
-        <div className="review-print-root total-load-print-root space-y-3">
+        <div
+          className={`review-print-root total-load-print-root space-y-3${
+            matchSelected ? "" : " total-load-print-no-match"
+          }`}
+        >
           <h2 className="review-print-title">Total Load</h2>
           <p className="review-print-meta">{weekLabel ?? ""}</p>
+          {!matchSelected ? (
+            <p className="no-print text-sm text-zinc-600">
+              Training only — not Final Total Week
+            </p>
+          ) : null}
           <div className="total-load-print-top overflow-x-auto rounded-xl border border-[#245c45] bg-[#1b4332] p-1">
             <div className="grid w-full grid-cols-5 gap-1">
               {TOP_CARDS.map((card) => (
@@ -402,7 +418,7 @@ export function PlannerTotalLoadView({
                       </th>
                     </Fragment>
                   ))}
-                  <th className="border-l border-white/15 px-3 py-3 text-center font-medium">
+                  <th className="total-load-print-match-time border-l border-white/15 px-3 py-3 text-center font-medium">
                     Match Time
                   </th>
                 </tr>
@@ -421,7 +437,11 @@ export function PlannerTotalLoadView({
                   return (
                     <tr
                       key={row.playerId}
-                      className={`border-b border-zinc-300 text-zinc-800 ${stripe}`}
+                      className={`border-b border-zinc-300 text-zinc-800 ${stripe}${
+                        totalLoadRowHasNoDataThroughout(row)
+                          ? " review-print-hide-empty"
+                          : ""
+                      }`}
                     >
                       <td className={`sticky left-0 z-10 px-3 py-2.5 ${stripe}`}>
                         <PlayerCell
@@ -462,7 +482,7 @@ export function PlannerTotalLoadView({
                       })}
                       <td
                         title={formatMatchDurationSeconds(row.match.durationSeconds)}
-                        className="border-l border-zinc-200/80 px-3 py-2.5 text-center tabular-nums"
+                        className="total-load-print-match-time border-l border-zinc-200/80 px-3 py-2.5 text-center tabular-nums"
                       >
                         {matchMinutes === "—" ? (
                           matchMinutes
@@ -509,6 +529,14 @@ export function PlannerTotalLoadView({
           .total-load-print-root .review-print-meta {
             margin: 0 0 4px !important;
             font-size: 9px !important;
+          }
+
+          .total-load-print-root .review-print-hide-empty {
+            display: none !important;
+          }
+
+          .total-load-print-no-match .total-load-print-match-time {
+            display: none !important;
           }
 
           .total-load-print-top {

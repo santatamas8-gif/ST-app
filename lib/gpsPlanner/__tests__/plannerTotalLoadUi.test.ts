@@ -60,6 +60,11 @@ describe("Total Load Review UI", () => {
     );
     expect(view).toContain("getPlannerTotalLoadAction");
     expect(view).toContain("Configured Matches");
+    expect(view).toContain("Training only — not Final Total Week");
+    expect(view).toContain(
+      'className="no-print text-sm text-zinc-600"'
+    );
+    expect(view).toContain("hasTrainingOnlyTotals");
     expect(view).not.toContain("setPlannerWeekOfficialMatchAction");
     expect(view).not.toContain("deletePlannerWeekOfficialMatchAction");
     expect(view).not.toContain("listPlannerMatchCandidatesAction");
@@ -76,6 +81,11 @@ describe("Total Load Review UI", () => {
     expect(view).toContain('title: "Dec"');
     expect(view).not.toContain("Most TD");
     expect(view).toContain("Match Time");
+    expect(view).toContain("total-load-print-no-match");
+    expect(view).toContain("total-load-print-match-time");
+    expect(view).toContain(
+      ".total-load-print-no-match .total-load-print-match-time"
+    );
     expect(view).toContain("{m.label}");
     expect(view).toContain("{m.label} %");
     expect(view).toContain("({m.unit})");
@@ -138,6 +148,9 @@ describe("Total Load Review UI", () => {
     expect(view).toContain("by Santa Tamas");
     expect(view).toContain("total-load-print-num");
     expect(view).toContain("total-load-print-pct");
+    expect(view).toContain("totalLoadRowHasNoDataThroughout");
+    expect(view).toContain("review-print-hide-empty");
+    expect(view).toContain(".total-load-print-root .review-print-hide-empty");
     expect(view).toContain("font-style: italic");
     expect(view).toContain("total-load-print-avatar");
     expect(view).not.toContain("total-load-print-hide-avatar");

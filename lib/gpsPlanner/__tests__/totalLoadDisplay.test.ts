@@ -14,6 +14,7 @@ import {
   sortTotalLoadRowsByTotal,
   totalLoadCellPercent,
   totalLoadCellValue,
+  totalLoadRowHasNoDataThroughout,
 } from "@/lib/gpsPlanner/totalLoadDisplay";
 
 const ZERO = {
@@ -243,6 +244,49 @@ describe("quality and cell display", () => {
         matchQuality: "match_zero",
       })
     ).toBe("Training: 6,412\nMatch: 0\nTotal: 6,412");
+  });
+
+  it("print-empty is only all-dash Totals; Match Time dash does not hide", () => {
+    expect(
+      totalLoadRowHasNoDataThroughout(
+        row({
+          quality: "match_not_selected",
+          match: {
+            quality: "match_not_selected",
+            metrics: null,
+            durationSeconds: null,
+          },
+          total: { metrics: null, percentages: null },
+        })
+      )
+    ).toBe(true);
+    expect(
+      totalLoadRowHasNoDataThroughout(
+        row({
+          quality: "complete",
+          match: {
+            quality: "match_not_selected",
+            metrics: null,
+            durationSeconds: null,
+          },
+        })
+      )
+    ).toBe(false);
+    expect(totalLoadRowHasNoDataThroughout(row({ quality: "complete" }))).toBe(
+      false
+    );
+  });
+
+  it("training-only standing is not labelled Total Week and Match is omitted", () => {
+    expect(
+      formatTotalLoadMetricBreakdown({
+        quality: "complete",
+        trainingValue: 14000,
+        matchValue: null,
+        totalValue: 14000,
+        matchQuality: "match_not_selected",
+      })
+    ).toBe("Training: 14,000\nMatch: —\nTraining only (not Total Week): 14,000");
   });
 });
 

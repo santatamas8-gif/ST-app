@@ -171,7 +171,7 @@ function compose(
 }
 
 describe("Phase E Total Load 0–2 Match composition", () => {
-  it("A: 0 configured Matches → match_not_selected, no final Total", () => {
+  it("A: 0 configured Matches → training-only standing, not Final Total or match_zero", () => {
     const row = training({
       playerId: "p1",
       name: "Doru Andrei",
@@ -182,11 +182,37 @@ describe("Phase E Total Load 0–2 Match composition", () => {
     const result = compose([row], [], []);
     expect(result.officialMatch.selected).toBe(false);
     expect(result.officialMatches).toEqual([]);
-    expect(result.rows[0].quality).toBe("match_not_selected");
+    expect(result.rows[0].quality).toBe("complete");
     expect(result.rows[0].matches).toEqual([]);
-    expect(result.rows[0].total.metrics).toBeNull();
-    expect(result.rows[0].total.percentages).toBeNull();
-    expect(result.topValues.totalDistance).toBeNull();
+    expect(result.rows[0].match.quality).toBe("match_not_selected");
+    expect(result.rows[0].match.metrics).toBeNull();
+    expect(result.rows[0].total.metrics).toEqual(abs(14000));
+    expect(result.rows[0].total.percentages?.totalDistance).toBeCloseTo(
+      (14000 / 11000) * 100
+    );
+    expect(result.topValues.totalDistance?.value).toBe(14000);
+  });
+
+  it("A2: adding a Match mid-week switches to match week and waits for GPS", () => {
+    const row = training({
+      playerId: "p1",
+      name: "Doru Andrei",
+      pbi: "Doru Andrei",
+      completeness: "complete",
+      actual: abs(14000),
+    });
+    const trainingOnly = compose([row], [], []);
+    expect(trainingOnly.rows[0].quality).toBe("complete");
+    expect(trainingOnly.rows[0].total.metrics).toEqual(abs(14000));
+
+    const afterMatchAdded = compose([row], [MATCH_1], [pending(MATCH_1)]);
+    expect(afterMatchAdded.officialMatch.selected).toBe(true);
+    expect(afterMatchAdded.rows[0].quality).toBe("match_data_pending");
+    expect(afterMatchAdded.rows[0].match.quality).toBe("match_data_pending");
+    expect(afterMatchAdded.rows[0].total.metrics).toBeNull();
+    expect(afterMatchAdded.rows[0].total.percentages).toBeNull();
+    expect(afterMatchAdded.rows[0].training.metrics).toEqual(abs(14000));
+    expect(afterMatchAdded.topValues.totalDistance).toBeNull();
   });
 
   it("B: 1 safe Match remains V1-equivalent Training + Match 1", () => {

@@ -4,6 +4,8 @@
  *
  * Phase E: 0–2 configured official Matches. Configured rows are the source of
  * truth. Pending source ≠ match_zero. Final Total is all-or-nothing.
+ * 0 Matches: training-only standing (not labelled Final Total). Adding a Match
+ * immediately applies match-week rules.
  */
 
 import type { AbsoluteMetrics } from "@/lib/gpsPlanner/calculations";
@@ -470,16 +472,31 @@ function composePlayerRow(
   };
 
   if (officialMatches.length === 0) {
+    const match = {
+      quality: "match_not_selected" as const,
+      metrics: null,
+      durationSeconds: null,
+    };
+    if (trainingMetrics == null) {
+      return {
+        ...base,
+        quality: "match_not_selected",
+        matches: [],
+        match,
+        total: { metrics: null, percentages: null },
+      };
+    }
+    const quality: TotalLoadQuality =
+      training.actualCompleteness === "complete" ? "complete" : "partial";
     return {
       ...base,
-      quality: "match_not_selected",
+      quality,
       matches: [],
-      match: {
-        quality: "match_not_selected",
-        metrics: null,
-        durationSeconds: null,
+      match,
+      total: {
+        metrics: trainingMetrics,
+        percentages: percentagesFromTotal(trainingMetrics, training.frozen),
       },
-      total: { metrics: null, percentages: null },
     };
   }
 

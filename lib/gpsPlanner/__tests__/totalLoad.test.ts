@@ -218,7 +218,9 @@ describe("getPlannerTotalLoad", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.officialMatch.selected).toBe(false);
-    expect(result.data.rows[0].quality).toBe("match_not_selected");
+    expect(result.data.rows[0].quality).toBe("complete");
+    expect(result.data.rows[0].match.quality).toBe("match_not_selected");
+    expect(result.data.rows[0].total.metrics).not.toBeNull();
     expect(getMatchActualGpsBatch).not.toHaveBeenCalled();
     expect(getMatchCandidateDates).not.toHaveBeenCalled();
   });
