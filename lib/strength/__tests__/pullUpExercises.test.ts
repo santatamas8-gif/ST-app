@@ -20,8 +20,14 @@ describe("isRepsOnlyPullUpExercise", () => {
     expect(isRepsOnlyPullUpExercise("Tricep Dips (Bench)")).toBe(true);
   });
 
-  it("excludes pull downs and rows", () => {
+  it("excludes pull downs and bent-over rows", () => {
     expect(isRepsOnlyPullUpExercise("Pull Down (Neutral)")).toBe(false);
     expect(isRepsOnlyPullUpExercise("Bent Over Row")).toBe(false);
+  });
+
+  it("matches custom reps-only catalog exercises", () => {
+    expect(isRepsOnlyPullUpExercise("Inverted Row")).toBe(true);
+    expect(isRepsOnlyPullUpExercise("Band Pallof Press")).toBe(true);
+    expect(isRepsOnlyPullUpExercise("Kettlebell Swing")).toBe(true);
   });
 });

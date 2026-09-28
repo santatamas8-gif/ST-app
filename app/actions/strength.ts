@@ -25,6 +25,7 @@ import { EXPLOSIVE_EXERCISE_SEED, isExplosiveExercise } from "@/lib/strength/exp
 import {
   DEFAULT_PULL_UP_SET_PERCENTAGE,
   isRepsOnlyPullUpExercise,
+  REPS_ONLY_EXERCISE_SEED,
 } from "@/lib/strength/pullUpExercises";
 import exercisesSeed from "@/lib/strength/seed/exercises.json";
 import schemesSeed from "@/lib/strength/seed/schemes.json";
@@ -129,6 +130,21 @@ async function ensureCustomExplosiveExercises(
   }
 }
 
+async function ensureCustomRepsOnlyExercises(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const names = REPS_ONLY_EXERCISE_SEED.map((e) => e.name);
+  const { data } = await supabase
+    .from("strength_exercises")
+    .select("name")
+    .in("name", names);
+  const existing = new Set((data ?? []).map((r) => r.name));
+  const missing = REPS_ONLY_EXERCISE_SEED.filter((e) => !existing.has(e.name));
+  if (missing.length) {
+    await supabase.from("strength_exercises").insert([...missing]);
+  }
+}
+
 type RawStrengthCardRow = Omit<StrengthSessionCard, "profiles">;
 
 async function enrichCardsWithProfiles(
@@ -174,6 +190,7 @@ export async function seedStrengthDataIfEmpty() {
     await insertSchemesBatch(supabase, schemesSeed as SchemeSeed[]);
   }
   await ensureCustomExplosiveExercises(supabase);
+  await ensureCustomRepsOnlyExercises(supabase);
 }
 
 export async function getStrengthExercises(activeOnly = true) {
