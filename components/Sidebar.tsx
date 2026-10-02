@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell, LayoutGrid } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell, LayoutGrid, Timer } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { PLAYER_STRENGTH_CARD_ENABLED } from "@/lib/strength/playerCardEnabled";
 import { PLANNER_NAV_ITEM } from "@/lib/gpsPlanner/nav";
@@ -28,6 +28,7 @@ const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRo
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/players", label: "Players", icon: Users, roles: ["admin", "staff"] },
+  { href: "/hiit", label: "HIIT", icon: Timer, roles: ["admin", "staff"] },
   { href: "/wellness", label: "Wellness", icon: HeartPulse },
   { href: "/rpe", label: "RPE", icon: Activity },
   { href: "/recovery-protocol", label: "Recovery Protocol", icon: RefreshCw },
