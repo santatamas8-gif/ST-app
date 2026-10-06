@@ -30,6 +30,11 @@ describe("Total Load Review UI", () => {
     expect(review).toContain("canPrintWeekly");
     expect(review).toContain('tab === "weekly"');
     expect(review).toContain("getPlannerWeeklyReviewProgressAction");
+    expect(review).toContain("weekly-review-print-root");
+    expect(review).toContain("weeklyRowHasNoActualThroughout");
+    expect(review).toContain(".weekly-review-print-root .review-print-hide-empty");
+    expect(review).toContain("WEEKLY_COMPLIANCE_LEGEND.footnote");
+    expect(review).toContain("printable");
   });
 
   it("C: Daily Review table and compliance remain", async () => {

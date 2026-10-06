@@ -125,6 +125,12 @@ function dailyRowHasNoActualThroughout(
   });
 }
 
+function weeklyRowHasNoActualThroughout(
+  actual: AbsoluteMetrics | null
+): boolean {
+  return dailyRowHasNoActualThroughout(actual);
+}
+
 function formatTotalLoadWeekSelectLabel(week: PlannerWeekRow): string {
   const range = formatCompactDateRange(week.startDate, week.endDate).replace(
     /–/g,
@@ -833,7 +839,8 @@ export function PlannerReviewView({
             display: none !important;
           }
 
-          .daily-review-print-root .review-print-hide-empty {
+          .daily-review-print-root .review-print-hide-empty,
+          .weekly-review-print-root .review-print-hide-empty {
             display: none !important;
           }
 
@@ -922,7 +929,7 @@ function WeeklyReviewTable({
   }
   const metricColSpan = METRICS.length * 3;
   return (
-    <div className="review-print-root space-y-2">
+    <div className="review-print-root weekly-review-print-root space-y-2">
       <h2 className="review-print-title">Weekly Review</h2>
       <p className="review-print-meta">
         {weekLabel}
@@ -959,7 +966,11 @@ function WeeklyReviewTable({
               return (
                 <tr
                   key={row.playerId}
-                  className={`border-b border-zinc-300 ${stripe}`}
+                  className={`border-b border-zinc-300 ${stripe}${
+                    weeklyRowHasNoActualThroughout(row.weeklyActual)
+                      ? " review-print-hide-empty"
+                      : ""
+                  }`}
                 >
                   <td className={`sticky left-0 z-10 px-3 py-2 ${stripe}`}>
                     <ReviewPlayerCell
@@ -1001,6 +1012,7 @@ function WeeklyReviewTable({
         title={WEEKLY_COMPLIANCE_LEGEND.title}
         items={WEEKLY_COMPLIANCE_LEGEND.items}
         footnote={WEEKLY_COMPLIANCE_LEGEND.footnote}
+        printable
       />
     </div>
   );
