@@ -25,23 +25,25 @@ async function ensureCardId(input: {
   if (typeof input.cardId === "string" && CARD_ID.test(input.cardId)) {
     return { ok: true, cardId: input.cardId };
   }
-  if (typeof input.sessionKey !== "string" || typeof input.occurrenceKey !== "string") {
+  const sessionKey = input.sessionKey;
+  const occurrenceKey = input.occurrenceKey;
+  if (typeof sessionKey !== "string" || typeof occurrenceKey !== "string") {
     return { ok: false, error: "Card not found.", status: 404 };
   }
-  if (!occurrenceMatchesSession(input.occurrenceKey, input.sessionKey)) {
+  if (!occurrenceMatchesSession(occurrenceKey, sessionKey)) {
     return { ok: false, error: "This drill is not part of the selected session.", status: 400 };
   }
 
-  const previous = await loadSavedCards(input.sessionKey);
+  const previous = await loadSavedCards(sessionKey);
   if (!previous.ok) return { ok: false, error: previous.error, status: 500 };
-  const plan = layoutForDrillImage(previous.cards, input.occurrenceKey);
+  const plan = layoutForDrillImage(previous.cards, occurrenceKey);
   if ("cardId" in plan) return { ok: true, cardId: plan.cardId };
 
-  const saved = await saveDrillAnalysisLayout({ sessionKey: input.sessionKey, cards: plan.cards });
+  const saved = await saveDrillAnalysisLayout({ sessionKey, cards: plan.cards });
   if (!saved.ok) return { ok: false, error: saved.error, status: 400 };
-  const reloaded = await loadSavedCards(input.sessionKey);
+  const reloaded = await loadSavedCards(sessionKey);
   if (!reloaded.ok) return { ok: false, error: reloaded.error, status: 500 };
-  const created = reloaded.cards.find((card) => card.occurrenceKeys.includes(input.occurrenceKey));
+  const created = reloaded.cards.find((card) => card.occurrenceKeys.includes(occurrenceKey));
   if (!created) return { ok: false, error: "Image upload failed.", status: 500 };
   return { ok: true, cardId: created.id };
 }
