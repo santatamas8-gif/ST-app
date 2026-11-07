@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { DrillCompare } from "@/app/(app)/drill-analysis/DrillCompare";
+import { DrillHistory } from "@/app/(app)/drill-analysis/DrillHistory";
 import { ManageDrills } from "@/app/(app)/drill-analysis/ManageDrills";
-import { formatDrillMetric, formatDrillNumber, formatSessionDate, reportHeadings } from "@/lib/drillAnalysis/format";
+import { formatDrillMetric, formatDrillNumber, formatDurationMinutes, formatSessionDate, reportHeadings } from "@/lib/drillAnalysis/format";
+import { comparePrintMarks } from "@/lib/drillAnalysis/printMarks";
 import { DRILL_METRICS } from "@/lib/drillAnalysis/types";
-import type { DrillAnalysisPageData, DrillMetricKey } from "@/lib/drillAnalysis/types";
+import type { DrillAnalysisPageData, DrillColumn, DrillMetricKey } from "@/lib/drillAnalysis/types";
 import type { DrillViewCard } from "@/lib/drillAnalysis/types";
 
 const PRINT_METRIC_LABEL: Record<DrillMetricKey, string> = {
@@ -47,6 +50,11 @@ function printSeriesHeading(index: number, count: number): string {
   return count <= 1 ? "Value" : `SET ${index + 1}`;
 }
 
+function DurationMark({ column }: { column?: DrillColumn }) {
+  if (!column || column.missing || column.durationMinutes === null) return null;
+  return <span className="da-duration">{formatDurationMinutes(column.durationMinutes)}</span>;
+}
+
 function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?: string[] }) {
   const labels = columnLabels ?? card.columns.map((column) => column.label);
   const showNames = labels.some((label) => label.trim().length > 0);
@@ -55,6 +63,16 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
     <div className="da-table-scroll min-w-0 overflow-x-auto">
       <table className={`w-full min-w-[280px] border-collapse text-left text-sm ${separateSets ? "da-split-sets" : ""}`}>
         <thead>
+          {separateSets ? (
+            <tr className="da-print-head da-duration-head">
+              <th className="da-col-head da-metric-head" />
+              {card.columns.map((column) => (
+                <th key={`duration-${column.occurrenceKey}`} className="da-col-head da-value-head">
+                  <DurationMark column={column} />
+                </th>
+              ))}
+            </tr>
+          ) : null}
           <tr className="da-print-head">
             <th className="da-col-head da-metric-head">Metric</th>
             {card.columns.map((column, index) => (
@@ -68,12 +86,15 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
           </tr>
           {showNames ? (
             <tr className="da-screen-only">
-              <th className="da-col-head border border-zinc-300 px-2 py-2 font-semibold">
+              <th className="da-col-head border border-zinc-300 px-2 py-1 font-semibold">
                 <span className="da-screen-only">Metric</span>
               </th>
               {card.columns.map((column, index) => (
-                <th key={column.occurrenceKey} className="da-col-head da-value-head border border-zinc-300 px-2 py-2 font-semibold">
-                  <div>{labels[index]}</div>
+                <th key={column.occurrenceKey} className="da-col-head da-value-head border border-zinc-300 px-2 py-1 font-semibold">
+                  <div>
+                    {labels[index]}
+                    {separateSets ? <DurationMark column={column} /> : null}
+                  </div>
                 </th>
               ))}
             </tr>
@@ -82,12 +103,12 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
         <tbody>
           {DRILL_METRICS.map((metric) => (
             <tr key={metric.key}>
-              <th className="border border-zinc-300 px-2 py-2 font-medium text-zinc-900">
+              <th className="border border-zinc-300 px-2 py-1 font-medium text-zinc-900">
                 <span className="da-screen-only">{metric.label}</span>
                 <span className="da-print-only"><PrintMetricName metric={metric} /></span>
               </th>
               {card.columns.map((column) => (
-                <td key={column.occurrenceKey} className="da-num border border-zinc-300 px-2 py-2 tabular-nums text-zinc-900">
+                <td key={column.occurrenceKey} className="da-num border border-zinc-300 px-2 py-1 tabular-nums text-zinc-900">
                   <span className="da-screen-only">{formatDrillMetric(column.metrics[metric.key], metric.unit)}</span>
                   <span className="da-print-only">{formatDrillNumber(column.metrics[metric.key])}</span>
                 </td>
@@ -163,7 +184,7 @@ function CardImage({
 
   const src = `/api/drill-analysis/image?cardId=${card.id}`;
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col items-start gap-1">
       <button
         type="button"
         className="block w-full"
@@ -175,10 +196,10 @@ function CardImage({
           <span className="block py-8 text-sm text-red-700">Image failed to load</span>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
+            <img
             src={src}
             alt={card.displayName}
-            className="max-h-72 w-full object-contain"
+            className="max-h-36 w-full object-contain object-left sm:max-h-40"
             onLoad={() => onImageState(card.id, "ready")}
             onError={() => {
               setFailed(true);
@@ -187,7 +208,7 @@ function CardImage({
           />
         )}
       </button>
-      <label className="da-screen-only inline-flex h-11 cursor-pointer items-center rounded-lg border border-zinc-300 px-3 text-sm text-zinc-800">
+      <label className="da-screen-only inline-flex h-7 cursor-pointer items-center rounded-md border border-zinc-300 px-2 text-xs text-zinc-700">
         {uploading ? "Uploading…" : "Replace image"}
         <input
           type="file"
@@ -206,7 +227,15 @@ function CardImage({
   );
 }
 
-export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageData; logoUrl?: string | null }) {
+export function DrillAnalysisView({
+  data,
+  logoUrl,
+  playerPhotos = {},
+}: {
+  data: DrillAnalysisPageData;
+  logoUrl?: string | null;
+  playerPhotos?: Record<string, string>;
+}) {
   const logoSrc = logoUrl?.trim() || "/icon.svg";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -221,8 +250,41 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
     });
   }, []);
   const [printMessage, setPrintMessage] = useState<string | null>(null);
+  const [tab, setTab] = useState<"daily" | "history">("daily");
+  const [historyMounted, setHistoryMounted] = useState(false);
+  const [compareOn, setCompareOn] = useState(false);
+  const [playerA, setPlayerA] = useState("");
+  const [playerB, setPlayerB] = useState("");
   const model = data.model;
   const sessions = data.sessions.filter((session) => session.date === data.selectedDate);
+  const compareNames = model?.players ?? [];
+
+  useEffect(() => {
+    if (!compareOn) return;
+    const names = model?.players ?? [];
+    setPlayerA((current) => (current && names.includes(current) ? current : names[0] ?? ""));
+    setPlayerB((current) => {
+      if (current && names.includes(current)) return current;
+      return names.find((name) => name !== names[0]) ?? "";
+    });
+  }, [compareOn, model]);
+
+  function enableCompare() {
+    const names = model?.players ?? [];
+    const nextA =
+      playerA && names.includes(playerA)
+        ? playerA
+        : data.selectedPlayer && names.includes(data.selectedPlayer)
+          ? data.selectedPlayer
+          : names[0] ?? "";
+    const nextB =
+      playerB && names.includes(playerB) && playerB !== nextA
+        ? playerB
+        : names.find((name) => name !== nextA) ?? "";
+    setPlayerA(nextA);
+    setPlayerB(nextB);
+    setCompareOn(true);
+  }
 
   function navigate(date: string | null, sessionKey: string | null, player: string | null) {
     setPrintMessage(null);
@@ -236,7 +298,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
       setPrintMessage("Wait until this date, session, and player have finished loading.");
       return;
     }
-    const imageCards = model.cards.filter((card) => card.hasImage);
+    const imageCards = compareOn ? [] : model.cards.filter((card) => card.hasImage);
     if (imageCards.some((card) => imageState[card.id] !== "ready" && imageState[card.id] !== "error")) {
       setPrintMessage("Wait for the drawings to finish loading.");
       return;
@@ -249,8 +311,11 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
     window.print();
   }
 
+  const comparePair = Boolean(compareOn && playerA && playerB && playerA !== playerB);
+  const compareMarks = comparePair ? comparePrintMarks(playerA, playerB) : null;
+
   return (
-    <div className={`da-sheet space-y-4 ${pending ? "da-pending" : ""}`}>
+    <div className={`da-sheet space-y-4 ${pending ? "da-pending" : ""} ${tab === "history" ? "da-tab-history" : ""} ${compareOn ? "da-comparing" : ""}`}>
       <style>{`
         .da-print-only { display: none; }
         .da-print-head { display: none; }
@@ -258,9 +323,30 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
         .da-collapsed .da-card-body { display: none; }
         .da-col-head { background: #f4f6f8; color: #0f2744; }
         .da-unit { color: #64748b; font-weight: 500; font-size: 0.82em; }
+        .da-duration { margin-left: 0.4rem; color: #71717a; font-weight: 500; font-size: 0.78em; }
         .da-print-footer { display: none; }
+        .da-compare-print-names { display: none; }
+        .da-compare-print-duration { display: none; }
+        .da-compare-view { display: none; }
+        .da-comparing .da-compare-view { display: block; }
+        .da-comparing .da-results { display: none; }
+        .da-daily-panel { display: block; }
+        @media screen {
+          .da-comparing .da-compare-screen-sep,
+          .da-comparing .da-compare-player-label { display: none; }
+          div.da-sheet.da-comparing.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+          div.da-comparing .da-daily-panel.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+          .da-cs-a { color: #0f766e; font-weight: 700; }
+          .da-cs-b { color: #1d4ed8; font-weight: 700; }
+          .da-cs-mins { color: #64748b; font-weight: 500; }
+        }
+        .da-history-panel { display: none; }
+        .da-tab-history .da-daily-panel { display: none; }
+        .da-tab-history .da-history-panel { display: block; }
         @media print {
           @page { size: A4 landscape; margin: 7mm; }
+          .da-daily-panel { display: contents !important; }
+          .da-history-panel, .da-history-tabs { display: none !important; }
           html, body, body * { background: #ffffff !important; color: #18181b !important; box-shadow: none !important; }
           html, body, main { overflow: visible !important; height: auto !important; max-height: none !important; scrollbar-width: none !important; }
           ::-webkit-scrollbar, ::-webkit-scrollbar-thumb, ::-webkit-scrollbar-track { display: none !important; width: 0 !important; height: 0 !important; }
@@ -272,12 +358,12 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
           .da-print-title, .da-pending-note { display: none !important; }
           .da-sheet { display: flex !important; flex-direction: column !important; height: 190mm !important; overflow: hidden !important; background: #ffffff !important; color: #18181b !important; }
           .da-pending .da-results { display: none !important; }
-          .da-sheet header { position: relative !important; display: block !important; min-height: 9mm !important; margin: 0 0 1.6mm !important; padding: 1.2mm 0 1.2mm !important; border: 0 !important; border-bottom: 0.4mm solid #0f766e !important; text-align: center !important; }
+          .da-sheet header { position: relative !important; display: block !important; min-height: 8mm !important; margin: 0 0 1mm !important; padding: 0.8mm 0 0.8mm !important; border: 0 !important; border-bottom: 0.4mm solid #0f766e !important; text-align: center !important; }
           .da-sheet header h1 { display: none !important; }
           .da-sheet header .da-logo { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 9mm !important; height: 9mm !important; max-width: 9mm !important; max-height: 9mm !important; object-fit: contain !important; }
           .da-sheet header p { margin: 0 !important; font-size: 14pt !important; font-weight: 700 !important; line-height: 1.15 !important; letter-spacing: 0.01em !important; color: #0f2744 !important; text-align: center !important; }
-          .da-results { display: flex !important; flex: 1 1 auto !important; flex-direction: column !important; gap: 1.8mm !important; height: auto !important; min-height: 0 !important; }
-          .da-print-footer { display: flex !important; justify-content: flex-end !important; align-items: flex-end !important; gap: 2mm !important; margin: 1.4mm 0 0 !important; }
+          .da-results { display: flex !important; flex: 1 1 0 !important; flex-direction: column !important; gap: 2mm !important; height: auto !important; min-height: 0 !important; overflow: hidden !important; }
+          .da-print-footer { display: flex !important; flex: 0 0 auto !important; justify-content: flex-end !important; align-items: flex-end !important; gap: 2mm !important; margin: 1mm 0 0 !important; }
           .da-print-footer .da-logo { display: none !important; }
           .da-print-brand { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 0.35mm !important; }
           .da-print-footer span { font-size: 9pt !important; font-weight: 700 !important; line-height: 1 !important; color: #0f2744 !important; }
@@ -285,20 +371,24 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
           .da-results > * { margin-top: 0 !important; }
           .da-ft-print { display: block !important; margin: 0 0 1.6mm !important; padding: 0.5mm 0 !important; background: #ffffff !important; border: 0 !important; }
           .da-ft-kicker { display: block !important; margin: 0 0 1.2mm !important; padding: 0 !important; border: 0 !important; font-size: 10.5pt !important; font-weight: 700 !important; line-height: 1.1 !important; color: #18181b !important; background: #ffffff !important; }
-          .da-ft-fields { display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 0 !important; border: 0 !important; border-radius: 2mm !important; overflow: hidden !important; background: #e6e6e6 !important; }
-          .da-ft-field { display: block !important; margin: 0 !important; padding: 1.5mm 0.65mm 1.3mm !important; border: 0 !important; background: transparent !important; text-align: center !important; color: #18181b !important; }
+          .da-ft-kicker .da-duration, .da-print-card-head .da-duration { display: inline !important; margin-left: 1.6mm !important; color: #94a3b8 !important; background: transparent !important; font-size: 8pt !important; font-weight: 500 !important; line-height: 1 !important; }
+          .da-sheet thead tr.da-duration-head th { background: transparent !important; color: #94a3b8 !important; font-size: 7.5pt !important; font-weight: 500 !important; letter-spacing: 0 !important; padding: 0 1.1mm 0.3mm !important; border: 0 !important; border-left: 0 !important; }
+          .da-sheet thead tr.da-duration-head .da-duration { display: inline !important; margin: 0 !important; color: #94a3b8 !important; background: transparent !important; font-size: 7.5pt !important; font-weight: 500 !important; line-height: 1 !important; }
+          .da-ft-fields { display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 0 !important; border: 0 !important; border-radius: 2mm !important; overflow: hidden !important; background: #f2f2f2 !important; }
+          .da-ft-field { display: block !important; margin: 0 !important; padding: 1.15mm 0.65mm 1mm !important; border: 0 !important; background: transparent !important; text-align: center !important; color: #18181b !important; }
           .da-ft-field span, .da-ft-field strong { background: transparent !important; color: #18181b !important; }
-          .da-ft-field span { display: block !important; font-size: 9pt !important; font-weight: 500 !important; line-height: 1.1 !important; color: #18181b !important; }
-          .da-ft-field strong { display: block !important; margin-top: 0.45mm !important; font-size: 17pt !important; font-weight: 700 !important; line-height: 1.05 !important; color: #18181b !important; }
+          .da-ft-field span { display: block !important; font-size: 8.5pt !important; font-weight: 500 !important; line-height: 1.1 !important; color: #18181b !important; }
+          .da-ft-field strong { display: block !important; margin-top: 0.35mm !important; font-size: 15pt !important; font-weight: 700 !important; line-height: 1.05 !important; color: #18181b !important; }
           .da-full-training { margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
           .da-blank-note { margin: 0 !important; font-size: 7.5pt !important; line-height: 1.15 !important; }
           .da-card-list {
             display: grid !important;
-            flex: 1 1 auto !important;
+            flex: 1 1 0 !important;
             min-height: 0 !important;
+            overflow: hidden !important;
             grid-template-columns: 1fr 1fr !important;
             grid-template-rows: repeat(var(--da-rows, 1), minmax(0, 1fr)) !important;
-            gap: 2mm !important;
+            gap: 3.6mm !important;
             align-items: stretch !important;
           }
           .da-card {
@@ -307,37 +397,44 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
             display: flex !important;
             flex-direction: column !important;
             height: 100% !important;
+            min-height: 0 !important;
             margin: 0 !important;
-            padding: 1.5mm !important;
+            padding: 1mm 1.2mm 1mm 0.4mm !important;
+            overflow: hidden !important;
             border: 0.25mm solid #d5dbe3 !important;
             border-radius: 0 !important;
             background: #ffffff !important;
           }
-          .da-screen-title { display: block !important; margin: 0 0 0.7mm !important; }
-          .da-print-card-head { display: flex !important; align-items: baseline !important; gap: 1.6mm !important; margin: 0 0 1.1mm !important; padding: 0 !important; border: 0 !important; }
+          .da-screen-title { display: block !important; margin: 0 0 0.4mm !important; flex: 0 0 auto !important; }
+          .da-print-card-head { display: flex !important; align-items: baseline !important; gap: 1.6mm !important; margin: 0 0 0.5mm !important; padding: 0 !important; border: 0 !important; }
           .da-drill-name { font-size: 13pt !important; line-height: 1.1 !important; font-weight: 700 !important; color: #11243B !important; }
           .da-print-card-head p { margin: 0 !important; font-size: 8pt !important; font-weight: 400 !important; color: #475569 !important; }
           .da-collapsed .da-card-body,
           .da-card-body {
             display: grid !important;
             flex: 1 1 auto !important;
+            height: 100% !important;
             min-height: 0 !important;
-            grid-template-columns: minmax(0, 43%) minmax(0, 1fr) !important;
-            gap: 2mm !important;
+            overflow: hidden !important;
+            grid-template-columns: minmax(0, 46%) minmax(0, 1fr) !important;
+            gap: 1.5mm !important;
             align-items: stretch !important;
           }
-          .da-card-body > :first-child { position: relative !important; width: auto !important; height: 100% !important; min-height: 0 !important; max-height: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+          .da-card-body > :last-child { height: 100% !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; }
+          .da-card-body > :first-child { position: relative !important; width: 100% !important; height: 100% !important; min-height: 0 !important; max-height: 100% !important; display: flex !important; align-items: center !important; justify-content: flex-start !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+          .da-card-body > :first-child button { position: relative !important; width: 100% !important; height: 100% !important; min-height: 0 !important; max-height: 100% !important; display: flex !important; align-items: center !important; justify-content: flex-start !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
           .da-missing-image { margin: 0 !important; font-size: 8pt !important; line-height: 1.1 !important; font-weight: 500 !important; color: #94a3b8 !important; text-align: center !important; }
           .da-card-body button { margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
           .da-card-body .min-h-32 { min-height: 0 !important; border: 0 !important; background: transparent !important; padding: 0 !important; }
           .da-print-head { display: table-row !important; }
-          .da-table-scroll { overflow: visible !important; }
-          .da-sheet table { width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; border-bottom: 0.25mm solid #c5ced8 !important; background: transparent !important; }
+          .da-table-scroll { overflow: hidden !important; flex: 1 1 auto !important; height: 100% !important; min-height: 0 !important; }
+          .da-sheet table { width: 100% !important; height: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; border-bottom: 0.25mm solid #c5ced8 !important; background: transparent !important; }
+          .da-sheet tbody tr { height: 14.2% !important; }
           .da-sheet table.da-split-sets { border-collapse: collapse !important; border-spacing: 0 !important; }
           .da-sheet th, .da-sheet td {
-            padding: 0.7mm 1.1mm !important;
+            padding: 0.7mm 1mm !important;
             font-size: 10.5pt !important;
-            line-height: 1.15 !important;
+            line-height: 1.1 !important;
             color: #18181b !important;
             background: #ffffff !important;
             border: 0 !important;
@@ -370,23 +467,155 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
           .da-sheet .da-metric { display: inline-flex !important; flex-direction: row !important; align-items: baseline !important; gap: 0.6mm !important; white-space: nowrap !important; max-width: 100% !important; }
           .da-sheet .da-metric-name { display: inline !important; font-weight: 400 !important; }
           .da-sheet .da-unit { display: inline !important; margin: 0 !important; color: #18181b !important; font-weight: 400 !important; font-size: 8.5pt !important; line-height: 1 !important; }
-          .da-sheet td { font-size: 12pt !important; font-weight: 700 !important; text-align: right !important; white-space: nowrap !important; font-variant-numeric: tabular-nums !important; color: #18181b !important; }
+          .da-sheet td { font-size: 12pt !important; font-weight: 700 !important; text-align: right !important; white-space: nowrap !important; font-variant-numeric: tabular-nums !important; color: #18181b !important; vertical-align: middle !important; }
+          .da-sheet table.da-split-sets .da-value-head,
+          .da-sheet table.da-split-sets td.da-num { text-align: center !important; }
           .da-sheet .da-card img {
-            position: absolute !important;
-            inset: 0 !important;
+            position: static !important;
+            inset: auto !important;
             display: block !important;
             width: 100% !important;
             height: 100% !important;
             max-width: 100% !important;
             max-height: 100% !important;
             object-fit: contain !important;
-            object-position: center center !important;
+            object-position: left center !important;
+          }
+          .da-sheet:not(.da-comparing) .da-card {
+            padding: 0 !important;
+            border: 0.25mm solid #d5dee6 !important;
+          }
+          .da-sheet:not(.da-comparing) .da-screen-title { margin: 0 !important; }
+          .da-sheet:not(.da-comparing) .da-card-body { padding: 1mm 1.2mm 1mm 0.4mm !important; }
+          .da-sheet:not(.da-comparing) .da-print-card-head {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto !important;
+            align-items: start !important;
+            column-gap: 2mm !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+            background: #e7eef3 !important;
+            border: 0 !important;
+            border-bottom: 0.2mm solid #d5dee6 !important;
+            overflow: visible !important;
+          }
+          .da-sheet:not(.da-comparing) .da-print-card-head .da-drill-name {
+            grid-column: 1 !important;
+            min-width: 0 !important;
+            font-size: 10.5pt !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+            color: #11243B !important;
+            white-space: normal !important;
+            overflow: visible !important;
+            background: transparent !important;
+          }
+          .da-sheet:not(.da-comparing) .da-print-card-head .da-duration {
+            grid-column: 2 !important;
+            margin: 0 !important;
+            color: #64748b !important;
+            background: transparent !important;
+            font-size: 9pt !important;
+            font-weight: 500 !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+            text-align: right !important;
+          }
+          .da-sheet:not(.da-comparing) .da-print-card-head p { grid-column: 1 / -1 !important; background: transparent !important; }
+          .da-sheet:not(.da-comparing) thead tr:not(.da-duration-head) th,
+          .da-sheet:not(.da-comparing) thead tr:not(.da-duration-head) th * {
+            background: #f4f7f8 !important;
+            color: #11243B !important;
+            font-weight: 600 !important;
           }
           tr, thead { break-inside: avoid; page-break-inside: avoid; }
+          .da-compare-print-names { display: none !important; }
+          .da-comparing.da-sheet { display: flex !important; flex-direction: column !important; height: 194mm !important; max-height: none !important; overflow: visible !important; }
+          .da-comparing .da-results { display: none !important; }
+          .da-comparing .da-compare-view { display: flex !important; flex: 0 0 auto !important; flex-direction: column !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+          .da-comparing .da-compare-sheet { display: flex !important; flex: 0 0 auto !important; flex-direction: column !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+          .da-comparing .da-daily-panel.space-y-4 > :not([hidden]) ~ :not([hidden]):not(.da-print-footer) { margin-top: 0 !important; }
+          .da-comparing .da-daily-panel.space-y-4 > .da-print-footer { margin-top: auto !important; padding-top: 3mm !important; }
+          .da-comparing .da-print-footer .da-print-email { font-size: 8pt !important; font-weight: 400 !important; line-height: 1.25 !important; color: #3f3f46 !important; overflow: visible !important; }
+          .da-comparing .da-compare-player-label { display: none !important; }
+          .da-comparing .da-compare-print-names { display: inline !important; }
+          .da-comparing .da-compare-print-head,
+          .da-comparing .da-compare-grid { display: none !important; }
+          .da-comparing .da-print-footer { margin-top: auto !important; }
+          .da-comparing .da-cr-face { display: inline-block !important; width: 8mm !important; height: 8mm !important; margin: 0 1.2mm 0 2mm !important; object-fit: contain !important; object-position: center center !important; vertical-align: middle !important; background: #f4f4f5 !important; }
+          .da-comparing .da-cr { display: flex !important; flex: 0 0 auto !important; flex-direction: column !important; margin-top: 0 !important; color: #11243B !important; }
+          .da-comparing .da-cr-ft { margin: 0 0 1mm !important; }
+          .da-comparing .da-cr-ft h2 { margin: 0 0 1.2mm !important; font-size: 11pt !important; font-weight: 700 !important; line-height: 1.15 !important; color: #11243B !important; text-align: left !important; }
+          .da-comparing .da-cr-note { margin: 0 0 1mm !important; font-size: 8pt !important; line-height: 1.2 !important; color: #3f3f46 !important; }
+          .da-comparing .da-cr table { width: 100% !important; height: auto !important; min-width: 0 !important; table-layout: auto !important; border-collapse: collapse !important; border: 0 !important; background: transparent !important; }
+          .da-comparing .da-cr tr { height: auto !important; }
+          .da-comparing .da-cr th,
+          .da-comparing .da-cr td,
+          .da-comparing .da-cr thead th:first-child,
+          .da-comparing .da-cr tbody th { width: auto !important; min-width: 0 !important; max-width: none !important; height: auto !important; overflow: visible !important; padding: 1.05mm 1.35mm !important; border: 0 !important; border-bottom: 0.15mm solid #e7e5e4 !important; background: #ffffff !important; color: #18181b !important; font-size: 10pt !important; font-weight: 700 !important; line-height: 1.2 !important; text-align: right !important; vertical-align: middle !important; white-space: nowrap !important; }
+          .da-comparing .da-cr th:first-child,
+          .da-comparing .da-cr td:first-child { text-align: left !important; font-weight: 600 !important; }
+          .da-comparing .da-cr-ft table,
+          .da-comparing .da-cr-card table { table-layout: fixed !important; width: 100% !important; }
+          .da-comparing .da-cr-ft thead th:first-child,
+          .da-comparing .da-cr-ft tbody th:first-child { width: 64mm !important; max-width: none !important; overflow: visible !important; }
+          .da-comparing .da-cr-ft td { font-size: 13pt !important; font-weight: 700 !important; line-height: 1.1 !important; padding: 1.15mm 1.5mm !important; }
+          .da-comparing .da-cr-ft tbody th { font-size: 10pt !important; }
+          .da-comparing .da-cr-card tbody td { font-size: 10pt !important; font-weight: 700 !important; }
+          .da-comparing .da-cr-card tbody th { font-size: 9pt !important; font-weight: 600 !important; }
+          .da-comparing .da-cr thead th { font-size: 8pt !important; font-weight: 600 !important; color: #11243B !important; background: #f4f7f8 !important; white-space: normal !important; padding: 0.9mm 1.3mm !important; }
+          .da-comparing .da-cr tbody tr:nth-child(even) th,
+          .da-comparing .da-cr tbody tr:nth-child(even) td { background: #f7f7f8 !important; }
+          .da-comparing .da-cr .da-cr-u { margin-left: 0.8mm !important; font-size: 7.5pt !important; font-weight: 500 !important; color: #64748b !important; }
+          .da-comparing .da-cr .da-cr-a,
+          .da-comparing .da-cr th.da-cr-a { color: #0f766e !important; }
+          .da-comparing .da-cr .da-cr-b,
+          .da-comparing .da-cr th.da-cr-b { color: #1d4ed8 !important; }
+          .da-comparing .da-cr th.da-cr-mins { font-size: 8pt !important; font-weight: 500 !important; color: #52525b !important; }
+          .da-comparing .da-cr h2 .da-cr-mins,
+          .da-comparing .da-cr thead th .da-cr-mins { font-weight: 500 !important; color: #94a3b8 !important; background: transparent !important; }
+          .da-comparing .da-cr h2 .da-cr-mins { font-size: 8.5pt !important; }
+          .da-comparing .da-cr h2 .da-cr-a,
+          .da-comparing .da-cr h2 .da-cr-b,
+          .da-comparing .da-cr thead th .da-cr-a,
+          .da-comparing .da-cr thead th .da-cr-b { background: transparent !important; }
+          .da-comparing .da-cr th.da-cr-split,
+          .da-comparing .da-cr td.da-cr-split { border-left: 0.45mm solid #c5d0da !important; padding-left: 2.4mm !important; }
+          .da-comparing .da-cr-drills { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 4mm !important; align-items: start !important; flex: 0 0 auto !important; }
+          .da-comparing .da-cr-card { display: flex !important; flex-direction: column !important; min-width: 0 !important; border: 0.25mm solid #d5dee6 !important; background: #ffffff !important; break-inside: avoid; page-break-inside: avoid; }
+          .da-comparing .da-cr-card h2 { margin: 0 !important; padding: 1.5mm 2.2mm !important; font-size: 10.5pt !important; font-weight: 700 !important; line-height: 1.15 !important; color: #11243B !important; text-align: left !important; background: #e7eef3 !important; border-bottom: 0.2mm solid #d5dee6 !important; }
+          .da-comparing .da-cr-body { display: grid !important; grid-template-columns: 32% minmax(0, 1fr) !important; column-gap: 2.5mm !important; align-items: center !important; flex: 0 0 auto !important; min-height: 0 !important; padding: 1.4mm !important; }
+          .da-comparing .da-cr-frame { position: relative !important; width: 100% !important; height: 54mm !important; min-height: 54mm !important; max-height: 54mm !important; align-self: center !important; background: #f4f6f8 !important; }
+          .da-comparing .da-cr-frame img { position: absolute !important; inset: 1.2mm !important; width: calc(100% - 2.4mm) !important; height: calc(100% - 2.4mm) !important; max-width: none !important; max-height: none !important; object-fit: contain !important; object-position: center center !important; background: transparent !important; }
+          .da-comparing .da-cr-card table { align-self: stretch !important; height: auto !important; }
         }
       `}</style>
 
-      <div className="da-screen-only flex flex-wrap items-end gap-3">
+      <div className="da-history-tabs da-screen-only flex gap-2" role="tablist" aria-label="Drill Analysis">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "daily"}
+          className={`h-11 rounded-lg px-4 text-sm font-medium ${tab === "daily" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          onClick={() => setTab("daily")}
+        >
+          Daily Analysis
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "history"}
+          className={`h-11 rounded-lg px-4 text-sm font-medium ${tab === "history" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          onClick={() => {
+            setHistoryMounted(true);
+            setTab("history");
+          }}
+        >
+          Drill History
+        </button>
+      </div>
+      <div className="da-daily-panel space-y-4">
+      <div className={`da-screen-only flex max-w-full flex-wrap items-end ${compareOn ? "gap-x-2 gap-y-1.5" : "gap-3"}`}>
         <label className="text-sm">
           <span className="mb-1 block font-medium text-zinc-900">Date</span>
           <input
@@ -430,6 +659,49 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
         </label>
         <button
           type="button"
+          aria-pressed={compareOn}
+          className={`h-11 rounded-lg px-4 text-sm font-medium ${compareOn ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          onClick={() => {
+            if (compareOn) setCompareOn(false);
+            else enableCompare();
+          }}
+        >
+          Compare players
+        </button>
+        {compareOn ? (
+          <>
+            <label className="min-w-40 text-sm">
+              <span className="mb-1 block font-medium text-zinc-900">Player A</span>
+              <select
+                value={playerA}
+                onChange={(event) => setPlayerA(event.target.value)}
+                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900"
+              >
+                {compareNames.map((player) => (
+                  <option key={player} value={player} disabled={player === playerB}>
+                    {player}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-40 text-sm">
+              <span className="mb-1 block font-medium text-zinc-900">Player B</span>
+              <select
+                value={playerB}
+                onChange={(event) => setPlayerB(event.target.value)}
+                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900"
+              >
+                {compareNames.map((player) => (
+                  <option key={player} value={player} disabled={player === playerA}>
+                    {player}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
+        <button
+          type="button"
           className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900"
           onClick={() => setManageOpen((open) => !open)}
         >
@@ -438,7 +710,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
         <button
           type="button"
           className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 disabled:opacity-60"
-          disabled={pending || !model || Boolean(data.sourceError) || Boolean(data.playerError)}
+          disabled={pending || !model || Boolean(data.sourceError) || Boolean(data.playerError) || (compareOn && (!playerA || !playerB || playerA === playerB))}
           onClick={printSheet}
         >
           Print / Save PDF
@@ -448,17 +720,53 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
       {data.layoutError ? <p className="da-screen-only text-sm text-zinc-700">{data.layoutError}</p> : null}
       {pending ? <p className="da-screen-only text-sm text-zinc-700">Loading the selected session…</p> : null}
 
-      <header className="flex items-center gap-3 border-b border-teal-700/40 pb-3">
+      <header className={`flex items-center border-b border-teal-700/40 ${compareOn ? "gap-2 pb-2" : "gap-3 pb-3"}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} alt="ST-AMS" className="da-logo h-12 w-12 object-contain" />
+        <img src={logoSrc} alt="ST-AMS" className={`da-logo object-contain ${compareOn ? "h-10 w-10" : "h-12 w-12"}`} />
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f2744]">ST-AMS / Drill Analysis</h1>
+          <h1 className={`font-semibold tracking-tight text-[#0f2744] ${compareOn ? "text-xl" : "text-2xl"}`}>
+            {compareOn ? "ST-AMS / Compare players" : "ST-AMS / Drill Analysis"}
+          </h1>
           {model ? (
             <p className="text-sm text-[#1e3a4c]">
               {formatSessionDate(model.session.date)} · {model.sessionLabel}
-              <span className="mx-2">·</span>
-              {model.playerLabel}
+              <span className={compareOn ? "da-compare-screen-sep mx-2" : "mx-2"}>·</span>
+              <span className={compareOn ? "da-compare-player-label" : ""}>{model.playerLabel}</span>
+              {comparePair ? (
+                <span className="da-compare-print-names">
+                  {playerPhotos[playerA] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={playerPhotos[playerA]} alt="" className="da-cr-face" />
+                  ) : null}
+                  {playerA}
+                  <span className="da-cr-dot"> · </span>
+                  {playerPhotos[playerB] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={playerPhotos[playerB]} alt="" className="da-cr-face" />
+                  ) : null}
+                  {playerB}
+                </span>
+              ) : null}
             </p>
+          ) : null}
+          {compareMarks ? (
+            <div className="da-screen-only mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {[
+                { name: playerA, photo: playerPhotos[playerA] ?? null, mark: compareMarks[0], tone: "da-cs-a" },
+                { name: playerB, photo: playerPhotos[playerB] ?? null, mark: compareMarks[1], tone: "da-cs-b" },
+              ].map((player) => (
+                <span key={player.name} className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                  {player.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={player.photo} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <span className="h-7 w-7 shrink-0 rounded-full bg-zinc-200" />
+                  )}
+                  <span className={`${player.tone} text-sm`}>{player.mark}</span>
+                  <span className="truncate text-sm font-semibold text-[#11243B]">{player.name}</span>
+                </span>
+              ))}
+            </div>
           ) : null}
         </div>
       </header>
@@ -479,10 +787,13 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
       ) : null}
 
       {model ? (
-        <div className="da-results space-y-4">
-          <section className="da-full-training rounded-xl border border-zinc-300 bg-white p-4">
+        <div className="da-results space-y-3">
+          <section className="da-full-training rounded-xl border border-zinc-300 bg-white p-3 sm:p-4">
             <div className="da-screen-only">
-            <h2 className="text-lg font-semibold text-zinc-900">Full Training</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">
+              Full Training
+              {model.fullTraining.columns.length === 1 ? <DurationMark column={model.fullTraining.columns[0]} /> : null}
+            </h2>
             {model.fullTraining.status === "missing" ? (
               <p className="mt-2 text-sm text-zinc-700">No Full Training row for this session.</p>
             ) : null}
@@ -491,40 +802,23 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
                 More than one Full Training occurrence was found. They are shown separately and are not added together.
               </p>
             ) : null}
-            <div className="mt-3">
-              <DrillTable
-                card={{
-                  id: "full-training",
-                  displayName: "Full Training",
-                  persisted: false,
-                  hasImage: false,
-                  missingCount: 0,
-                  columns: model.fullTraining.columns.length === 1
-                    ? [{ ...model.fullTraining.columns[0], label: "Value" }]
-                    : model.fullTraining.columns.length > 0
-                      ? model.fullTraining.columns
-                      : [
-                        {
-                          label: "Value",
-                          occurrenceKey: "full-training-empty",
-                          timeLabel: "No source row",
-                          uncertain: false,
-                          missing: false,
-                          hasPlayerConflict: false,
-                          metrics: {
-                            totalDistance: null,
-                            tempoDistance: null,
-                            hsr: null,
-                            sprintDistance: null,
-                            distancePerMin: null,
-                            accelerations: null,
-                            decelerations: null,
-                          },
-                        },
-                      ],
-                }}
-              />
-            </div>
+            {model.fullTraining.columns.map((column) => (
+              <div key={column.occurrenceKey} className="mt-2">
+                {model.fullTraining.columns.length > 1 ? (
+                  <p className="mb-1 text-sm font-medium text-zinc-700">{column.label}</p>
+                ) : null}
+                <div className="grid grid-cols-7 overflow-hidden rounded-lg bg-[#f2f2f2]">
+                  {DRILL_METRICS.map((metric) => (
+                    <div key={metric.key} className="px-1 py-2 text-center">
+                      <div className="text-[11px] font-medium text-zinc-600">{PRINT_METRIC_LABEL[metric.key]}</div>
+                      <div className="mt-0.5 text-sm font-bold tabular-nums text-zinc-900 sm:text-lg">
+                        {fullTrainingFigure(column.metrics[metric.key], metric)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
             </div>
             <div className="da-print-only da-ft-print">
               {model.fullTraining.columns.length === 0 ? (
@@ -535,6 +829,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
                     <div className="da-ft-kicker">
                       Full Training
                       {model.fullTraining.columns.length > 1 ? ` · ${column.label}` : ""}
+                      <DurationMark column={column} />
                     </div>
                     <div className="da-ft-fields">
                       {DRILL_METRICS.map((metric) => (
@@ -560,7 +855,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
           ) : null}
 
           <div
-            className="da-card-list flex flex-col gap-4"
+            className="da-card-list grid grid-cols-1 gap-3 lg:grid-cols-2"
             style={{ ["--da-rows" as string]: String(Math.max(1, Math.ceil(model.cards.length / 2))) }}
           >
             {model.cards.map((card) => {
@@ -572,12 +867,17 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
               return (
                 <article
                   key={card.id}
-                  className={`da-card rounded-xl border border-zinc-300 bg-white p-4 ${isCollapsed ? "da-collapsed" : ""}`}
+                  className={`da-card rounded-xl border border-zinc-300 bg-white p-3 ${isCollapsed ? "da-collapsed" : ""}`}
                   style={{ ["--da-cols" as string]: String(card.columns.length) }}
                 >
-                  <div className="da-screen-title mb-3 flex flex-wrap items-start justify-between gap-3">
+                  <div className="da-screen-title mb-2 flex flex-wrap items-start justify-between gap-2">
                     <div className="da-screen-only">
-                      {headings.title ? <h2 className="text-lg font-semibold text-[#0f2744]">{headings.title}</h2> : null}
+                      {headings.title ? (
+                        <h2 className="text-lg font-semibold text-[#0f2744]">
+                          {headings.title}
+                          {card.columns.length === 1 ? <DurationMark column={card.columns[0]} /> : null}
+                        </h2>
+                      ) : null}
                       {card.missingCount > 0 ? (
                         <p className="mt-1 text-sm text-zinc-700">
                           A saved drill occurrence is no longer in the source. It was not linked to another drill with the same name.
@@ -592,6 +892,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
                     {headings.title || card.missingCount > 0 || card.columns.some((column) => column.hasPlayerConflict) ? (
                       <div className="da-print-only da-print-card-head">
                         {headings.title ? <span className="da-drill-name">{headings.title}</span> : null}
+                        {headings.title && card.columns.length === 1 ? <DurationMark column={card.columns[0]} /> : null}
                         {card.missingCount > 0 ? (
                           <p>A saved drill occurrence is no longer in the source. It was not linked to another drill with the same name.</p>
                         ) : null}
@@ -609,7 +910,7 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
                       {isCollapsed ? "Expand" : "Collapse"}
                     </button>
                   </div>
-                  <div className="da-card-body grid gap-4 lg:grid-cols-[minmax(180px,280px)_minmax(0,1fr)] lg:items-start">
+                  <div className="da-card-body grid grid-cols-[minmax(7.5rem,28%)_minmax(0,1fr)] items-start gap-3">
                     <CardImage
                       key={`${card.id}:${card.hasImage ? "image" : "empty"}`}
                       card={card}
@@ -623,6 +924,12 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
               );
             })}
           </div>
+        </div>
+      ) : null}
+
+      {model && compareOn ? (
+        <div className="da-compare-view da-screen-only min-w-0">
+          <DrillCompare model={model} playerA={playerA} playerB={playerB} photos={playerPhotos} ready={!pending} />
         </div>
       ) : null}
 
@@ -642,6 +949,12 @@ export function DrillAnalysisView({ data, logoUrl }: { data: DrillAnalysisPageDa
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={zoom.src} alt={zoom.alt} className="max-h-full max-w-full object-contain" />
+        </div>
+      ) : null}
+      </div>
+      {historyMounted ? (
+        <div className="da-history-panel">
+          <DrillHistory />
         </div>
       ) : null}
     </div>

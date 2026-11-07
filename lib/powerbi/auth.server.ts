@@ -1,5 +1,8 @@
 import "server-only";
 
+import https from "node:https";
+import { URL } from "node:url";
+
 import {
   POWERBI_API_SCOPE,
   POWERBI_TOKEN_EXPIRY_SKEW_MS,
@@ -36,23 +39,72 @@ function readCachedToken(): string | null {
   return tokenCache.accessToken;
 }
 
+/** Drop the in-memory token so the next request asks Entra again. */
+export function invalidatePowerBiAccessToken(): void {
+  tokenCache = null;
+}
+
+function jwtExpiryMs(accessToken: string): number | null {
+  const segment = accessToken.split(".")[1];
+  if (!segment) return null;
+  try {
+    const json = JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as { exp?: unknown };
+    return typeof json.exp === "number" && Number.isFinite(json.exp) ? json.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 function storeCachedToken(accessToken: string, expiresInSeconds: number): void {
-  const ttlMs = Math.max(0, expiresInSeconds * 1000 - POWERBI_TOKEN_EXPIRY_SKEW_MS);
-  tokenCache = {
-    accessToken,
-    expiresAtMs: Date.now() + ttlMs,
-  };
+  const byLifetime = Date.now() + Math.max(0, expiresInSeconds * 1000 - POWERBI_TOKEN_EXPIRY_SKEW_MS);
+  const expiryMs = jwtExpiryMs(accessToken);
+  const byClaim = expiryMs === null ? byLifetime : expiryMs - POWERBI_TOKEN_EXPIRY_SKEW_MS;
+  const expiresAtMs = Math.min(byLifetime, byClaim);
+  if (expiresAtMs <= Date.now()) return;
+  tokenCache = { accessToken, expiresAtMs };
+}
+
+function postForm(urlString: string, body: string, timeoutMs: number): Promise<{ status: number; text: string }> {
+  const url = new URL(urlString);
+  return new Promise((resolve, reject) => {
+    const request = https.request(
+      {
+        method: "POST",
+        protocol: url.protocol,
+        hostname: url.hostname,
+        path: `${url.pathname}${url.search}`,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": Buffer.byteLength(body),
+          "Cache-Control": "no-cache",
+        },
+        timeout: timeoutMs,
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => {
+          resolve({
+            status: response.statusCode ?? 0,
+            text: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      }
+    );
+    request.on("error", reject);
+    request.on("timeout", () => {
+      const error = new Error("timeout");
+      error.name = "AbortError";
+      request.destroy(error);
+    });
+    request.write(body);
+    request.end();
+  });
 }
 
 async function fetchClientCredentialsToken(
   config: PowerBiConfig
 ): Promise<PowerBiAccessTokenResult> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    POWERBI_TOKEN_TIMEOUT_MS
-  );
-
   try {
     const body = new URLSearchParams({
       grant_type: "client_credentials",
@@ -61,17 +113,9 @@ async function fetchClientCredentialsToken(
       scope: POWERBI_API_SCOPE,
     });
 
-    const response = await fetch(powerBiTokenUrl(config.tenantId), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-      signal: controller.signal,
-      cache: "no-store",
-    });
+    const response = await postForm(powerBiTokenUrl(config.tenantId), body.toString(), POWERBI_TOKEN_TIMEOUT_MS);
 
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       const safe = powerBiError(
         "auth_failed",
         "Failed to obtain Power BI access token."
@@ -82,7 +126,7 @@ async function fetchClientCredentialsToken(
 
     let json: unknown;
     try {
-      json = await response.json();
+      json = JSON.parse(response.text);
     } catch {
       const safe = powerBiError(
         "invalid_response",
@@ -127,8 +171,6 @@ async function fetchClientCredentialsToken(
         "Power BI token request failed."
       ),
     };
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 

@@ -31,6 +31,8 @@ export type ParsedDrillRow = {
   startToken: string;
   startLabel: string;
   startParsed: boolean;
+  /** GPS_Log[Duration] in seconds. Null when the source value is missing or unreadable. */
+  durationSeconds: number | null;
   metrics: DrillMetrics;
   sourceRows: number;
 };
@@ -47,7 +49,7 @@ export type DrillOccurrence = {
   playerCount: number;
   sourceRowCount: number;
   hasPlayerConflict: boolean;
-  players: { player: string; metrics: DrillMetrics }[];
+  players: { player: string; metrics: DrillMetrics; durationSeconds: number | null }[];
 };
 
 export type SavedDrillCard = {
@@ -58,6 +60,12 @@ export type SavedDrillCard = {
   occurrenceKeys: string[];
 };
 
+/** One player's rounded values for a single source occurrence. */
+export type PlayerOccurrenceValues = {
+  metrics: DrillMetrics;
+  durationMinutes: number | null;
+};
+
 export type DrillColumn = {
   label: string;
   occurrenceKey: string;
@@ -65,6 +73,8 @@ export type DrillColumn = {
   uncertain: boolean;
   missing: boolean;
   hasPlayerConflict: boolean;
+  /** Null only when no player has a readable duration. Outliers do not blank it. */
+  durationMinutes: number | null;
   metrics: DrillMetrics;
 };
 
@@ -107,6 +117,8 @@ export type DrillAnalysisModel = {
   players: string[];
   fullTraining: FullTrainingView;
   cards: DrillViewCard[];
+  /** Individual rounded values keyed by occurrence, then player. Team averages are not stored here. */
+  playerValues: Record<string, Record<string, PlayerOccurrenceValues>>;
   editorOccurrences: EditorOccurrence[];
   editorCards: EditorCard[];
   excludedBlankDrillRows: number;

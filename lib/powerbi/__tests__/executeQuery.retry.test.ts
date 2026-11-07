@@ -18,8 +18,9 @@ vi.mock("@/lib/powerbi/config.server", () => ({
 vi.mock("@/lib/powerbi/auth.server", () => ({
   getPowerBiAccessToken: async () => ({
     ok: true,
-    accessToken: "token",
+    accessToken: `token-${Math.random()}`,
   }),
+  invalidatePowerBiAccessToken: () => undefined,
 }));
 
 import {
@@ -56,6 +57,7 @@ describe("executePowerBiDaxQuery transient retry", () => {
     expect(isTransientPowerBiHttpStatus(503)).toBe(true);
     expect(isTransientPowerBiHttpStatus(400)).toBe(false);
     expect(isTransientPowerBiHttpStatus(401)).toBe(false);
+    expect(isTransientPowerBiHttpStatus(403)).toBe(false);
   });
 
   it("retries once after 429 then succeeds", async () => {
@@ -102,6 +104,18 @@ describe("executePowerBiDaxQuery transient retry", () => {
     const result = await executePowerBiDaxQuery("EVALUATE ROW(\"x\", 1)");
     expect(result.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks for a new token once after 403 and then succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(403, { error: { code: "TokenExpired", message: "Access token has expired." } }))
+      .mockResolvedValueOnce(jsonResponse(200, { results: [{ tables: [{ rows: [{ TD: 1 }] }] }] }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const result = await executePowerBiDaxQuery("EVALUATE ROW(\"x\", 1)");
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not retry non-transient 400", async () => {

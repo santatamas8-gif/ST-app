@@ -1,5 +1,6 @@
-import { roundPowerBi0 } from "@/lib/drillAnalysis/format";
+import { roundDurationToMinutes, roundPowerBi0 } from "@/lib/drillAnalysis/format";
 import { buildOccurrenceKey, parseDrillStart } from "@/lib/drillAnalysis/keys";
+import { parseGpsLogDurationToSeconds } from "@/lib/powerbi/queries/matchActualClassify";
 import { parseIsoDateParts, pickRowValue, toNullableNumber } from "@/lib/powerbi/queries/rowUtils";
 import {
   DRILL_METRICS,
@@ -53,6 +54,7 @@ export function parseDrillSourceRow(row: Record<string, unknown>): ParsedDrillRo
     startToken: start.token,
     startLabel: start.label,
     startParsed: start.parsed,
+    durationSeconds: parseGpsLogDurationToSeconds(pickRowValue(row, "Duration")),
     metrics: metricsFromRow(row),
     sourceRows: 1,
   };
@@ -112,9 +114,18 @@ type PlayerStart = {
   startLabel: string;
   startParsed: boolean;
   metrics: DrillMetrics;
+  durationSeconds: number | null;
   conflict: boolean;
   sourceRows: number;
 };
+
+function durationForRows(rows: ParsedDrillRow[]): number | null {
+  const minutes = rows.map((row) =>
+    row.durationSeconds === null ? null : roundDurationToMinutes(row.durationSeconds)
+  );
+  if (minutes.some((value) => value === null) || !minutes.every((value) => value === minutes[0])) return null;
+  return rows[0]?.durationSeconds ?? null;
+}
 
 function collapsePlayerStarts(rows: ParsedDrillRow[]): PlayerStart[] {
   const groups = new Map<string, ParsedDrillRow[]>();
@@ -135,6 +146,7 @@ function collapsePlayerStarts(rows: ParsedDrillRow[]): PlayerStart[] {
         startLabel: first.startLabel,
         startParsed: first.startParsed,
         metrics: first.metrics,
+        durationSeconds: durationForRows(group),
         conflict: false,
         sourceRows: group.reduce((sum, row) => sum + row.sourceRows, 0),
       });
@@ -146,6 +158,7 @@ function collapsePlayerStarts(rows: ParsedDrillRow[]): PlayerStart[] {
         startLabel: first.startLabel,
         startParsed: first.startParsed,
         metrics: merged.metrics,
+        durationSeconds: durationForRows(group),
         conflict: merged.conflict,
         sourceRows: merged.sourceRows,
       });
@@ -199,7 +212,11 @@ function occurrenceFromPlayers(
     sourceRowCount: players.reduce((sum, player) => sum + player.sourceRows, 0),
     hasPlayerConflict: players.some((player) => player.conflict),
     players: players
-      .map((player) => ({ player: player.player, metrics: player.metrics }))
+      .map((player) => ({
+        player: player.player,
+        metrics: player.metrics,
+        durationSeconds: player.durationSeconds,
+      }))
       .sort((a, b) => (a.player < b.player ? -1 : a.player > b.player ? 1 : 0)),
   };
 }

@@ -11,6 +11,22 @@ export function formatDrillMetric(value: number | null, unit: "m" | "count"): st
   return unit === "m" ? `${rounded} m` : String(rounded);
 }
 
+/**
+ * Difference of the two values after the same rounding the sheet displays.
+ * Missing on either side stays blank. A source zero is a real zero.
+ */
+export function formatMetricDifference(a: number | null, b: number | null, unit: "m" | "count"): string {
+  if (a === null || b === null || !Number.isFinite(a) || !Number.isFinite(b)) return "—";
+  const left = roundPowerBi0(a);
+  const right = roundPowerBi0(b);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return "—";
+  const delta = left - right;
+  if (delta === 0) return "0";
+  const sign = delta > 0 ? "+" : "−";
+  const amount = Math.abs(delta);
+  return unit === "m" ? `${sign}${amount} m` : `${sign}${amount}`;
+}
+
 export function formatDrillNumber(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "—";
   const rounded = roundPowerBi0(value);
@@ -67,6 +83,43 @@ function splitSetSuffix(label: string): { base: string; setToken: string | null 
   const base = match[1].replace(/[\s\-–—]+$/, "").trim();
   if (!base) return { base: label.trim(), setToken: null };
   return { base, setToken: `SET${match[2]}` };
+}
+
+/** Whole minutes. 30 seconds and above round up; under 30 round down. */
+export function roundDurationToMinutes(seconds: number): number | null {
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  const wholeMinutes = Math.floor(seconds / 60);
+  const remainderSeconds = seconds - wholeMinutes * 60;
+  return remainderSeconds >= 30 ? wholeMinutes + 1 : wholeMinutes;
+}
+
+/**
+ * The minute most players recorded. Does not average.
+ * A shorter or longer outlier does not hide the drill length.
+ * An equal count uses the longer minute.
+ */
+export function modalDurationMinutes(values: Array<number | null>): number | null {
+  const counts = new Map<number, number>();
+  for (const seconds of values) {
+    if (seconds === null) continue;
+    const minutes = roundDurationToMinutes(seconds);
+    if (minutes === null) continue;
+    counts.set(minutes, (counts.get(minutes) ?? 0) + 1);
+  }
+  let best: number | null = null;
+  let bestCount = 0;
+  for (const [minutes, count] of counts) {
+    if (count > bestCount || (count === bestCount && (best === null || minutes > best))) {
+      best = minutes;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+export function formatDurationMinutes(minutes: number | null): string {
+  if (minutes === null || !Number.isFinite(minutes)) return "—";
+  return `${minutes} min`;
 }
 
 export function formatSessionDate(isoDate: string): string {

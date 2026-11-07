@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildDrillAnalysisModel } from "@/lib/drillAnalysis/assemble";
 import { buildSessionKey, parseSessionKey, sessionLabel } from "@/lib/drillAnalysis/keys";
 import { buildOccurrences, parseDrillSourceRow, parsePowerBiDate } from "@/lib/drillAnalysis/metrics";
+import { keptDrillAnalysisRequest } from "@/lib/drillAnalysis/pageSelection";
 import { buildDrillSessionListDax, buildDrillSessionRowsDax } from "@/lib/drillAnalysis/query";
 import {
   DRILL_ANALYSIS_SCOPE,
@@ -89,7 +90,8 @@ export async function loadDrillAnalysisPage(input: {
   const listResult = await executePowerBiDaxQuery(buildDrillSessionListDax());
   if (!listResult.ok) {
     logPowerBiError("drillAnalysis.sessions", listResult.error);
-    return { ...empty, sourceError: "Drill data could not be loaded from Power BI." };
+    const kept = keptDrillAnalysisRequest(input);
+    return { ...empty, ...kept, sourceError: "Drill data could not be loaded from Power BI." };
   }
 
   const sessions: SessionListItem[] = [];
@@ -112,7 +114,8 @@ export async function loadDrillAnalysisPage(input: {
   sessions.sort((a, b) => (a.date === b.date ? (a.label < b.label ? -1 : 1) : a.date < b.date ? 1 : -1));
   const dates = [...new Set(sessions.map((session) => session.date))];
   if (sessions.length === 0) {
-    return { ...empty, sourceError: "Power BI returned no drill sessions." };
+    const kept = keptDrillAnalysisRequest(input);
+    return { ...empty, ...kept, sourceError: "Power BI returned no drill sessions." };
   }
 
   const selectedDate = input.date && dates.includes(input.date) ? input.date : dates[0];

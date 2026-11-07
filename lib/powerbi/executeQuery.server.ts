@@ -7,7 +7,7 @@ import {
   POWERBI_QUERY_TIMEOUT_MS,
   powerBiExecuteQueriesUrl,
 } from "@/lib/powerbi/constants";
-import { getPowerBiAccessToken } from "@/lib/powerbi/auth.server";
+import { getPowerBiAccessToken, invalidatePowerBiAccessToken } from "@/lib/powerbi/auth.server";
 import { getPowerBiConfig } from "@/lib/powerbi/config.server";
 import { logPowerBiError, powerBiError } from "@/lib/powerbi/errors";
 import type {
@@ -38,6 +38,46 @@ function parseTables(rawTables: unknown): PowerBiTableResult[] {
     if (!isRecord(table)) return { rows: [] };
     return { rows: parseRows(table.rows) };
   });
+}
+
+/** Seconds until the JWT exp claim. Negative means the token is already past exp. The token itself is not logged. */
+function tokenExpiresInSeconds(accessToken: string): number | null {
+  const segment = accessToken.split(".")[1];
+  if (!segment) return null;
+  try {
+    const json = JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as { exp?: unknown };
+    if (typeof json.exp !== "number" || !Number.isFinite(json.exp)) return null;
+    return Math.round(json.exp - Date.now() / 1000);
+  } catch {
+    return null;
+  }
+}
+
+function powerBiFailureDetail(json: unknown): Record<string, string> {
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  function add(label: string, value: string) {
+    const cleaned = value
+      .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[redacted]")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240);
+    if (!cleaned || seen.has(cleaned)) return;
+    seen.add(cleaned);
+    parts.push(`${label}=${cleaned}`);
+  }
+  function walk(node: unknown, depth: number) {
+    if (depth > 5 || parts.length >= 6 || !node || typeof node !== "object") return;
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (typeof value === "string" && (key === "code" || key === "message" || key === "value")) {
+        add(key, value);
+      } else if (typeof value === "object") {
+        walk(value, depth + 1);
+      }
+    }
+  }
+  walk(json, 0);
+  return parts.length > 0 ? { powerBi: parts.join(" | ") } : {};
 }
 
 function parseResults(rawResults: unknown): PowerBiQueryResult[] {
@@ -93,7 +133,7 @@ type AttemptOutcome =
       errorCode: "query_failed" | "timeout" | "network_error";
       message: string;
     }
-  | { kind: "fail"; result: ExecutePowerBiDaxQueryResult };
+  | { kind: "fail"; status?: number; detail?: Record<string, string | number | null>; result: ExecutePowerBiDaxQueryResult };
 
 async function attemptExecuteQueries(input: {
   accessToken: string;
@@ -146,8 +186,15 @@ async function attemptExecuteQueries(input: {
         "query_failed",
         "Power BI Execute Queries request failed."
       );
-      logPowerBiError("executeQuery", error, { status: response.status });
-      return { kind: "fail", result: { ok: false, error } };
+      return {
+        kind: "fail",
+        status: response.status,
+        detail: {
+          tokenExpiresInSeconds: tokenExpiresInSeconds(input.accessToken),
+          ...powerBiFailureDetail(json),
+        },
+        result: { ok: false, error },
+      };
     }
 
     if (!json || !Array.isArray(json.results)) {
@@ -205,7 +252,7 @@ export async function executePowerBiDaxQuery(
     return { ok: false, error: configResult.error };
   }
 
-  const tokenResult = await getPowerBiAccessToken();
+  let tokenResult = await getPowerBiAccessToken();
   if (!tokenResult.ok) {
     return { ok: false, error: tokenResult.error };
   }
@@ -216,6 +263,7 @@ export async function executePowerBiDaxQuery(
   const maxAttempts = 1 + POWERBI_QUERY_MAX_RETRIES;
 
   let lastRetry: Extract<AttemptOutcome, { kind: "retry" }> | null = null;
+  let refreshedAuth = false;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const outcome = await attemptExecuteQueries({
@@ -231,6 +279,20 @@ export async function executePowerBiDaxQuery(
       return { ok: true, results: outcome.results };
     }
     if (outcome.kind === "fail") {
+      if (outcome.status === 403 && !refreshedAuth) {
+        refreshedAuth = true;
+        invalidatePowerBiAccessToken();
+        const refreshed = await getPowerBiAccessToken();
+        if (refreshed.ok) {
+          tokenResult = refreshed;
+          attempt -= 1;
+          continue;
+        }
+      }
+      logPowerBiError("executeQuery", outcome.result.error, {
+        status: outcome.status,
+        ...outcome.detail,
+      });
       return outcome.result;
     }
 

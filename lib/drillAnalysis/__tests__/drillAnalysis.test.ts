@@ -2,10 +2,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildDrillAnalysisModel } from "@/lib/drillAnalysis/assemble";
-import { formatDrillMetric, reportHeadings, roundPowerBi0 } from "@/lib/drillAnalysis/format";
+import {
+  modalDurationMinutes,
+  formatDrillMetric,
+  formatDurationMinutes,
+  reportHeadings,
+  roundDurationToMinutes,
+  roundPowerBi0,
+} from "@/lib/drillAnalysis/format";
 import { detectDrillImage } from "@/lib/drillAnalysis/images";
 import { buildOccurrenceKey, buildSessionKey, occurrenceMatchesSession } from "@/lib/drillAnalysis/keys";
 import { buildOccurrences, emptyMetrics, metricsForPlayer } from "@/lib/drillAnalysis/metrics";
+import { keptDrillAnalysisRequest } from "@/lib/drillAnalysis/pageSelection";
 import { canAccessDrillAnalysis, DRILL_ANALYSIS_NAV_ITEM } from "@/lib/drillAnalysis/nav";
 import { buildDrillSessionRowsDax } from "@/lib/drillAnalysis/query";
 import type { DrillMetrics, ParsedDrillRow, SessionRef } from "@/lib/drillAnalysis/types";
@@ -34,6 +42,7 @@ function drillRow(input: {
   drill: string;
   start?: string;
   sourceRows?: number;
+  durationSeconds?: number | null;
   metrics?: Partial<DrillMetrics>;
 }): ParsedDrillRow {
   const start = input.start ?? "10:00:00";
@@ -43,12 +52,21 @@ function drillRow(input: {
     startToken: start,
     startLabel: start,
     startParsed: start !== "blank",
+    durationSeconds: input.durationSeconds ?? null,
     sourceRows: input.sourceRows ?? 1,
     metrics: metrics(input.metrics),
   };
 }
 
 describe("drill analysis access", () => {
+  it("keeps the requested date when the session list cannot be loaded", () => {
+    const kept = keptDrillAnalysisRequest({ date: "2026-11-05", player: "Ada" });
+    expect(kept.selectedDate).toBe("2026-11-05");
+    expect(kept.dates).toEqual(["2026-11-05"]);
+    expect(kept.selectedPlayer).toBe("Ada");
+    expect(kept.sessions).toEqual([]);
+  });
+
   it("is available to admin and staff only", () => {
     expect(DRILL_ANALYSIS_NAV_ITEM.href).toBe("/drill-analysis");
     expect(canAccessDrillAnalysis("admin")).toBe(true);
@@ -81,6 +99,7 @@ describe("Power BI drill query", () => {
     expect(dax).toContain('"Z6", GPS_Log[Z6]');
     expect(dax).toContain('"DistancePerMin", GPS_Log[Distance Per Min]');
     expect(dax).toContain('"DrillStart", GPS_Log[Drill Start Time]');
+    expect(dax).toContain('"Duration", GPS_Log[Duration]');
     expect(dax).not.toContain("SUM(");
     expect(dax).not.toContain("AVERAGE(");
   });
@@ -505,6 +524,52 @@ describe("original session order", () => {
       excludedBlankPlayerRows: 0,
     });
     expect(view.cards.map((card) => card.displayName)).toEqual(["Warm up", "Recovery Sprint", "10v10"]);
+  });
+});
+
+describe("drill duration", () => {
+  it("rounds 30 seconds up and anything under 30 down", () => {
+    expect(roundDurationToMinutes(10 * 60 + 32)).toBe(11);
+    expect(roundDurationToMinutes(10 * 60 + 30)).toBe(11);
+    expect(roundDurationToMinutes(10 * 60 + 29)).toBe(10);
+    expect(roundDurationToMinutes(20 * 60)).toBe(20);
+    expect(roundDurationToMinutes(86 * 60)).toBe(86);
+    expect(formatDurationMinutes(11)).toBe("11 min");
+    expect(formatDurationMinutes(null)).toBe("—");
+  });
+
+  it("writes the minute most players recorded and ignores a short outlier", () => {
+    const rows = [
+      drillRow({ player: "A", drill: "Warm up", durationSeconds: 11 * 60 + 40, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "B", drill: "Warm up", durationSeconds: 11 * 60 + 40, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "C", drill: "Warm up", durationSeconds: 1 * 60 + 7, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "A", drill: "10v10", durationSeconds: 19 * 60 + 35, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "B", drill: "10v10", durationSeconds: 19 * 60 + 35, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "A", drill: "Full Training", durationSeconds: 86 * 60, metrics: { totalDistance: 1 } }),
+      drillRow({ player: "B", drill: "Full Training", durationSeconds: 58 * 60 + 7, metrics: { totalDistance: 1 } }),
+    ];
+    const built = buildOccurrences(session, rows);
+    const team = buildDrillAnalysisModel({
+      session,
+      occurrences: built.occurrences,
+      savedCards: [],
+      player: null,
+      excludedBlankDrillRows: 0,
+      excludedBlankPlayerRows: 0,
+    });
+    const player = buildDrillAnalysisModel({
+      session,
+      occurrences: built.occurrences,
+      savedCards: [],
+      player: "C",
+      excludedBlankDrillRows: 0,
+      excludedBlankPlayerRows: 0,
+    });
+    expect(team.cards.find((card) => card.displayName === "Warm up")?.columns[0]?.durationMinutes).toBe(12);
+    expect(team.cards.find((card) => card.displayName === "10v10")?.columns[0]?.durationMinutes).toBe(20);
+    expect(team.fullTraining.columns[0]?.durationMinutes).toBe(86);
+    expect(player.cards.find((card) => card.displayName === "Warm up")?.columns[0]?.durationMinutes).toBe(1);
+    expect(modalDurationMinutes([null, null])).toBeNull();
   });
 });
 

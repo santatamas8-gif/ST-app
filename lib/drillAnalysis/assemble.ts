@@ -1,4 +1,5 @@
 import { buildSessionKey, sessionLabel } from "@/lib/drillAnalysis/keys";
+import { modalDurationMinutes } from "@/lib/drillAnalysis/format";
 import { isFullTrainingDrill, metricsForPlayer, roundedMetrics } from "@/lib/drillAnalysis/metrics";
 import type {
   DrillAnalysisModel,
@@ -7,9 +8,19 @@ import type {
   DrillViewCard,
   EditorCard,
   FullTrainingView,
+  PlayerOccurrenceValues,
   SavedDrillCard,
   SessionRef,
 } from "@/lib/drillAnalysis/types";
+
+function durationMinutesFor(occurrence: DrillOccurrence, player: string | null, missing: boolean): number | null {
+  if (missing) return null;
+  if (player !== null) {
+    const match = occurrence.players.find((row) => row.player === player);
+    return modalDurationMinutes(match ? [match.durationSeconds] : []);
+  }
+  return modalDurationMinutes(occurrence.players.map((row) => row.durationSeconds));
+}
 
 function columnFor(
   occurrence: DrillOccurrence,
@@ -23,8 +34,14 @@ function columnFor(
     uncertain: missing || occurrence.timeUncertain,
     missing,
     hasPlayerConflict: occurrence.hasPlayerConflict,
+    durationMinutes: durationMinutesFor(occurrence, player, missing),
     metrics: missing ? roundedMetrics(metricsForPlayer({ ...occurrence, players: [] }, player)) : roundedMetrics(metricsForPlayer(occurrence, player)),
   };
+}
+
+function playerSlice(occurrence: DrillOccurrence, player: string): PlayerOccurrenceValues {
+  const column = columnFor(occurrence, player, false);
+  return { metrics: column.metrics, durationMinutes: column.durationMinutes };
 }
 
 function missingColumn(key: string): DrillColumn {
@@ -35,6 +52,7 @@ function missingColumn(key: string): DrillColumn {
     uncertain: true,
     missing: true,
     hasPlayerConflict: false,
+    durationMinutes: null,
     metrics: {
       totalDistance: null,
       tempoDistance: null,
@@ -129,8 +147,14 @@ export function buildDrillAnalysisModel(input: {
   };
 
   const players = new Set<string>();
+  const playerValues: Record<string, Record<string, PlayerOccurrenceValues>> = {};
   for (const occurrence of input.occurrences) {
-    for (const player of occurrence.players) players.add(player.player);
+    const slices: Record<string, PlayerOccurrenceValues> = {};
+    for (const player of occurrence.players) {
+      players.add(player.player);
+      slices[player.player] = playerSlice(occurrence, player.player);
+    }
+    playerValues[occurrence.key] = slices;
   }
 
   return {
@@ -142,6 +166,7 @@ export function buildDrillAnalysisModel(input: {
     players: [...players].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
     fullTraining,
     cards,
+    playerValues,
     editorOccurrences: input.occurrences
       .filter((occurrence) => !isFullTrainingDrill(occurrence.drill))
       .map((occurrence) => ({
