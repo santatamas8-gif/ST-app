@@ -11,6 +11,7 @@ import { getPowerBiAccessToken, invalidatePowerBiAccessToken } from "@/lib/power
 import { getPowerBiConfig } from "@/lib/powerbi/config.server";
 import { logPowerBiError, powerBiError } from "@/lib/powerbi/errors";
 import type {
+  ExecutePowerBiDaxQueryFailure,
   ExecutePowerBiDaxQueryOptions,
   ExecutePowerBiDaxQueryResult,
   PowerBiQueryResult,
@@ -133,7 +134,7 @@ type AttemptOutcome =
       errorCode: "query_failed" | "timeout" | "network_error";
       message: string;
     }
-  | { kind: "fail"; status?: number; detail?: Record<string, string | number | null>; result: ExecutePowerBiDaxQueryResult };
+  | { kind: "fail"; status?: number; detail?: Record<string, string | number | null>; result: ExecutePowerBiDaxQueryFailure };
 
 async function attemptExecuteQueries(input: {
   accessToken: string;
