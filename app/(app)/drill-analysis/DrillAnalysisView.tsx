@@ -61,7 +61,7 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
   const separateSets = card.columns.length > 1;
   return (
     <div className="da-table-scroll min-w-0 overflow-x-auto">
-      <table className={`w-full min-w-[280px] border-collapse text-left text-sm ${separateSets ? "da-split-sets" : ""}`}>
+      <table className={`w-full border-collapse text-left text-[15px] ${separateSets ? "min-w-max da-split-sets" : ""}`}>
         <thead>
           {separateSets ? (
             <tr className="da-print-head da-duration-head">
@@ -85,12 +85,10 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
             ))}
           </tr>
           {showNames ? (
-            <tr className="da-screen-only">
-              <th className="da-col-head border border-zinc-300 px-2 py-1 font-semibold">
-                <span className="da-screen-only">Metric</span>
-              </th>
+            <tr className="da-screen-only bg-[#f4f7f8] text-sm text-[#11243B]">
+              <th className="border-b border-[#e7e5e4] px-2 py-1.5 text-left font-semibold">Metric</th>
               {card.columns.map((column, index) => (
-                <th key={column.occurrenceKey} className="da-col-head da-value-head border border-zinc-300 px-2 py-1 font-semibold">
+                <th key={column.occurrenceKey} className="da-value-head border-b border-l border-[#e7e5e4] px-2 py-1.5 text-right font-semibold">
                   <div>
                     {labels[index]}
                     {separateSets ? <DurationMark column={column} /> : null}
@@ -102,13 +100,13 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
         </thead>
         <tbody>
           {DRILL_METRICS.map((metric) => (
-            <tr key={metric.key}>
-              <th className="border border-zinc-300 px-2 py-1 font-medium text-zinc-900">
+            <tr key={metric.key} className="odd:bg-white even:bg-[#f7f7f8]">
+              <th className="border-b border-[#e7e5e4] px-2 py-1.5 text-left text-[15px] font-medium text-zinc-800">
                 <span className="da-screen-only">{metric.label}</span>
                 <span className="da-print-only"><PrintMetricName metric={metric} /></span>
               </th>
-              {card.columns.map((column) => (
-                <td key={column.occurrenceKey} className="da-num border border-zinc-300 px-2 py-1 tabular-nums text-zinc-900">
+              {card.columns.map((column, index) => (
+                <td key={column.occurrenceKey} className={`da-num border-b border-[#e7e5e4] px-2 py-1.5 text-right text-[15px] font-bold tabular-nums text-zinc-900 ${index > 0 ? "border-l" : ""}`}>
                   <span className="da-screen-only">{formatDrillMetric(column.metrics[metric.key], metric.unit)}</span>
                   <span className="da-print-only">{formatDrillNumber(column.metrics[metric.key])}</span>
                 </td>
@@ -162,7 +160,7 @@ function CardImage({
   if (!card.hasImage) {
     return (
       <div className="space-y-2">
-        <label className="da-screen-only flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center text-sm text-zinc-700">
+        <label className="da-screen-only flex h-36 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-3 text-center text-sm text-zinc-600 lg:h-[190px]">
           <span>{uploading ? "Uploading…" : "Upload image"}</span>
           <input
             type="file"
@@ -187,7 +185,7 @@ function CardImage({
     <div className="flex flex-col items-start gap-1">
       <button
         type="button"
-        className="block w-full"
+        className="flex h-36 w-full items-center justify-center bg-[#f4f6f8] lg:h-[190px]"
         onClick={() => {
           if (!failed) onZoom(src, card.displayName);
         }}
@@ -199,7 +197,7 @@ function CardImage({
             <img
             src={src}
             alt={card.displayName}
-            className="max-h-36 w-full object-contain object-left sm:max-h-40"
+            className="h-full w-full object-contain object-center"
             onLoad={() => onImageState(card.id, "ready")}
             onError={() => {
               setFailed(true);
@@ -339,6 +337,51 @@ export function DrillAnalysisView({
           .da-cs-a { color: #0f766e; font-weight: 700; }
           .da-cs-b { color: #1d4ed8; font-weight: 700; }
           .da-cs-mins { color: #64748b; font-weight: 500; }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: center;
+            column-gap: 1rem;
+            row-gap: 0.75rem;
+          }
+          .da-sheet:not(.da-comparing):not(.da-tab-history).space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) > .da-daily-panel { display: contents; }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) .da-daily-panel.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) > .da-daily-panel > header {
+            order: 1;
+            flex: 1 1 16rem;
+            min-width: 0;
+            max-width: 100%;
+            margin: 0;
+            border: 0;
+            padding: 0;
+          }
+          .da-daily-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: 0.75rem;
+            row-gap: 0.25rem;
+          }
+          .da-daily-head h1 { min-width: 0; margin: 0; }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) > .da-history-tabs {
+            order: 2;
+            flex: 0 1 auto;
+            max-width: 100%;
+            margin: 0 0 0 auto;
+          }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) > .da-daily-panel > .da-daily-controls {
+            order: 3;
+            flex: 1 0 100%;
+            min-width: 0;
+            max-width: 100%;
+          }
+          .da-sheet:not(.da-comparing):not(.da-tab-history) > .da-daily-panel > :not(header):not(.da-daily-controls) {
+            order: 4;
+            flex: 1 0 100%;
+            min-width: 0;
+            max-width: 100%;
+          }
         }
         .da-history-panel { display: none; }
         .da-tab-history .da-daily-panel { display: none; }
@@ -362,6 +405,8 @@ export function DrillAnalysisView({
           .da-sheet header h1 { display: none !important; }
           .da-sheet header .da-logo { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 9mm !important; height: 9mm !important; max-width: 9mm !important; max-height: 9mm !important; object-fit: contain !important; }
           .da-sheet header p { margin: 0 !important; font-size: 14pt !important; font-weight: 700 !important; line-height: 1.15 !important; letter-spacing: 0.01em !important; color: #0f2744 !important; text-align: center !important; }
+          .da-sheet:not(.da-comparing) .da-player-face { display: flex !important; flex: 0 0 auto !important; justify-content: center !important; align-items: center !important; height: 12mm !important; margin: 0 !important; padding: 0 !important; background: transparent !important; }
+          .da-sheet:not(.da-comparing) .da-player-face img { display: block !important; width: 12mm !important; height: 12mm !important; max-width: 12mm !important; max-height: 12mm !important; object-fit: cover !important; object-position: center center !important; border-radius: 50% !important; background: #f4f6f8 !important; }
           .da-results { display: flex !important; flex: 1 1 0 !important; flex-direction: column !important; gap: 2mm !important; height: auto !important; min-height: 0 !important; overflow: hidden !important; }
           .da-print-footer { display: flex !important; flex: 0 0 auto !important; justify-content: flex-end !important; align-items: flex-end !important; gap: 2mm !important; margin: 1mm 0 0 !important; }
           .da-print-footer .da-logo { display: none !important; }
@@ -591,12 +636,13 @@ export function DrillAnalysisView({
         }
       `}</style>
 
-      <div className="da-history-tabs da-screen-only flex gap-2" role="tablist" aria-label="Drill Analysis">
+      <div className="da-history-tabs da-screen-only flex gap-2 overflow-x-auto">
+        <div className="flex shrink-0 gap-2" role="tablist" aria-label="Drill Analysis">
         <button
           type="button"
           role="tab"
           aria-selected={tab === "daily"}
-          className={`h-11 rounded-lg px-4 text-sm font-medium ${tab === "daily" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          className={`h-11 shrink-0 rounded-lg px-4 font-medium ${compareOn ? "text-sm" : "text-base"} ${tab === "daily" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
           onClick={() => setTab("daily")}
         >
           Daily Analysis
@@ -605,7 +651,8 @@ export function DrillAnalysisView({
           type="button"
           role="tab"
           aria-selected={tab === "history"}
-          className={`h-11 rounded-lg px-4 text-sm font-medium ${tab === "history" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          data-da-tab="history"
+          className={`h-11 shrink-0 rounded-lg px-4 font-medium ${compareOn ? "text-sm" : "text-base"} ${tab === "history" ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
           onClick={() => {
             setHistoryMounted(true);
             setTab("history");
@@ -613,24 +660,27 @@ export function DrillAnalysisView({
         >
           Drill History
         </button>
+        </div>
+        <div id="da-plan-toolbar-slot" className="flex shrink-0 gap-2" />
       </div>
       <div className="da-daily-panel space-y-4">
-      <div className={`da-screen-only flex max-w-full flex-wrap items-end ${compareOn ? "gap-x-2 gap-y-1.5" : "gap-3"}`}>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-zinc-900">Date</span>
+      <div className={`da-daily-controls da-screen-only flex max-w-full flex-wrap items-end ${compareOn ? "gap-x-2 gap-y-1.5" : "justify-between gap-x-4 gap-y-2"}`}>
+        <div className={compareOn ? "contents" : "flex min-w-0 flex-1 basis-full flex-wrap items-end gap-x-3 gap-y-2 md:basis-auto"}>
+        <label className={compareOn ? "text-sm" : "min-w-[10.5rem] flex-1 sm:flex-none"}>
+          <span className={`mb-1 block font-medium ${compareOn ? "text-zinc-900" : "text-sm text-zinc-700"}`}>Date</span>
           <input
             type="date"
             value={data.selectedDate ?? ""}
             onChange={(event) => navigate(event.target.value, null, data.selectedPlayer)}
-            className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900"
+            className={`h-11 rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 ${compareOn ? "" : "w-full text-base"}`}
           />
         </label>
-        <label className="min-w-48 text-sm">
-          <span className="mb-1 block font-medium text-zinc-900">Session</span>
+        <label className={compareOn ? "min-w-48 text-sm" : "min-w-[11rem] flex-1 sm:max-w-xs"}>
+          <span className={`mb-1 block font-medium ${compareOn ? "text-zinc-900" : "text-sm text-zinc-700"}`}>Session</span>
           <select
             value={data.selectedSessionKey ?? ""}
             onChange={(event) => navigate(data.selectedDate, event.target.value, data.selectedPlayer)}
-            className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900"
+            className={`h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 ${compareOn ? "" : "text-base"}`}
           >
             {sessions.map((session) => (
               <option key={session.key} value={session.key}>
@@ -639,12 +689,12 @@ export function DrillAnalysisView({
             ))}
           </select>
         </label>
-        <label className="min-w-48 text-sm">
-          <span className="mb-1 block font-medium text-zinc-900">Player</span>
+        <label className={compareOn ? "min-w-48 text-sm" : "min-w-[11rem] flex-1 sm:max-w-xs"}>
+          <span className={`mb-1 block font-medium ${compareOn ? "text-zinc-900" : "text-sm text-zinc-700"}`}>Player</span>
           <select
             value={data.selectedPlayer ?? ""}
             onChange={(event) => navigate(data.selectedDate, data.selectedSessionKey, event.target.value || null)}
-            className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900"
+            className={`h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 ${compareOn ? "" : "text-base"}`}
           >
             <option value="">Team average</option>
             {data.selectedPlayer && !(model?.players ?? []).includes(data.selectedPlayer) ? (
@@ -657,10 +707,12 @@ export function DrillAnalysisView({
             ))}
           </select>
         </label>
+        </div>
+        <div className={compareOn ? "contents" : "flex flex-wrap items-center gap-2"}>
         <button
           type="button"
           aria-pressed={compareOn}
-          className={`h-11 rounded-lg px-4 text-sm font-medium ${compareOn ? "bg-[#11243B] text-white" : "border border-zinc-300 bg-white text-zinc-900"}`}
+          className={`h-11 rounded-lg px-4 font-medium ${compareOn ? "bg-[#11243B] text-sm text-white" : "border border-zinc-300 bg-white text-base text-zinc-900"}`}
           onClick={() => {
             if (compareOn) setCompareOn(false);
             else enableCompare();
@@ -702,33 +754,34 @@ export function DrillAnalysisView({
         ) : null}
         <button
           type="button"
-          className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900"
+          className={`h-11 rounded-lg border border-zinc-300 bg-white px-4 font-medium text-zinc-900 ${compareOn ? "text-sm" : "text-base"}`}
           onClick={() => setManageOpen((open) => !open)}
         >
           Manage drills
         </button>
         <button
           type="button"
-          className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 disabled:opacity-60"
+          className={`h-11 rounded-lg border border-zinc-300 bg-white px-4 font-medium text-zinc-900 disabled:opacity-60 ${compareOn ? "text-sm" : "text-base"}`}
           disabled={pending || !model || Boolean(data.sourceError) || Boolean(data.playerError) || (compareOn && (!playerA || !playerB || playerA === playerB))}
           onClick={printSheet}
         >
           Print / Save PDF
         </button>
+        </div>
       </div>
       {printMessage ? <p className="da-screen-only text-sm text-zinc-700">{printMessage}</p> : null}
       {data.layoutError ? <p className="da-screen-only text-sm text-zinc-700">{data.layoutError}</p> : null}
       {pending ? <p className="da-screen-only text-sm text-zinc-700">Loading the selected session…</p> : null}
 
-      <header className={`flex items-center border-b border-teal-700/40 ${compareOn ? "gap-2 pb-2" : "gap-3 pb-3"}`}>
+      <header className={compareOn ? "flex items-center gap-2 border-b border-teal-700/40 pb-2" : "da-daily-head"}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} alt="ST-AMS" className={`da-logo object-contain ${compareOn ? "h-10 w-10" : "h-12 w-12"}`} />
-        <div className="min-w-0">
-          <h1 className={`font-semibold tracking-tight text-[#0f2744] ${compareOn ? "text-xl" : "text-2xl"}`}>
+        <img src={logoSrc} alt="ST-AMS" className={`da-logo h-10 w-10 object-contain ${compareOn ? "" : "shrink-0"}`} />
+        <div className={compareOn ? "min-w-0" : "contents"}>
+          <h1 className={`font-semibold tracking-tight text-[#0f2744] ${compareOn ? "text-xl" : "text-[26px] leading-tight"}`}>
             {compareOn ? "ST-AMS / Compare players" : "ST-AMS / Drill Analysis"}
           </h1>
           {model ? (
-            <p className="text-sm text-[#1e3a4c]">
+            <p className={compareOn ? "text-sm text-[#1e3a4c]" : "da-print-only"}>
               {formatSessionDate(model.session.date)} · {model.sessionLabel}
               <span className={compareOn ? "da-compare-screen-sep mx-2" : "mx-2"}>·</span>
               <span className={compareOn ? "da-compare-player-label" : ""}>{model.playerLabel}</span>
@@ -787,35 +840,46 @@ export function DrillAnalysisView({
       ) : null}
 
       {model ? (
-        <div className="da-results space-y-3">
-          <section className="da-full-training rounded-xl border border-zinc-300 bg-white p-3 sm:p-4">
+        <div className="da-results min-w-0 space-y-3">
+          {!compareOn && data.selectedPlayer && playerPhotos[data.selectedPlayer] ? (
+            <div className="da-player-face flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={playerPhotos[data.selectedPlayer]} alt="" className="h-14 w-14 rounded-full object-cover" />
+            </div>
+          ) : null}
+          <section className="da-full-training min-w-0 max-w-full rounded-md border border-[#d5dee6] bg-white px-3 py-2.5">
             <div className="da-screen-only">
-            <h2 className="text-lg font-semibold text-zinc-900">
-              Full Training
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-base font-bold text-[#11243B]">Full Training</h2>
               {model.fullTraining.columns.length === 1 ? <DurationMark column={model.fullTraining.columns[0]} /> : null}
-            </h2>
+            </div>
             {model.fullTraining.status === "missing" ? (
-              <p className="mt-2 text-sm text-zinc-700">No Full Training row for this session.</p>
+              <p className="mt-1 text-sm text-zinc-700">No Full Training row for this session.</p>
             ) : null}
             {model.fullTraining.status === "repeated" ? (
-              <p className="mt-2 text-sm text-zinc-700">
+              <p className="mt-1 text-sm text-zinc-700">
                 More than one Full Training occurrence was found. They are shown separately and are not added together.
               </p>
             ) : null}
             {model.fullTraining.columns.map((column) => (
-              <div key={column.occurrenceKey} className="mt-2">
+              <div key={column.occurrenceKey} className="mt-1">
                 {model.fullTraining.columns.length > 1 ? (
-                  <p className="mb-1 text-sm font-medium text-zinc-700">{column.label}</p>
+                  <p className="mb-1 text-sm font-medium text-zinc-700">
+                    {column.label}
+                    <DurationMark column={column} />
+                  </p>
                 ) : null}
-                <div className="grid grid-cols-7 overflow-hidden rounded-lg bg-[#f2f2f2]">
-                  {DRILL_METRICS.map((metric) => (
-                    <div key={metric.key} className="px-1 py-2 text-center">
-                      <div className="text-[11px] font-medium text-zinc-600">{PRINT_METRIC_LABEL[metric.key]}</div>
-                      <div className="mt-0.5 text-sm font-bold tabular-nums text-zinc-900 sm:text-lg">
-                        {fullTrainingFigure(column.metrics[metric.key], metric)}
+                <div className="min-w-0 overflow-x-auto">
+                  <div className="grid min-w-[40rem] grid-cols-7 lg:min-w-0">
+                    {DRILL_METRICS.map((metric) => (
+                      <div key={metric.key} className="px-1 py-1 text-center">
+                        <div className="text-sm font-medium leading-tight text-zinc-600">{PRINT_METRIC_LABEL[metric.key]}</div>
+                        <div className="mt-1 text-[22px] font-bold leading-none tabular-nums text-zinc-900">
+                          {fullTrainingFigure(column.metrics[metric.key], metric)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
@@ -855,7 +919,7 @@ export function DrillAnalysisView({
           ) : null}
 
           <div
-            className="da-card-list grid grid-cols-1 gap-3 lg:grid-cols-2"
+            className="da-card-list grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2"
             style={{ ["--da-rows" as string]: String(Math.max(1, Math.ceil(model.cards.length / 2))) }}
           >
             {model.cards.map((card) => {
@@ -867,28 +931,34 @@ export function DrillAnalysisView({
               return (
                 <article
                   key={card.id}
-                  className={`da-card rounded-xl border border-zinc-300 bg-white p-3 ${isCollapsed ? "da-collapsed" : ""}`}
+                  className={`da-card min-w-0 max-w-full overflow-hidden rounded-md border border-[#d5dee6] bg-white ${isCollapsed ? "da-collapsed" : ""}`}
                   style={{ ["--da-cols" as string]: String(card.columns.length) }}
                 >
-                  <div className="da-screen-title mb-2 flex flex-wrap items-start justify-between gap-2">
-                    <div className="da-screen-only">
-                      {headings.title ? (
-                        <h2 className="text-lg font-semibold text-[#0f2744]">
-                          {headings.title}
-                          {card.columns.length === 1 ? <DurationMark column={card.columns[0]} /> : null}
-                        </h2>
-                      ) : null}
-                      {card.missingCount > 0 ? (
-                        <p className="mt-1 text-sm text-zinc-700">
-                          A saved drill occurrence is no longer in the source. It was not linked to another drill with the same name.
-                        </p>
-                      ) : null}
-                      {card.columns.some((column) => column.hasPlayerConflict) ? (
-                        <p className="mt-1 text-sm text-zinc-700">
-                          Repeated player rows for this drill disagreed, so those values are blank.
-                        </p>
-                      ) : null}
+                  <div className="da-screen-title">
+                    <div className="da-screen-only grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 bg-[#e7eef3] px-2.5 py-1.5">
+                      <h2 className="min-w-0 break-words text-[15px] font-bold leading-snug text-[#11243B]">{headings.title}</h2>
+                      <div className="flex items-center gap-1.5">
+                        {card.columns.length === 1 ? <DurationMark column={card.columns[0]} /> : null}
+                        <button
+                          type="button"
+                          className="h-7 shrink-0 rounded px-1.5 text-xs font-medium text-zinc-500"
+                          aria-expanded={!isCollapsed}
+                          onClick={() => setCollapsed((current) => ({ ...current, [card.id]: !current[card.id] }))}
+                        >
+                          {isCollapsed ? "Expand" : "Collapse"}
+                        </button>
+                      </div>
                     </div>
+                    {card.missingCount > 0 ? (
+                      <p className="da-screen-only px-2.5 pt-1 text-sm text-zinc-700">
+                        A saved drill occurrence is no longer in the source. It was not linked to another drill with the same name.
+                      </p>
+                    ) : null}
+                    {card.columns.some((column) => column.hasPlayerConflict) ? (
+                      <p className="da-screen-only px-2.5 pt-1 text-sm text-zinc-700">
+                        Repeated player rows for this drill disagreed, so those values are blank.
+                      </p>
+                    ) : null}
                     {headings.title || card.missingCount > 0 || card.columns.some((column) => column.hasPlayerConflict) ? (
                       <div className="da-print-only da-print-card-head">
                         {headings.title ? <span className="da-drill-name">{headings.title}</span> : null}
@@ -901,16 +971,8 @@ export function DrillAnalysisView({
                         ) : null}
                       </div>
                     ) : null}
-                    <button
-                      type="button"
-                      className="da-screen-only h-11 rounded-lg border border-zinc-300 px-3 text-sm"
-                      aria-expanded={!isCollapsed}
-                      onClick={() => setCollapsed((current) => ({ ...current, [card.id]: !current[card.id] }))}
-                    >
-                      {isCollapsed ? "Expand" : "Collapse"}
-                    </button>
                   </div>
-                  <div className="da-card-body grid grid-cols-[minmax(7.5rem,28%)_minmax(0,1fr)] items-start gap-3">
+                  <div className="da-card-body grid min-w-0 grid-cols-1 items-start gap-2 p-2 lg:grid-cols-[38%_minmax(0,1fr)] lg:gap-3">
                     <CardImage
                       key={`${card.id}:${card.hasImage ? "image" : "empty"}`}
                       card={card}

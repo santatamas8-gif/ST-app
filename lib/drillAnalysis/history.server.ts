@@ -127,10 +127,10 @@ export async function loadDrillHistoryCatalog(): Promise<
   };
 }
 
-export async function loadDrillHistoryDetail(
-  sessionKey: string,
-  cardId: string
-): Promise<{ ok: true; detail: HistoryDetail & { note: string } } | { ok: false; status: number; error: string }> {
+export async function loadHistorySessionModel(sessionKey: string, cardId: string): Promise<
+  | { ok: true; model: ReturnType<typeof buildDrillAnalysisModel>; savedCards: SavedDrillCard[] }
+  | { ok: false; status: number; error: string }
+> {
   const session = parseSessionKey(sessionKey);
   if (!session || !cardId.trim() || cardId.length > 800) {
     return { ok: false, status: 404, error: "Drill not found." };
@@ -159,7 +159,16 @@ export async function loadDrillHistoryDetail(
     excludedBlankDrillRows: built.excludedBlankDrillRows,
     excludedBlankPlayerRows: built.excludedBlankPlayerRows,
   });
-  const detail = historyDetailFromModel(model, cardId);
+  return { ok: true, model, savedCards: saved.ok ? saved.cards : [] };
+}
+
+export async function loadDrillHistoryDetail(
+  sessionKey: string,
+  cardId: string
+): Promise<{ ok: true; detail: HistoryDetail & { note: string } } | { ok: false; status: number; error: string }> {
+  const loaded = await loadHistorySessionModel(sessionKey, cardId);
+  if (!loaded.ok) return loaded;
+  const detail = historyDetailFromModel(loaded.model, cardId);
   if (!detail) return { ok: false, status: 404, error: "Drill not found." };
   const note = await loadHistoryNote(sessionKey, cardId);
   return { ok: true, detail: { ...detail, note } };

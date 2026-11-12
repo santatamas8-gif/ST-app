@@ -4,8 +4,15 @@ export const MAX_DRILL_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_PATH =
   /^cards\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9._-]+$/;
 
+const PLAN_IMAGE_PATH =
+  /^plans\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
+
 export function isDrillImagePath(path: string): boolean {
   return IMAGE_PATH.test(path);
+}
+
+export function isPlanImagePath(path: string): boolean {
+  return PLAN_IMAGE_PATH.test(path);
 }
 
 export function detectDrillImage(
@@ -44,7 +51,15 @@ export function detectDrillImage(
 }
 
 export function drillImageContentType(path: string): string | null {
-  if (!isDrillImagePath(path)) return null;
+  return imageContentType(path, isDrillImagePath(path));
+}
+
+export function planImageContentType(path: string): string | null {
+  return imageContentType(path, isPlanImagePath(path));
+}
+
+function imageContentType(path: string, allowed: boolean): string | null {
+  if (!allowed) return null;
   if (path.endsWith(".png")) return "image/png";
   if (path.endsWith(".webp")) return "image/webp";
   if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
