@@ -6,6 +6,7 @@ import {
   modalDurationMinutes,
   formatDrillMetric,
   formatDurationMinutes,
+  printColumnHeading,
   reportHeadings,
   roundDurationToMinutes,
   roundPowerBi0,
@@ -662,6 +663,15 @@ describe("report headings", () => {
     ]);
     expect(reportHeadings("", ["SAQ"]).title).toBe("SAQ");
     expect(reportHeadings("", ["SAQ"]).columnLabels).toEqual([""]);
+  });
+
+  it("prints the source SET label instead of restarting at SET 1 on each card", () => {
+    const labels = reportHeadings("10v10 - 105x65m", [
+      "10v10 - 105x65m - SET3",
+      "10v10 - 105x65m - SET4",
+    ]).columnLabels;
+    expect(labels.map((label, index) => printColumnHeading(label, index, labels.length))).toEqual(["SET3", "SET4"]);
+    expect(printColumnHeading("", 0, 1)).toBe("Value");
   });
 });
 

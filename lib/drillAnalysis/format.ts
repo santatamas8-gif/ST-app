@@ -40,6 +40,16 @@ export type ReportHeadings = {
   columnLabels: string[];
 };
 
+/**
+ * Print column title. Uses the same label as the screen, so a card that
+ * starts at SET3 stays SET3. A single column with no source SET name stays "Value".
+ */
+export function printColumnHeading(label: string | undefined, index: number, count: number): string {
+  const named = label?.trim() ?? "";
+  if (named) return named;
+  return count <= 1 ? "Value" : `SET ${index + 1}`;
+}
+
 /** Display-only. Does not rewrite stored or source drill names. */
 export function reportHeadings(displayName: string, labels: string[]): ReportHeadings {
   const count = labels.length;

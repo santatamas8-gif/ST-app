@@ -548,7 +548,7 @@ export function DrillCompare({
         markB={markB}
         values={model.playerValues}
       />
-      <div className="da-cr-drills">
+      <div className={`da-cr-drills${Math.ceil(drills.length / 2) >= 3 ? " da-dense" : ""}`}>
         {drills.map((drill) => (
           <PrintDrill
             key={drill.key}

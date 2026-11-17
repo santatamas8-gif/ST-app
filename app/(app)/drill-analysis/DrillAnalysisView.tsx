@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DrillCompare } from "@/app/(app)/drill-analysis/DrillCompare";
 import { DrillHistory } from "@/app/(app)/drill-analysis/DrillHistory";
 import { ManageDrills } from "@/app/(app)/drill-analysis/ManageDrills";
-import { formatDrillMetric, formatDrillNumber, formatDurationMinutes, formatSessionDate, reportHeadings } from "@/lib/drillAnalysis/format";
+import { formatDrillMetric, formatDrillNumber, formatDurationMinutes, formatSessionDate, printColumnHeading, reportHeadings } from "@/lib/drillAnalysis/format";
 import { comparePrintMarks } from "@/lib/drillAnalysis/printMarks";
 import { DRILL_METRICS } from "@/lib/drillAnalysis/types";
 import type { DrillAnalysisPageData, DrillColumn, DrillMetricKey } from "@/lib/drillAnalysis/types";
@@ -46,10 +46,6 @@ function pageHref(date: string | null, sessionKey: string | null, player: string
   return query ? `/drill-analysis?${query}` : "/drill-analysis";
 }
 
-function printSeriesHeading(index: number, count: number): string {
-  return count <= 1 ? "Value" : `SET ${index + 1}`;
-}
-
 function DurationMark({ column }: { column?: DrillColumn }) {
   if (!column || column.missing || column.durationMinutes === null) return null;
   return <span className="da-duration">{formatDurationMinutes(column.durationMinutes)}</span>;
@@ -80,7 +76,7 @@ function DrillTable({ card, columnLabels }: { card: DrillViewCard; columnLabels?
                 key={`print-${column.occurrenceKey}`}
                 className={`da-col-head da-value-head${card.columns.length === 1 ? " da-value-edge" : ""}`}
               >
-                {printSeriesHeading(index, card.columns.length)}
+                {printColumnHeading(labels[index], index, card.columns.length)}
               </th>
             ))}
           </tr>
@@ -310,10 +306,11 @@ export function DrillAnalysisView({
   }
 
   const comparePair = Boolean(compareOn && playerA && playerB && playerA !== playerB);
+  const denseCompare = Boolean(comparePair && model && model.cards.length >= 5);
   const compareMarks = comparePair ? comparePrintMarks(playerA, playerB) : null;
 
   return (
-    <div className={`da-sheet space-y-4 ${pending ? "da-pending" : ""} ${tab === "history" ? "da-tab-history" : ""} ${compareOn ? "da-comparing" : ""}`}>
+    <div className={`da-sheet space-y-4 ${pending ? "da-pending" : ""} ${tab === "history" ? "da-tab-history" : ""} ${compareOn ? "da-comparing" : ""} ${denseCompare ? "da-dense-compare" : ""}`}>
       <style>{`
         .da-print-only { display: none; }
         .da-print-head { display: none; }
@@ -475,6 +472,18 @@ export function DrillAnalysisView({
           .da-table-scroll { overflow: hidden !important; flex: 1 1 auto !important; height: 100% !important; min-height: 0 !important; }
           .da-sheet table { width: 100% !important; height: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; border-bottom: 0.25mm solid #c5ced8 !important; background: transparent !important; }
           .da-sheet tbody tr { height: 14.2% !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense { gap: 2.2mm !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense .da-print-card-head { padding: 1.1mm 1.5mm !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense .da-card-body { padding: 0.5mm 0.8mm 0.4mm 0.3mm !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense .da-card th,
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense .da-card td {
+            padding: 0.22mm 0.7mm !important;
+            line-height: 1.05 !important;
+          }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense thead th { font-size: 7.5pt !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense tbody tr { height: auto !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense tbody th { font-size: 8pt !important; }
+          .da-sheet:not(.da-comparing) .da-card-list.da-dense td { font-size: 9.5pt !important; }
           .da-sheet table.da-split-sets { border-collapse: collapse !important; border-spacing: 0 !important; }
           .da-sheet th, .da-sheet td {
             padding: 0.7mm 1mm !important;
@@ -633,6 +642,18 @@ export function DrillAnalysisView({
           .da-comparing .da-cr-frame { position: relative !important; width: 100% !important; height: 54mm !important; min-height: 54mm !important; max-height: 54mm !important; align-self: center !important; background: #f4f6f8 !important; }
           .da-comparing .da-cr-frame img { position: absolute !important; inset: 1.2mm !important; width: calc(100% - 2.4mm) !important; height: calc(100% - 2.4mm) !important; max-width: none !important; max-height: none !important; object-fit: contain !important; object-position: center center !important; background: transparent !important; }
           .da-comparing .da-cr-card table { align-self: stretch !important; height: auto !important; }
+          .da-comparing .da-cr-drills.da-dense { gap: 2.2mm !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr-card h2 { padding: 1mm 1.4mm !important; font-size: 9.5pt !important; line-height: 1.15 !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr-body { padding: 0.8mm !important; column-gap: 1.6mm !important; align-items: stretch !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr-frame { height: 28mm !important; min-height: 0 !important; max-height: 28mm !important; align-self: center !important; }
+          .da-comparing.da-dense-compare.da-sheet { height: auto !important; max-height: none !important; overflow: visible !important; }
+          .da-comparing.da-dense-compare .da-print-footer { margin-top: 1.5mm !important; }
+          .da-comparing.da-dense-compare .da-cr-card { break-inside: avoid !important; page-break-inside: avoid !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr th,
+          .da-comparing .da-cr-drills.da-dense .da-cr td { padding: 0.28mm 0.8mm !important; line-height: 1.05 !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr thead th { font-size: 7pt !important; padding: 0.22mm 0.6mm !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr-card tbody th { font-size: 7.5pt !important; }
+          .da-comparing .da-cr-drills.da-dense .da-cr-card tbody td { font-size: 8.5pt !important; }
         }
       `}</style>
 
@@ -919,7 +940,7 @@ export function DrillAnalysisView({
           ) : null}
 
           <div
-            className="da-card-list grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2"
+            className={`da-card-list grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2 ${Math.ceil(model.cards.length / 2) >= 3 ? "da-dense" : ""}`}
             style={{ ["--da-rows" as string]: String(Math.max(1, Math.ceil(model.cards.length / 2))) }}
           >
             {model.cards.map((card) => {
