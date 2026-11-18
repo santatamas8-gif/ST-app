@@ -24,6 +24,7 @@ type StaffWellnessWorkspaceProps = {
   matchList: MatchFeedbackListItem[];
   matchDetailsById: Record<string, MatchDetailState>;
   canDeleteMatch?: boolean;
+  showSubmittedAt?: boolean;
 };
 
 type WellnessStaffMode = "daily" | "match";
@@ -42,13 +43,14 @@ export function StaffWellnessWorkspace({
   matchList,
   matchDetailsById,
   canDeleteMatch = false,
+  showSubmittedAt = false,
 }: StaffWellnessWorkspaceProps) {
   const [mode, setMode] = useState<WellnessStaffMode>("daily");
 
   return (
     <div className="space-y-4">
       <div
-        className="mx-auto flex w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 md:mx-0"
+        className="no-print mx-auto flex w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 md:mx-0"
         role="tablist"
         aria-label="Wellness results view"
       >
@@ -88,6 +90,7 @@ export function StaffWellnessWorkspace({
               avatarByUserId={avatarByUserId}
               totalPlayers={totalPlayers}
               allPlayerIds={allPlayerIds}
+              showSubmittedAt={showSubmittedAt}
             />
           </div>
           <div className="hidden md:block">
@@ -98,13 +101,14 @@ export function StaffWellnessWorkspace({
               avatarByUserId={avatarByUserId}
               totalPlayers={totalPlayers}
               allPlayerIds={allPlayerIds}
+              showSubmittedAt={showSubmittedAt}
             />
           </div>
         </>
       ) : (
         <div className="px-4 pb-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
-            <h1 className="mb-4 text-lg font-bold tracking-tight text-white sm:text-xl">
+            <h1 className="no-print mb-4 text-lg font-bold tracking-tight text-white sm:text-xl">
               Match Feedback
             </h1>
             <MatchFeedbackResultsView

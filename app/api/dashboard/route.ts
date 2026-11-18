@@ -5,7 +5,7 @@ import { getDashboardData } from "@/lib/dashboard";
 import { getStaffAttentionToday } from "@/lib/staffAttention";
 
 const DASHBOARD_CACHE_HEADERS = {
-  "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+  "Cache-Control": "private, no-cache, no-store, must-revalidate",
 };
 
 export async function GET() {

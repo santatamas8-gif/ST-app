@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CSSProperties } from "react";
 import { Activity, AlertTriangle, UserRound, FileDown, ArrowUpDown, ArrowUp, ArrowDown, CalendarOff } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
@@ -8,6 +9,7 @@ import { NEON_CARD_STYLE, MATT_CARD_STYLE } from "@/lib/themes";
 import { PROFILE_AVATAR_IMG_CLASS } from "@/lib/players/profileAvatarStyles";
 import type { WellnessRow } from "@/lib/types";
 import { useSearchShortcut } from "@/lib/useSearchShortcut";
+import { formatWellnessSubmittedAt } from "@/lib/wellness/submittedAt";
 import { wellnessAverageFromRow, averageWellness } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
 import { getBodyPartLabel } from "@/lib/bodyMapParts";
@@ -179,6 +181,7 @@ interface StaffWellnessViewProps {
   avatarByUserId?: Record<string, string | null>;
   totalPlayers: number | null;
   allPlayerIds?: string[];
+  showSubmittedAt?: boolean;
 }
 
 export function StaffWellnessView({
@@ -188,6 +191,7 @@ export function StaffWellnessView({
   avatarByUserId = {},
   totalPlayers,
   allPlayerIds = [],
+  showSubmittedAt = false,
 }: StaffWellnessViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,10 +199,18 @@ export function StaffWellnessView({
   const [modalUserId, setModalUserId] = useState<string | null>(null);
   const [bodyMapMode, setBodyMapMode] = useState<"soreness" | "pain">("soreness");
   const [popoverCard, setPopoverCard] = useState<"at-risk" | "missing" | null>(null);
+  const [submittedTip, setSubmittedTip] = useState<{ id: string; x: number; y: number; label: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { themeId } = useTheme();
   const isHighContrast = themeId === "neon" || themeId === "matt";
   useSearchShortcut(searchInputRef);
+
+  useEffect(() => {
+    if (!submittedTip) return;
+    const hide = () => setSubmittedTip(null);
+    window.addEventListener("scroll", hide, true);
+    return () => window.removeEventListener("scroll", hide, true);
+  }, [submittedTip]);
 
   const filteredAndSorted = useMemo(() => {
     let rows = list.filter((r) => r.date === selectedDate);
@@ -503,6 +515,7 @@ export function StaffWellnessView({
                     {filteredAndSorted.map((r, index) => {
                       const atRisk = isAtRisk(r);
                       const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
+                      const submittedLabel = showSubmittedAt ? formatWellnessSubmittedAt(r.created_at) : null;
                       return (
                         <RiskRowHighlight key={r.id} isAtRisk={atRisk} rowIndex={index}>
                           <td className="px-4 py-2">
@@ -510,6 +523,14 @@ export function StaffWellnessView({
                               <button
                                 type="button"
                                 onClick={() => setModalUserId(r.user_id)}
+                                onMouseEnter={(event) => {
+                                  if (!submittedLabel) return;
+                                  const rect = event.currentTarget.getBoundingClientRect();
+                                  const below = rect.bottom + 8;
+                                  const top = below + 32 > window.innerHeight ? Math.max(8, rect.top - 36) : below;
+                                  setSubmittedTip({ id: r.id, x: rect.left, y: top, label: submittedLabel });
+                                }}
+                                onMouseLeave={() => setSubmittedTip((tip) => (tip?.id === r.id ? null : tip))}
                                 className="inline-flex min-h-[40px] max-w-full items-center gap-2 rounded font-medium text-white hover:text-white/90 hover:underline"
                               >
                                 <WellnessPlayerAvatar
@@ -920,6 +941,18 @@ export function StaffWellnessView({
           onClose={() => setModalUserId(null)}
         />
       )}
+      {submittedTip
+        ? createPortal(
+            <span
+              role="tooltip"
+              className="pointer-events-none fixed z-[80] whitespace-nowrap rounded-md border border-zinc-600 bg-zinc-950 px-2.5 py-1 text-xs font-normal text-zinc-100 shadow-lg"
+              style={{ left: submittedTip.x, top: submittedTip.y }}
+            >
+              {submittedTip.label}
+            </span>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

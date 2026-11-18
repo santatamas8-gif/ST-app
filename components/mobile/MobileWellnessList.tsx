@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { X, Pill, Clock, Moon, BatteryLow, Activity, Brain, Smile, Gauge, HeartPulse } from "lucide-react";
 import type { WellnessRow } from "@/lib/types";
+import { formatWellnessSubmittedAt } from "@/lib/wellness/submittedAt";
 import { wellnessAverageFromRow } from "@/utils/wellness";
 import { formatSleepDuration } from "@/utils/sleep";
 import { useTheme } from "@/components/ThemeProvider";
@@ -123,6 +124,7 @@ export interface MobileWellnessListProps {
   avatarByUserId?: Record<string, string | null>;
   totalPlayers?: number | null;
   allPlayerIds?: string[];
+  showSubmittedAt?: boolean;
 }
 
 export function MobileWellnessList({
@@ -131,6 +133,7 @@ export function MobileWellnessList({
   displayNameByUserId,
   avatarByUserId = {},
   allPlayerIds = [],
+  showSubmittedAt = false,
 }: MobileWellnessListProps) {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [filter, setFilter] = useState<FilterChip>("all");
@@ -236,6 +239,9 @@ export function MobileWellnessList({
       return sortByReadiness === "asc" ? ra - rb : rb - ra;
     });
   }, [rowsForDate, missingUserIds, filter, sortByReadiness]);
+
+  const detailSubmittedLabel =
+    showSubmittedAt && detailRow ? formatWellnessSubmittedAt(detailRow.created_at) : null;
 
   return (
     <div className="min-h-screen min-w-0 -mx-4 overflow-x-hidden px-3 py-4 sm:py-6 sm:mx-0 sm:px-4" style={{ backgroundColor: "var(--page-bg)" }}>
@@ -381,6 +387,7 @@ export function MobileWellnessList({
               }
               const r = item.row;
               const displayName = displayNameByUserId[r.user_id] ?? emailByUserId[r.user_id] ?? r.user_id;
+              const submittedLabel = showSubmittedAt ? formatWellnessSubmittedAt(r.created_at) : null;
               const readiness = wellnessAverageFromRow(r);
               const status = getStatusLabel(r, readiness ?? null);
               const badge = getStatusBadge(status);
@@ -401,8 +408,11 @@ export function MobileWellnessList({
                     }
                   >
                     <WellnessPlayerAvatar name={displayName} avatarUrl={avatarByUserId[r.user_id]} />
-                    <span className="min-w-0 flex-1 truncate font-medium text-white">
-                      {displayName}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-white">{displayName}</span>
+                      {submittedLabel ? (
+                        <span className="mt-0.5 block truncate text-xs font-normal text-zinc-400">{submittedLabel}</span>
+                      ) : null}
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 tabular-nums text-sm font-semibold ${readinessColorClass(
@@ -467,9 +477,14 @@ export function MobileWellnessList({
             className={`sticky top-0 z-20 flex shrink-0 flex-col border-b px-4 pb-3 pt-2 ${isHighContrast ? "border-white/20" : "border-emerald-500/25"} bg-zinc-900/95 shadow-md`}
           >
             <div className="relative flex items-center justify-center min-h-[52px]">
-              <h2 id="mobile-wellness-detail-title" className="text-xl font-bold tracking-tight text-white drop-shadow-sm text-center">
-                {displayNameByUserId[detailRow.user_id] ?? emailByUserId[detailRow.user_id] ?? detailRow.user_id}
-              </h2>
+              <div className="min-w-0 px-12 text-center">
+                <h2 id="mobile-wellness-detail-title" className="text-xl font-bold tracking-tight text-white drop-shadow-sm">
+                  {displayNameByUserId[detailRow.user_id] ?? emailByUserId[detailRow.user_id] ?? detailRow.user_id}
+                </h2>
+                {detailSubmittedLabel ? (
+                  <p className="mt-1 text-xs font-normal text-zinc-400">{detailSubmittedLabel}</p>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setDetailRow(null)}

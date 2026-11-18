@@ -182,6 +182,7 @@ export function StaffDashboard({
   const { themeId } = useTheme();
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+  const [notesOverrides, setNotesOverrides] = useState<Record<string, string | null>>({});
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -325,14 +326,14 @@ export function StaffDashboard({
   }, [mobileKpiSheet]);
 
   useEffect(() => {
-    if (!dropdownOpenId) return;
+    if (!dropdownOpenId || !playersSheetOpen) return;
     const preventTouch = (e: TouchEvent) => {
       if (playersSheetDropdownRef.current && e.target instanceof Node && playersSheetDropdownRef.current.contains(e.target)) return;
       e.preventDefault();
     };
     document.addEventListener("touchmove", preventTouch, { passive: false });
     return () => document.removeEventListener("touchmove", preventTouch);
-  }, [dropdownOpenId]);
+  }, [dropdownOpenId, playersSheetOpen]);
 
   useEffect(() => {
     const el = scheduleFirstPartRef.current;
@@ -438,6 +439,20 @@ export function StaffDashboard({
     setStatusOverrides((prev) => ({ ...prev, [p.id]: value }));
   }
 
+  function openStatusMenu(playerId: string, button: HTMLElement, currentlyOpen: boolean) {
+    setAvatarMenuOpenId(null);
+    setStatusError(null);
+    setPendingStatusPlayerId(null);
+    const opening = !currentlyOpen;
+    setDropdownOpenId(opening ? playerId : null);
+    if (opening) {
+      const rect = button.getBoundingClientRect();
+      setDropdownSheetButtonRect({ top: rect.top, left: rect.left, bottom: rect.bottom });
+    } else {
+      setDropdownSheetButtonRect(null);
+    }
+  }
+
   async function onStatusSave(p: PlayerWithStatus, valueOverride?: string) {
     const valueToSave = valueOverride ?? pendingStatusValue;
     const notesTrimmed = pendingNotes.trim();
@@ -446,6 +461,7 @@ export function StaffDashboard({
     setDropdownOpenId(null);
     setDropdownSheetButtonRect(null);
     setStatusOverrides((prev) => ({ ...prev, [p.id]: valueToSave }));
+    setNotesOverrides((prev) => ({ ...prev, [p.id]: notesToSave }));
     setPendingStatusPlayerId(null);
     setPendingStatusValue("");
     setPendingNotes("");
@@ -973,6 +989,10 @@ export function StaffDashboard({
                 const isOpen = dropdownOpenId === p.id;
                 const isAvatarMenuOpen = avatarMenuOpenId === p.id;
                 const isUploadingAvatar = uploadingAvatarId === p.id;
+                const displayNotes =
+                  Object.prototype.hasOwnProperty.call(notesOverrides, p.id)
+                    ? notesOverrides[p.id]
+                    : p.status_notes;
                 const statusCardStyle = isHighContrast ? getStatusCardStyle(themeId, effectiveStatus) : null;
                 return (
                   <div
@@ -1087,92 +1107,21 @@ export function StaffDashboard({
                             <div className="relative z-[100] inline-block">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setAvatarMenuOpenId(null);
-                                  setStatusError(null);
-                                  setPendingStatusPlayerId(null);
-                                  setDropdownOpenId(isOpen ? null : p.id);
-                                }}
+                                onClick={(e) => openStatusMenu(p.id, e.currentTarget, isOpen)}
                                 disabled={isSaving}
                                 className={`rounded border px-2 py-0.5 text-xs disabled:opacity-50 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
                               >
                                 {isSaving ? "Saving…" : "Change status ▾"}
                               </button>
-                              {isOpen && (
-                                <div className="absolute left-0 top-full z-[100] mt-1 w-72 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl">
-                                  {pendingStatusPlayerId === p.id ? (
-                                    <>
-                                      <p className="mb-2 text-xs text-zinc-400">
-                                        Status: <span className="font-medium text-white">{STATUS_OPTIONS.find((o) => o.value === pendingStatusValue)?.label ?? pendingStatusValue}</span>
-                                      </p>
-                                      <label className="mb-2 block text-xs text-zinc-400">
-                                        Description (optional)
-                                      </label>
-                                      <textarea
-                                        value={pendingNotes}
-                                        onChange={(e) => setPendingNotes(e.target.value)}
-                                        placeholder="e.g. ankle strain, recovery expected 2 weeks"
-                                        rows={2}
-                                        className="mb-2 w-full resize-none rounded border border-zinc-600 bg-zinc-800 px-2 py-1.5 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
-                                      />
-                                      <div className="flex gap-2">
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setStatusOverrides((prev) => {
-                                              const next = { ...prev };
-                                              delete next[p.id];
-                                              return next;
-                                            });
-                                            setPendingStatusPlayerId(null);
-                                            setPendingStatusValue("");
-                                            setPendingNotes("");
-                                          }}
-                                          className="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800"
-                                        >
-                                          Back
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            onStatusSave(p, pendingStatusValue);
-                                          }}
-                                          className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
-                                        >
-                                          Save
-                                        </button>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {STATUS_OPTIONS.map((opt) => (
-                                        <button
-                                          key={opt.value}
-                                          type="button"
-                                          onClick={() => onStatusSelect(p, opt.value)}
-                                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
-                                        >
-                                          {opt.label}
-                                          {effectiveStatus === opt.value && (
-                                            <span className="text-emerald-400" aria-hidden>✓</span>
-                                          )}
-                                        </button>
-                                      ))}
-                                    </>
-                                  )}
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
-                        {(p.status_notes && p.status_notes.trim()) ? (
+                        {(displayNotes && displayNotes.trim()) ? (
                           <p
                             className={`mt-1.5 line-clamp-2 text-xs ${isHighContrast ? "text-white/90" : "text-zinc-500"}`}
-                            title={p.status_notes}
+                            title={displayNotes}
                           >
-                            {p.status_notes}
+                            {displayNotes}
                           </p>
                         ) : null}
                       </div>
@@ -1197,6 +1146,8 @@ export function StaffDashboard({
                   onClick={() => {
                     const wasExpanded = playersGridExpanded;
                     if (!wasExpanded) expandScrollLockRef.current = window.scrollY;
+                    setDropdownOpenId(null);
+                    setDropdownSheetButtonRect(null);
                     setPlayersGridExpanded((e) => !e);
                     if (wasExpanded) {
                       setTimeout(() => {
@@ -1313,19 +1264,7 @@ export function StaffDashboard({
                                   <div className="relative inline-block">
                                     <button
                                       type="button"
-                                      onClick={(e) => {
-                                        setAvatarMenuOpenId(null);
-                                        setStatusError(null);
-                                        setPendingStatusPlayerId(null);
-                                        const opening = !isOpen;
-                                        setDropdownOpenId(opening ? p.id : null);
-                                        if (opening) {
-                                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                          setDropdownSheetButtonRect({ top: rect.top, left: rect.left, bottom: rect.bottom });
-                                        } else {
-                                          setDropdownSheetButtonRect(null);
-                                        }
-                                      }}
+                                      onClick={(e) => openStatusMenu(p.id, e.currentTarget, isOpen)}
                                       disabled={isSaving}
                                       className={`rounded border px-2 py-0.5 text-xs disabled:opacity-50 ${isHighContrast ? "border-white/30 bg-white/10 text-white/90 hover:bg-white/20" : "border-zinc-600 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}
                                     >
@@ -1342,98 +1281,109 @@ export function StaffDashboard({
                     </ul>
                   </div>
                 </div>
-                {/* Portal: status dropdown so it is not clipped by sheet scroll (mobile) */}
-                {playersSheetOpen &&
-                  dropdownOpenId &&
-                  dropdownSheetButtonRect &&
-                  (() => {
-                    const p = playersWithStatus.find((x) => x.id === dropdownOpenId);
-                    if (!p) return null;
-                    const effectiveStatus = statusOverrides[p.id] ?? p.status;
-                    const isNotesStep = pendingStatusPlayerId === p.id;
-                    const vv = visualViewportBox;
-                    const winW = typeof window !== "undefined" ? window.innerWidth : 400;
-                    const spaceBelow = vv.offsetTop + vv.height - (dropdownSheetButtonRect.bottom + 4) - 16;
-                    const spaceAbove = dropdownSheetButtonRect.top - vv.offsetTop - 8 - 16;
-                    const openAbove = spaceBelow < 220 && spaceAbove >= 120;
-                    const optionsMaxH = openAbove
-                      ? Math.max(120, Math.min(200, spaceAbove))
-                      : Math.max(120, Math.min(320, spaceBelow));
-                    const gap = openAbove ? 0 : 2;
-                    const optionsTop = openAbove
-                      ? dropdownSheetButtonRect.top - optionsMaxH - gap
-                      : Math.max(vv.offsetTop + 8, dropdownSheetButtonRect.bottom + gap);
-                    return createPortal(
-                      <div
-                        ref={playersSheetDropdownRef}
-                        className={`fixed z-[100] rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl ${isNotesStep ? "w-[min(92vw,340px)] p-3 pb-4" : "w-64 overflow-y-auto rounded-lg p-2"}`}
-                        style={{
-                          top: isNotesStep ? Math.max(12, vv.offsetTop + 8) : optionsTop,
-                          left: isNotesStep
-                            ? "50%"
-                            : Math.max(8, Math.min(dropdownSheetButtonRect.left, winW - 272)),
-                          transform: isNotesStep ? "translateX(-50%)" : undefined,
-                          maxHeight: isNotesStep ? Math.min(320, vv.height - 40) : optionsMaxH,
-                          overflow: isNotesStep ? "visible" : undefined,
-                        }}
-                      >
-                        {isNotesStep ? (
-                          <div className="flex min-h-0 flex-col">
-                            <p className="mb-1.5 shrink-0 text-xs text-zinc-400">
-                              Status: <span className="font-semibold text-white">{STATUS_OPTIONS.find((o) => o.value === pendingStatusValue)?.label ?? pendingStatusValue}</span>
-                            </p>
-                            <label className="mb-1 shrink-0 text-xs font-medium text-zinc-400">Notes (optional)</label>
-                            <textarea
-                              value={pendingNotes}
-                              onChange={(e) => setPendingNotes(e.target.value)}
-                              placeholder="e.g. ankle, 2 weeks"
-                              rows={2}
-                              className="mb-3 shrink-0 w-full resize-none rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
-                            />
-                            <div className="flex shrink-0 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPendingStatusPlayerId(null);
-                                  setPendingStatusValue("");
-                                  setPendingNotes("");
-                                }}
-                                className="flex-1 rounded-lg border border-zinc-600 px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
-                              >
-                                Back
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onStatusSave(p)}
-                                className="flex-1 rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
-                              >
-                                Save
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {STATUS_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => onStatusSelect(p, opt.value)}
-                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
-                              >
-                                {opt.label}
-                                {effectiveStatus === opt.value && (
-                                  <span className="text-emerald-400" aria-hidden>✓</span>
-                                )}
-                              </button>
-                            ))}
-                          </>
-                        )}
-                      </div>,
-                      document.body
-                    );
-                  })()}
               </>
             )}
+            {/* Portal: status menu is not clipped by the players grid (last row) or the mobile sheet */}
+            {dropdownOpenId &&
+              dropdownSheetButtonRect &&
+              (() => {
+                const p = playersWithStatus.find((x) => x.id === dropdownOpenId);
+                if (!p) return null;
+                const effectiveStatus = statusOverrides[p.id] ?? p.status;
+                const isNotesStep = pendingStatusPlayerId === p.id;
+                const pinNotesTop = playersSheetOpen && isNotesStep;
+                const vv = visualViewportBox;
+                const winW = typeof window !== "undefined" ? window.innerWidth : 400;
+                const needed = isNotesStep ? 240 : 220;
+                const spaceBelow = vv.offsetTop + vv.height - (dropdownSheetButtonRect.bottom + 4) - 16;
+                const spaceAbove = dropdownSheetButtonRect.top - vv.offsetTop - 8 - 16;
+                const openAbove = spaceBelow < needed && spaceAbove >= 120;
+                const optionsMaxH = openAbove
+                  ? Math.max(120, Math.min(isNotesStep ? 260 : 200, spaceAbove))
+                  : Math.max(120, Math.min(isNotesStep ? 280 : 320, spaceBelow));
+                const gap = openAbove ? 4 : 4;
+                const optionsTop = openAbove
+                  ? dropdownSheetButtonRect.top - optionsMaxH - gap
+                  : Math.max(vv.offsetTop + 8, dropdownSheetButtonRect.bottom + gap);
+                const menuWidth = isNotesStep ? 340 : 288;
+                return createPortal(
+                  <div
+                    ref={playersSheetDropdownRef}
+                    className={`fixed z-[100] rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl ${isNotesStep ? "w-[min(92vw,340px)] p-3 pb-4" : "w-72 overflow-y-auto rounded-lg p-2"}`}
+                    style={{
+                      top: pinNotesTop ? Math.max(12, vv.offsetTop + 8) : optionsTop,
+                      left: pinNotesTop
+                        ? "50%"
+                        : Math.max(8, Math.min(dropdownSheetButtonRect.left, winW - menuWidth - 8)),
+                      transform: pinNotesTop ? "translateX(-50%)" : undefined,
+                      maxHeight: pinNotesTop ? Math.min(320, vv.height - 40) : optionsMaxH,
+                      overflow: isNotesStep ? "visible" : undefined,
+                    }}
+                  >
+                    {isNotesStep ? (
+                      <div className="flex min-h-0 flex-col">
+                        <p className="mb-1.5 shrink-0 text-xs text-zinc-400">
+                          Status: <span className="font-semibold text-white">{STATUS_OPTIONS.find((o) => o.value === pendingStatusValue)?.label ?? pendingStatusValue}</span>
+                        </p>
+                        <label className="mb-1 shrink-0 text-xs font-medium text-zinc-400">
+                          {playersSheetOpen ? "Notes (optional)" : "Description (optional)"}
+                        </label>
+                        <textarea
+                          value={pendingNotes}
+                          onChange={(e) => setPendingNotes(e.target.value)}
+                          placeholder={playersSheetOpen ? "e.g. ankle, 2 weeks" : "e.g. ankle strain, recovery expected 2 weeks"}
+                          rows={2}
+                          className="mb-3 shrink-0 w-full resize-none rounded-lg border border-zinc-600 bg-zinc-800 px-2.5 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                        />
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!playersSheetOpen) {
+                                setStatusOverrides((prev) => {
+                                  const next = { ...prev };
+                                  delete next[p.id];
+                                  return next;
+                                });
+                              }
+                              setPendingStatusPlayerId(null);
+                              setPendingStatusValue("");
+                              setPendingNotes("");
+                            }}
+                            className="flex-1 rounded-lg border border-zinc-600 px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+                          >
+                            Back
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onStatusSave(p)}
+                            className="flex-1 rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {STATUS_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => onStatusSelect(p, opt.value)}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                          >
+                            {opt.label}
+                            {effectiveStatus === opt.value && (
+                              <span className="text-emerald-400" aria-hidden>✓</span>
+                            )}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>,
+                  document.body
+                );
+              })()}
           </div>
         )}
 

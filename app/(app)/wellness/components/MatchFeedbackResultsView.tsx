@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ClipboardList,
   Clock3,
+  FileDown,
   HeartPulse,
   Loader2,
   Star,
@@ -20,7 +21,8 @@ import {
   DEMAND_IDLE,
   PERFORMANCE_IDLE,
 } from "@/app/(app)/kiosk-rpe/components/matchFeedbackQuestionnaireStyles";
-import { deleteMatchFeedbackMatch } from "@/lib/matchFeedback/apiClient";import {
+import { deleteMatchFeedbackMatch } from "@/lib/matchFeedback/apiClient";
+import {
   MENTAL_DEMAND_LABELS,
   PERFORMANCE_RATING_LABELS,
   PHYSICAL_DEMAND_LABELS,
@@ -29,6 +31,17 @@ import { deleteMatchFeedbackMatch } from "@/lib/matchFeedback/apiClient";import 
 import { formatMatchFeedbackDate } from "@/lib/matchFeedback/format";
 import type { MatchFeedbackListItem, MatchFeedbackMatch, MatchFeedbackResponse } from "@/lib/matchFeedback/types";
 import type { KioskPlayer } from "@/lib/players/listPlayers";
+
+const PRINT_PLAYERS_PER_PAGE = 8;
+
+function chunkPlayers<T>(items: T[], size: number): T[][] {
+  if (items.length === 0) return [];
+  const pages: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    pages.push(items.slice(i, i + size));
+  }
+  return pages;
+}
 
 type MatchDetailState = {
   match: MatchFeedbackMatch;
@@ -292,6 +305,116 @@ function ResultRow({
   );
 }
 
+/** Print card mirrors the on-screen player card; CSS scales it to fit 8 / A4. */
+function PrintPlayerCard({
+  player,
+  response,
+}: {
+  player: KioskPlayer;
+  response: MatchFeedbackResponse | undefined;
+}) {
+  const submitted = Boolean(response);
+
+  return (
+    <article className={`mf-print-card ${submitted ? "mf-print-card--ok" : "mf-print-card--miss"}`}>
+      <div className="mf-print-card-inner">
+        <div className="relative flex flex-col items-center px-4 pb-4 pt-5 text-center">
+          <span
+            className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+              submitted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {submitted ? "Submitted" : "Missing"}
+          </span>
+          <KioskPlayerAvatar name={player.name} avatarUrl={player.avatarUrl} size="card" />
+          <p className="mt-3.5 max-w-full px-8 text-lg font-semibold leading-snug text-zinc-900">
+            {player.name}
+          </p>
+        </div>
+
+        {response ? (
+          <div className="flex-1 border-t border-zinc-100 px-4 pb-4 pt-1">
+            <ResultRow
+              icon={Activity}
+              iconClassName="bg-zinc-100 text-zinc-600"
+              question="How did you feel before the match?"
+              answer={
+                <AnswerPill className="border-zinc-200 bg-white text-zinc-800">
+                  <span className="line-clamp-2 text-[11px] font-semibold leading-snug">
+                    {response.pre_match_feelings.join(", ")}
+                  </span>
+                  {response.pre_match_feelings.includes(PRE_MATCH_OTHER_OPTION) &&
+                  response.pre_match_other_text ? (
+                    <span className="mt-0.5 line-clamp-2 text-[9px] font-medium leading-snug text-zinc-500">
+                      Other: {response.pre_match_other_text}
+                    </span>
+                  ) : null}
+                </AnswerPill>
+              }
+            />
+            <ResultRow
+              icon={HeartPulse}
+              iconClassName="bg-orange-50 text-orange-600"
+              question="How hard was the match physically?"
+              answer={
+                <ScalePill
+                  value={response.physical_demand}
+                  label={PHYSICAL_DEMAND_LABELS[response.physical_demand]}
+                  colorScale="demand"
+                />
+              }
+            />
+            <ResultRow
+              icon={Brain}
+              iconClassName="bg-amber-50 text-amber-600"
+              question="How hard was the match mentally?"
+              answer={
+                <ScalePill
+                  value={response.mental_demand}
+                  label={MENTAL_DEMAND_LABELS[response.mental_demand]}
+                  colorScale="demand"
+                />
+              }
+            />
+            <ResultRow
+              icon={Clock3}
+              iconClassName="bg-zinc-100 text-zinc-600"
+              question="When did you first feel a physical drop-off?"
+              answer={
+                <AnswerPill className="border-zinc-200 bg-zinc-50 text-zinc-800">
+                  <span className="text-sm font-semibold leading-snug">{response.physical_dropoff}</span>
+                </AnswerPill>
+              }
+            />
+            <ResultRow
+              icon={Star}
+              iconClassName="bg-emerald-50 text-emerald-600"
+              question="How would you rate your performance?"
+              answer={
+                <ScalePill
+                  value={response.performance_rating}
+                  label={PERFORMANCE_RATING_LABELS[response.performance_rating]}
+                  colorScale="performance"
+                />
+              }
+            />
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center border-t border-zinc-100 px-6 py-12 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">
+              <ClipboardList className="h-5 w-5" aria-hidden />
+            </span>
+            <p className="mt-3 text-sm font-semibold text-zinc-700">No feedback submitted</p>
+            <p className="mt-1 max-w-[16rem] text-xs leading-snug text-zinc-500">
+              This player hasn&apos;t completed the Match Feedback yet.
+            </p>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function MatchFeedbackResultsView({
   matches,
   detailsByMatchId,
@@ -322,6 +445,11 @@ export function MatchFeedbackResultsView({
     if (!selectedId) return null;
     return detailsByMatchId[selectedId] ?? null;
   }, [selectedId, detailsByMatchId]);
+
+  const printPages = useMemo(() => {
+    if (!detail) return [];
+    return chunkPlayers(detail.participants, PRINT_PLAYERS_PER_PAGE);
+  }, [detail]);
 
   useEffect(() => {
     setOpenFeelingsPlayerId(null);
@@ -379,12 +507,12 @@ export function MatchFeedbackResultsView({
       {openFeelingsPlayerId ? (
         <button
           type="button"
-          className="fixed inset-0 z-20 cursor-default bg-transparent"
+          className="fixed inset-0 z-20 cursor-default bg-transparent no-print"
           aria-label="Close feelings details"
           onClick={() => setOpenFeelingsPlayerId(null)}
         />
       ) : null}
-      <label className="block max-w-md space-y-1.5">
+      <label className="block max-w-md space-y-1.5 no-print">
         <span className="text-sm font-medium text-zinc-300">Match</span>
         <MatchSelector
           matches={matchItems}
@@ -406,24 +534,36 @@ export function MatchFeedbackResultsView({
 
       {detail ? (
         <>
-          <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-900">vs {detail.match.opponent}</h2>
-                <p className="mt-1 text-sm text-zinc-600">
-                  {formatMatchFeedbackDate(detail.match.match_date)} · Matchday{" "}
-                  {detail.match.matchday}
-                </p>
-                <p className="mt-2 text-xs font-medium text-zinc-500">
-                  {Object.keys(detail.responsesByPlayerId).length} / {detail.participants.length}{" "}
-                  responses
-                </p>
+          <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm no-print">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900">vs {detail.match.opponent}</h2>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    {formatMatchFeedbackDate(detail.match.match_date)} · Matchday{" "}
+                    {detail.match.matchday}
+                  </p>
+                  <p className="mt-2 text-xs font-medium text-zinc-500">
+                    {Object.keys(detail.responsesByPlayerId).length} / {detail.participants.length}{" "}
+                    responses
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-800 shadow-sm hover:bg-zinc-50"
+                title="Export / Save as PDF (opens print dialog)"
+                aria-label="Export Match Feedback as PDF"
+              >
+                <FileDown className="h-3.5 w-3.5" aria-hidden />
+                Export PDF
+              </button>
             </div>
           </div>
 
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 no-print">
             {detail.participants.map((player) => {
               const response = detail.responsesByPlayerId[player.id];
               const submitted = Boolean(response);
@@ -538,9 +678,189 @@ export function MatchFeedbackResultsView({
               );
             })}
           </ul>
+
+          {/* Print-only A4 layout: 2×4 = 8 players per page */}
+          <div className="match-feedback-print-root" aria-hidden>
+            {printPages.map((pagePlayers, pageIndex) => (
+              <section
+                key={`mf-print-page-${pageIndex}`}
+                className="mf-print-page"
+                aria-label={`Match Feedback print page ${pageIndex + 1}`}
+              >
+                <header className="mf-print-header">
+                  <div>
+                    <h1 className="mf-print-title">Match Feedback</h1>
+                    <p className="mf-print-sub">
+                      vs {detail.match.opponent} · {formatMatchFeedbackDate(detail.match.match_date)} ·
+                      MD {detail.match.matchday}
+                    </p>
+                  </div>
+                  <p className="mf-print-count">
+                    {Object.keys(detail.responsesByPlayerId).length}/{detail.participants.length}{" "}
+                    responses
+                    {printPages.length > 1
+                      ? ` · ${pageIndex + 1}/${printPages.length}`
+                      : ""}
+                  </p>
+                </header>
+                <div className="mf-print-grid">
+                  {pagePlayers.map((player) => (
+                    <PrintPlayerCard
+                      key={player.id}
+                      player={player}
+                      response={detail.responsesByPlayerId[player.id]}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <style jsx global>{`
+            .match-feedback-print-root {
+              display: none;
+            }
+
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 8mm;
+              }
+
+              html,
+              body {
+                width: 210mm;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                color: #111 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              /* Hide app chrome (sidebar Back, dark page bg, screen cards). */
+              body * {
+                visibility: hidden !important;
+              }
+
+              .match-feedback-print-root,
+              .match-feedback-print-root * {
+                visibility: visible !important;
+              }
+
+              .no-print {
+                display: none !important;
+                visibility: hidden !important;
+              }
+
+              .match-feedback-print-root {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: #fff !important;
+                color: #111 !important;
+                padding: 0;
+                margin: 0;
+              }
+
+              .mf-print-page {
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+                width: 100%;
+                min-height: 278mm;
+                max-height: 278mm;
+                padding: 0;
+                break-after: page;
+                page-break-after: always;
+                color: #111;
+                background: #fff;
+              }
+
+              .mf-print-page:last-child {
+                break-after: auto;
+                page-break-after: auto;
+              }
+
+              .mf-print-header {
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 2.5mm;
+                padding-bottom: 1.5mm;
+                border-bottom: 1.5px solid #c41230;
+              }
+
+              .mf-print-title {
+                margin: 0;
+                font-size: 11pt;
+                font-weight: 800;
+                line-height: 1.15;
+                color: #111;
+              }
+
+              .mf-print-sub {
+                margin: 0.8mm 0 0;
+                font-size: 7.5pt;
+                color: #444;
+              }
+
+              .mf-print-count {
+                margin: 0;
+                flex-shrink: 0;
+                font-size: 7.5pt;
+                font-weight: 600;
+                color: #333;
+              }
+
+              .mf-print-grid {
+                display: grid;
+                flex: 1;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: repeat(4, minmax(0, 1fr));
+                gap: 2mm;
+                min-height: 0;
+              }
+
+              /* Same chrome as screen cards; inner content is a scaled clone of the UI. */
+              .mf-print-card {
+                position: relative;
+                display: block;
+                min-height: 0;
+                overflow: hidden;
+                border: 1px solid #e4e4e7;
+                border-radius: 2.5mm;
+                background: #fff;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
+
+              .mf-print-card--ok {
+                border-top: 3px solid #10b981;
+              }
+
+              .mf-print-card--miss {
+                border-top: 3px solid #f59e0b;
+              }
+
+              .mf-print-card-inner {
+                position: absolute;
+                left: 0;
+                top: 0;
+                /* ~100% / 0.42 so the scaled screen card fills each 2×4 cell */
+                width: 238.1%;
+                transform: scale(0.42);
+                transform-origin: top left;
+              }
+            }
+          `}</style>
         </>
       ) : (
-        <p className="text-sm text-zinc-500">Select a match to view results.</p>
+        <p className="text-sm text-zinc-500 no-print">Select a match to view results.</p>
       )}
     </div>
   );

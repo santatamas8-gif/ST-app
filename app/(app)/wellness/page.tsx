@@ -135,9 +135,18 @@ export default async function WellnessPage() {
     console.error("[wellness] Match Feedback results failed to load", error);
   }
 
+  const isAdmin = user.role === "admin";
+  const staffList = isAdmin
+    ? list
+    : list.map((row) => {
+        const rest = { ...row };
+        delete rest.created_at;
+        return rest;
+      });
+
   return (
     <StaffWellnessWorkspace
-      list={list}
+      list={staffList}
       emailByUserId={emailByUserId}
       displayNameByUserId={displayNameByUserId}
       avatarByUserId={avatarByUserId}
@@ -145,7 +154,8 @@ export default async function WellnessPage() {
       allPlayerIds={allPlayerIds}
       matchList={matchList}
       matchDetailsById={matchDetailsById}
-      canDeleteMatch={user.role === "admin"}
+      canDeleteMatch={isAdmin}
+      showSubmittedAt={isAdmin}
     />
   );
 }
