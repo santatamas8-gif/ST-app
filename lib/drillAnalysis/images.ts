@@ -54,6 +54,20 @@ export function drillImageContentType(path: string): string | null {
   return imageContentType(path, isDrillImagePath(path));
 }
 
+/** Changes when the stored file changes. The storage path itself stays on the server. */
+export function drillImageVersion(imagePath: string | null | undefined): string | null {
+  if (!imagePath) return null;
+  const file = imagePath.split("/").pop()?.trim() ?? "";
+  const stem = file.replace(/\.[^.]+$/, "");
+  return stem.length > 0 ? stem : null;
+}
+
+export function drillImageSrc(cardId: string, version: string | null | undefined): string {
+  const params = new URLSearchParams({ cardId });
+  if (version) params.set("v", version);
+  return `/api/drill-analysis/image?${params.toString()}`;
+}
+
 export function planImageContentType(path: string): string | null {
   return imageContentType(path, isPlanImagePath(path));
 }

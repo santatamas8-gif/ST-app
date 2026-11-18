@@ -83,6 +83,8 @@ export type DrillViewCard = {
   displayName: string;
   persisted: boolean;
   hasImage: boolean;
+  /** File identity used only so a replaced image is not shown from the previous address. */
+  imageVersion: string | null;
   columns: DrillColumn[];
   missingCount: number;
 };

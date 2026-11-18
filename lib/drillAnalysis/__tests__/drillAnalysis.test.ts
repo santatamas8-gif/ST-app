@@ -11,7 +11,7 @@ import {
   roundDurationToMinutes,
   roundPowerBi0,
 } from "@/lib/drillAnalysis/format";
-import { detectDrillImage } from "@/lib/drillAnalysis/images";
+import { detectDrillImage, drillImageSrc, drillImageVersion } from "@/lib/drillAnalysis/images";
 import { buildOccurrenceKey, buildSessionKey, occurrenceMatchesSession } from "@/lib/drillAnalysis/keys";
 import { buildOccurrences, emptyMetrics, metricsForPlayer } from "@/lib/drillAnalysis/metrics";
 import { keptDrillAnalysisRequest } from "@/lib/drillAnalysis/pageSelection";
@@ -685,5 +685,14 @@ describe("image detection", () => {
     webp.set([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
     expect(detectDrillImage(webp)?.ext).toBe("webp");
     expect(detectDrillImage(Uint8Array.from([0x47, 0x49, 0x46, 0x38]))).toBeNull();
+  });
+
+  it("changes the image address when the stored file changes", () => {
+    const cardId = "11111111-1111-4111-8111-111111111111";
+    const first = drillImageVersion(`cards/${cardId}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg`);
+    const second = drillImageVersion(`cards/${cardId}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg`);
+    expect(first).not.toBe(second);
+    expect(drillImageSrc(cardId, first)).toContain(`v=${first}`);
+    expect(drillImageSrc(cardId, second)).not.toBe(drillImageSrc(cardId, first));
   });
 });

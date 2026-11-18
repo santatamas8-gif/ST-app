@@ -1,3 +1,4 @@
+import { drillImageVersion } from "@/lib/drillAnalysis/images";
 import { buildSessionKey, sessionLabel } from "@/lib/drillAnalysis/keys";
 import { modalDurationMinutes } from "@/lib/drillAnalysis/format";
 import { isFullTrainingDrill, metricsForPlayer, roundedMetrics } from "@/lib/drillAnalysis/metrics";
@@ -104,6 +105,7 @@ export function buildDrillAnalysisModel(input: {
       displayName: savedCard.displayName,
       persisted: true,
       hasImage: Boolean(savedCard.imagePath),
+      imageVersion: drillImageVersion(savedCard.imagePath),
       columns,
       missingCount: columns.filter((column) => column.missing).length,
     };
@@ -130,6 +132,7 @@ export function buildDrillAnalysisModel(input: {
         displayName: occurrence.drill,
         persisted: false,
         hasImage: false,
+        imageVersion: null,
         columns: [columnFor(occurrence, input.player, false)],
         missingCount: 0,
       },

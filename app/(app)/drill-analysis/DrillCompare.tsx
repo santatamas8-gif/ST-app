@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { formatDrillNumber, formatDurationMinutes, reportHeadings } from "@/lib/drillAnalysis/format";
+import { drillImageSrc } from "@/lib/drillAnalysis/images";
 import { comparePrintMarks } from "@/lib/drillAnalysis/printMarks";
 import { DRILL_METRICS, type DrillAnalysisModel, type DrillColumn, type DrillMetricKey } from "@/lib/drillAnalysis/types";
 
@@ -465,7 +466,7 @@ export function DrillCompare({
     return {
       key: card.id,
       title: headings.title,
-      imageUrl: card.hasImage ? `/api/drill-analysis/image?cardId=${card.id}` : null,
+      imageUrl: card.hasImage ? drillImageSrc(card.id, card.imageVersion) : null,
       note,
       columns: card.columns,
       setLabels: several ? card.columns.map((column, index) => headings.columnLabels[index] || column.label) : card.columns.map(() => ""),

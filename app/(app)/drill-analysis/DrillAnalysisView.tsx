@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DrillCompare } from "@/app/(app)/drill-analysis/DrillCompare";
 import { DrillHistory } from "@/app/(app)/drill-analysis/DrillHistory";
 import { ManageDrills } from "@/app/(app)/drill-analysis/ManageDrills";
+import { drillImageSrc } from "@/lib/drillAnalysis/images";
 import { formatDrillMetric, formatDrillNumber, formatDurationMinutes, formatSessionDate, printColumnHeading, reportHeadings } from "@/lib/drillAnalysis/format";
 import { comparePrintMarks } from "@/lib/drillAnalysis/printMarks";
 import { DRILL_METRICS } from "@/lib/drillAnalysis/types";
@@ -129,7 +130,13 @@ function CardImage({
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [freshVersion, setFreshVersion] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    setFreshVersion(null);
+    setFailed(false);
+  }, [card.imageVersion]);
 
   async function upload(file: File) {
     setUploadMessage(null);
@@ -149,6 +156,8 @@ function CardImage({
       setUploadMessage(payload?.error ?? "Image upload failed.");
       return;
     }
+    setFailed(false);
+    setFreshVersion(String(Date.now()));
     setUploadMessage("Image saved.");
     router.refresh();
   }
@@ -176,7 +185,7 @@ function CardImage({
     );
   }
 
-  const src = `/api/drill-analysis/image?cardId=${card.id}`;
+  const src = drillImageSrc(card.id, freshVersion ?? card.imageVersion);
   return (
     <div className="flex flex-col items-start gap-1">
       <button
@@ -235,6 +244,7 @@ export function DrillAnalysisView({
   const [pending, startTransition] = useTransition();
   const [manageOpen, setManageOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
   const [imageState, setImageState] = useState<Record<string, "loading" | "ready" | "error">>({});
   const onImageState = useCallback((id: string, state: "loading" | "ready" | "error") => {
@@ -292,7 +302,7 @@ export function DrillAnalysisView({
       setPrintMessage("Wait until this date, session, and player have finished loading.");
       return;
     }
-    const imageCards = compareOn ? [] : model.cards.filter((card) => card.hasImage);
+    const imageCards = compareOn ? [] : model.cards.filter((card) => card.hasImage && !hidden[card.id]);
     if (imageCards.some((card) => imageState[card.id] !== "ready" && imageState[card.id] !== "error")) {
       setPrintMessage("Wait for the drawings to finish loading.");
       return;
@@ -316,6 +326,9 @@ export function DrillAnalysisView({
         .da-print-head { display: none; }
         .da-print-title { display: none; }
         .da-collapsed .da-card-body { display: none; }
+        @media screen {
+          .da-card-hidden { opacity: 0.4; }
+        }
         .da-col-head { background: #f4f6f8; color: #0f2744; }
         .da-unit { color: #64748b; font-weight: 500; font-size: 0.82em; }
         .da-duration { margin-left: 0.4rem; color: #71717a; font-weight: 500; font-size: 0.78em; }
@@ -402,6 +415,8 @@ export function DrillAnalysisView({
           .da-sheet header h1 { display: none !important; }
           .da-sheet header .da-logo { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 9mm !important; height: 9mm !important; max-width: 9mm !important; max-height: 9mm !important; object-fit: contain !important; }
           .da-sheet header p { margin: 0 !important; font-size: 14pt !important; font-weight: 700 !important; line-height: 1.15 !important; letter-spacing: 0.01em !important; color: #0f2744 !important; text-align: center !important; }
+          .da-sheet:not(.da-comparing) header .da-print-center { padding: 0 56mm !important; }
+          .da-sheet:not(.da-comparing) header .da-print-meta { position: absolute !important; right: 0 !important; top: 0.6mm !important; max-width: 54mm !important; margin: 0 !important; font-size: 8pt !important; font-weight: 500 !important; line-height: 1.15 !important; letter-spacing: 0 !important; text-align: right !important; color: #3d4f63 !important; }
           .da-sheet:not(.da-comparing) .da-player-face { display: flex !important; flex: 0 0 auto !important; justify-content: center !important; align-items: center !important; height: 12mm !important; margin: 0 !important; padding: 0 !important; background: transparent !important; }
           .da-sheet:not(.da-comparing) .da-player-face img { display: block !important; width: 12mm !important; height: 12mm !important; max-width: 12mm !important; max-height: 12mm !important; object-fit: cover !important; object-position: center center !important; border-radius: 50% !important; background: #f4f6f8 !important; }
           .da-results { display: flex !important; flex: 1 1 0 !important; flex-direction: column !important; gap: 2mm !important; height: auto !important; min-height: 0 !important; overflow: hidden !important; }
@@ -433,6 +448,7 @@ export function DrillAnalysisView({
             gap: 3.6mm !important;
             align-items: stretch !important;
           }
+          .da-card.da-card-hidden { display: none !important; }
           .da-card {
             break-inside: avoid;
             page-break-inside: avoid;
@@ -776,9 +792,10 @@ export function DrillAnalysisView({
         <button
           type="button"
           className={`h-11 rounded-lg border border-zinc-300 bg-white px-4 font-medium text-zinc-900 ${compareOn ? "text-sm" : "text-base"}`}
+          aria-expanded={manageOpen}
           onClick={() => setManageOpen((open) => !open)}
         >
-          Manage drills
+          {manageOpen ? "Close drills" : "Manage drills"}
         </button>
         <button
           type="button"
@@ -801,11 +818,19 @@ export function DrillAnalysisView({
           <h1 className={`font-semibold tracking-tight text-[#0f2744] ${compareOn ? "text-xl" : "text-[26px] leading-tight"}`}>
             {compareOn ? "ST-AMS / Compare players" : "ST-AMS / Drill Analysis"}
           </h1>
-          {model ? (
-            <p className={compareOn ? "text-sm text-[#1e3a4c]" : "da-print-only"}>
+          {model && !compareOn ? (
+            <>
+              <p className="da-print-only da-print-center">{model.playerLabel}</p>
+              <p className="da-print-only da-print-meta">
+                {formatSessionDate(model.session.date)} · {model.sessionLabel}
+              </p>
+            </>
+          ) : null}
+          {model && compareOn ? (
+            <p className="text-sm text-[#1e3a4c]">
               {formatSessionDate(model.session.date)} · {model.sessionLabel}
-              <span className={compareOn ? "da-compare-screen-sep mx-2" : "mx-2"}>·</span>
-              <span className={compareOn ? "da-compare-player-label" : ""}>{model.playerLabel}</span>
+              <span className="da-compare-screen-sep mx-2">·</span>
+              <span className="da-compare-player-label">{model.playerLabel}</span>
               {comparePair ? (
                 <span className="da-compare-print-names">
                   {playerPhotos[playerA] ? (
@@ -856,6 +881,7 @@ export function DrillAnalysisView({
             sessionKey={model.sessionKey}
             occurrences={model.editorOccurrences}
             savedCards={model.editorCards}
+            onCollapse={() => setManageOpen(false)}
           />
         </div>
       ) : null}
@@ -940,11 +966,12 @@ export function DrillAnalysisView({
           ) : null}
 
           <div
-            className={`da-card-list grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2 ${Math.ceil(model.cards.length / 2) >= 3 ? "da-dense" : ""}`}
-            style={{ ["--da-rows" as string]: String(Math.max(1, Math.ceil(model.cards.length / 2))) }}
+            className={`da-card-list grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2 ${Math.ceil(model.cards.filter((card) => !hidden[card.id]).length / 2) >= 3 ? "da-dense" : ""}`}
+            style={{ ["--da-rows" as string]: String(Math.max(1, Math.ceil(model.cards.filter((card) => !hidden[card.id]).length / 2))) }}
           >
             {model.cards.map((card) => {
               const isCollapsed = Boolean(collapsed[card.id]);
+              const isHidden = Boolean(hidden[card.id]);
               const headings = reportHeadings(
                 card.displayName,
                 card.columns.map((column) => column.label)
@@ -952,7 +979,7 @@ export function DrillAnalysisView({
               return (
                 <article
                   key={card.id}
-                  className={`da-card min-w-0 max-w-full overflow-hidden rounded-md border border-[#d5dee6] bg-white ${isCollapsed ? "da-collapsed" : ""}`}
+                  className={`da-card min-w-0 max-w-full overflow-hidden rounded-md border border-[#d5dee6] bg-white ${isCollapsed ? "da-collapsed" : ""} ${isHidden ? "da-card-hidden" : ""}`}
                   style={{ ["--da-cols" as string]: String(card.columns.length) }}
                 >
                   <div className="da-screen-title">
@@ -960,6 +987,14 @@ export function DrillAnalysisView({
                       <h2 className="min-w-0 break-words text-[15px] font-bold leading-snug text-[#11243B]">{headings.title}</h2>
                       <div className="flex items-center gap-1.5">
                         {card.columns.length === 1 ? <DurationMark column={card.columns[0]} /> : null}
+                        <button
+                          type="button"
+                          className="h-7 shrink-0 rounded px-1.5 text-xs font-medium text-zinc-500"
+                          aria-pressed={isHidden}
+                          onClick={() => setHidden((current) => ({ ...current, [card.id]: !current[card.id] }))}
+                        >
+                          {isHidden ? "Show" : "Hide"}
+                        </button>
                         <button
                           type="button"
                           className="h-7 shrink-0 rounded px-1.5 text-xs font-medium text-zinc-500"

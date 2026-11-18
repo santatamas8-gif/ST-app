@@ -29,10 +29,12 @@ export function ManageDrills({
   sessionKey,
   occurrences,
   savedCards,
+  onCollapse,
 }: {
   sessionKey: string;
   occurrences: EditorOccurrence[];
   savedCards: EditorCard[];
+  onCollapse: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -118,6 +120,13 @@ export function ManageDrills({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900"
+            onClick={onCollapse}
+          >
+            Collapse
+          </button>
           <button
             type="button"
             className="h-11 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900"
