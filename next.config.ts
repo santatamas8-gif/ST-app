@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
   serverExternalPackages: ["sharp"],
+  outputFileTracingIncludes: {
+    "/api/movement-prep/media": ["./content/movement-prep/**/*"],
+  },
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
     serverActions: {

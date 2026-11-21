@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell, LayoutGrid, Timer, Rows3 } from "lucide-react";
+import { MessageCircle, Calendar, Palette, Home, Users, HeartPulse, Activity, UserCog, LogOut, Menu, X, ArrowLeft, Monitor, RefreshCw, Dumbbell, LayoutGrid, Timer, Rows3, PersonStanding } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import { PLAYER_STRENGTH_CARD_ENABLED } from "@/lib/strength/playerCardEnabled";
 import { PLANNER_NAV_ITEM } from "@/lib/gpsPlanner/nav";
 import { DRILL_ANALYSIS_NAV_ITEM } from "@/lib/drillAnalysis/nav";
+import { MOVEMENT_PREP_NAV_ITEM } from "@/lib/movementPrep/nav";
 import { KioskExitButton } from "@/app/(app)/kiosk-rpe/components/KioskExitButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { THEMES, type ThemeId } from "@/lib/themes";
@@ -36,6 +37,12 @@ const navItems: { href: string; label: string; icon: typeof Home; roles?: UserRo
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/admin/users", label: "Users", icon: UserCog, roles: ["admin"] },
   { href: "/admin/strength", label: "Strength Cards", icon: Dumbbell, roles: ["admin"] },
+  {
+    href: MOVEMENT_PREP_NAV_ITEM.href,
+    label: MOVEMENT_PREP_NAV_ITEM.label,
+    icon: PersonStanding,
+    roles: [...MOVEMENT_PREP_NAV_ITEM.roles],
+  },
   {
     href: PLANNER_NAV_ITEM.href,
     label: PLANNER_NAV_ITEM.label,
