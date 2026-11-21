@@ -41,20 +41,14 @@ describe("Movement Prep access", () => {
     expect(view).toContain("window.print()");
     expect(view).toContain("movement-prep-qr");
     expect(view).toContain(".movement-prep-qr { display: none !important; }");
-    expect(MOVEMENT_PREP_SHEET_QR).toHaveLength(6);
-    expect(MOVEMENT_PREP_SHEET_QR.map((code) => code.id)).toEqual(
-      MOVEMENT_PREP_EXERCISES.map((exercise) => exercise.videoId)
+    expect(MOVEMENT_PREP_SHEET_QR).toHaveLength(1);
+    expect(MOVEMENT_PREP_SHEET_QR[0]?.id).toBe("stick-mobility");
+    expect(MOVEMENT_PREP_SHEET_QR[0]?.href).toBe(
+      "https://st-app-seven.vercel.app/admin/movement-prep"
     );
-    for (const code of MOVEMENT_PREP_SHEET_QR) {
-      expect(code.href).toBe(
-        `https://st-app-seven.vercel.app/api/movement-prep/media?id=${code.id}`
-      );
-      expect(code.path.length).toBeGreaterThan(100);
-      expect(code.x).toBeGreaterThan(0);
-      expect(code.y).toBeGreaterThan(0);
-      expect(code.x).toBeLessThan(0.95);
-      expect(code.y).toBeLessThan(0.95);
-    }
+    expect(MOVEMENT_PREP_SHEET_QR[0]?.path.length).toBeGreaterThan(100);
+    expect(MOVEMENT_PREP_SHEET_QR[0]?.x).toBeGreaterThan(0.9);
+    expect(MOVEMENT_PREP_SHEET_QR[0]?.y).toBeLessThan(0.02);
     expect(view).toContain("size: A4 landscape");
     expect(view).toContain(".movement-prep-screen");
     expect(sidebar).toContain("MOVEMENT_PREP_NAV_ITEM");
